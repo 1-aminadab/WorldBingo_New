@@ -1,0 +1,113 @@
+{
+  "common": {
+    "continue": "متابعة",
+    "cancel": "إلغاء",
+    "back": "رجوع",
+    "next": "التالي",
+    "save": "حفظ",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "loading": "جاري التحميل...",
+    "error": "خطأ",
+    "success": "تم بنجاح",
+    "yes": "نعم",
+    "no": "لا"
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "signup": "إنشاء حساب",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "confirmPassword": "تأكيد كلمة المرور",
+    "name": "الاسم الكامل",
+    "forgotPassword": "هل نسيت كلمة المرور؟",
+    "dontHaveAccount": "ليس لديك حساب؟",
+    "alreadyHaveAccount": "هل لديك حساب؟",
+    "resetPassword": "إعادة تعيين كلمة المرور",
+    "sendResetLink": "إرسال رابط إعادة التعيين",
+    "otpVerification": "التحقق من الرمز",
+    "enterOtp": "أدخل رمز التحقق المكون من 4 أرقام المرسل إلى بريدك",
+    "changePassword": "تغيير كلمة المرور",
+    "newPassword": "كلمة مرور جديدة",
+    "logout": "تسجيل الخروج",
+    "enterAsGuest": "الدخول كضيف",
+    "guestUser": "مستخدم ضيف"
+  },
+  "splash": {
+    "welcome": "مرحبًا بك في ورلد بينغو",
+    "loading": "جاري تحميل تجربتك..."
+  },
+  "home": {
+    "playBingo": "العب بينغو",
+    "bingoCard": "بطاقة بينغو",
+    "settings": "الإعدادات",
+    "profile": "الملف الشخصي",
+    "welcomeBack": "مرحبًا بعودتك!",
+    "readyToPlay": "هل أنت مستعد للعب بينغو؟"
+  },
+  "settings": {
+    "title": "إعدادات اللعبة",
+    "patternSelection": "اختيار النمط",
+    "classic": "كلاسيكي",
+    "modern": "حديث",
+    "default": "افتراضي",
+    "blackWhite": "أبيض وأسود",
+    "voiceSettings": "إعدادات الصوت",
+    "gender": "الجنس",
+    "male": "ذكر",
+    "female": "أنثى",
+    "language": "اللغة",
+    "english": "الإنجليزية",
+    "amharic": "الأمهرية",
+    "appLanguage": "لغة التطبيق",
+    "theme": "السمة",
+    "light": "فاتح",
+    "dark": "داكن",
+    "system": "افتراضي النظام",
+    "rtp": "العائد للاعب (RTP)",
+    "rtpInfo": "كلما زاد الـ RTP زادت العوائد على المدى الطويل",
+    "selectPattern": "يرجى اختيار نمط للبدء",
+    "previewVoice": "معاينة الصوت"
+  },
+  "patterns": {
+    "one_line": "سطر واحد",
+    "two_lines": "سطران",
+    "three_lines": "ثلاثة أسطر",
+    "full_house": "امتلاء كامل",
+    "t_shape": "شكل T",
+    "u_shape": "شكل U",
+    "x_shape": "شكل X",
+    "plus_sign": "علامة زائد",
+    "diamond": "شكل ماسي",
+    "descriptions": {
+      "one_line": "أكمل أي خط أفقي أو عمودي أو قطري",
+      "two_lines": "أكمل أي خطين أفقيين",
+      "three_lines": "أكمل أي ثلاثة أسطر أفقية",
+      "full_house": "املأ بطاقة البينغو بالكامل",
+      "t_shape": "أكمل الصف العلوي والعمود الأوسط",
+      "u_shape": "أكمل العمود الأيسر والعمود الأيمن والصف السفلي",
+      "x_shape": "أكمل الخطين القطريين",
+      "plus_sign": "أكمل الصف الأوسط والعمود الأوسط",
+      "diamond": "أكمل نمط الماس في الوسط"
+    }
+  },
+  "game": {
+    "pause": "إيقاف مؤقت",
+    "resume": "استئناف",
+    "newGame": "لعبة جديدة",
+    "callingNumbers": "جارٍ نداء الأرقام...",
+    "currentCall": "النداء الحالي",
+    "drawnNumbers": "الأرقام المسحوبة",
+    "yourCard": "بطاقتك",
+    "bingo": "بينغو!",
+    "congratulations": "تهانينا!",
+    "youWon": "لقد فزت بـ {{pattern}}!",
+    "playAgain": "العب مجددًا",
+    "backToHome": "العودة إلى الصفحة الرئيسية"
+  },
+  "voice": {
+    "calling": "ينادي {{letter}} {{number}}",
+    "bingo": "بينغو!"
+  }
+}
+

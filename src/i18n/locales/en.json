@@ -1,0 +1,112 @@
+{
+  "common": {
+    "continue": "Continue",
+    "cancel": "Cancel",
+    "back": "Back",
+    "next": "Next",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "auth": {
+    "login": "Login",
+    "signup": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "name": "Full Name",
+    "forgotPassword": "Forgot Password?",
+    "dontHaveAccount": "Don't have an account?",
+    "alreadyHaveAccount": "Already have an account?",
+    "resetPassword": "Reset Password",
+    "sendResetLink": "Send Reset Link",
+    "otpVerification": "OTP Verification",
+    "enterOtp": "Enter the 4-digit code sent to your email",
+    "changePassword": "Change Password",
+    "newPassword": "New Password",
+    "logout": "Logout",
+    "enterAsGuest": "Enter as Guest",
+    "guestUser": "Guest User"
+  },
+  "splash": {
+    "welcome": "Welcome to World Bingo",
+    "loading": "Loading your experience..."
+  },
+  "home": {
+    "playBingo": "Play Bingo",
+    "bingoCard": "Bingo Card",
+    "settings": "Settings",
+    "profile": "Profile",
+    "welcomeBack": "Welcome back!",
+    "readyToPlay": "Ready to play some Bingo?"
+  },
+  "settings": {
+    "title": "Game Settings",
+    "patternSelection": "Pattern Selection",
+    "classic": "Classic",
+    "modern": "Modern",
+    "default": "Default",
+    "blackWhite": "Black & White",
+    "voiceSettings": "Voice Settings",
+    "gender": "Gender",
+    "male": "Male",
+    "female": "Female",
+    "language": "Language",
+    "english": "English",
+    "amharic": "Amharic",
+    "appLanguage": "App Language",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System Default",
+    "rtp": "RTP (Return to Player)",
+    "rtpInfo": "Higher RTP means more generous payouts over time",
+    "selectPattern": "Please select a pattern to start playing",
+    "previewVoice": "Preview Voice"
+  },
+  "patterns": {
+    "one_line": "1 Line",
+    "two_lines": "2 Lines", 
+    "three_lines": "3 Lines",
+    "full_house": "Full House",
+    "t_shape": "T Shape",
+    "u_shape": "U Shape",
+    "x_shape": "X Shape",
+    "plus_sign": "Plus Sign",
+    "diamond": "Diamond",
+    "descriptions": {
+      "one_line": "Complete any horizontal, vertical, or diagonal line",
+      "two_lines": "Complete any two horizontal lines",
+      "three_lines": "Complete any three horizontal lines", 
+      "full_house": "Fill the entire bingo card",
+      "t_shape": "Complete the top row and middle column",
+      "u_shape": "Complete left column, right column, and bottom row",
+      "x_shape": "Complete both diagonal lines",
+      "plus_sign": "Complete middle row and middle column",
+      "diamond": "Complete diamond pattern in the center"
+    }
+  },
+  "game": {
+    "pause": "Pause",
+    "resume": "Resume",
+    "newGame": "New Game",
+    "callingNumbers": "Calling Numbers...",
+    "currentCall": "Current Call",
+    "drawnNumbers": "Drawn Numbers",
+    "yourCard": "Your Card",
+    "bingo": "BINGO!",
+    "congratulations": "Congratulations!",
+    "youWon": "You won with {{pattern}}!",
+    "playAgain": "Play Again",
+    "backToHome": "Back to Home"
+  },
+  "voice": {
+    "calling": "Calling {{letter}} {{number}}",
+    "bingo": "Bingo!"
+  }
+}

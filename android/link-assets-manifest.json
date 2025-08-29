@@ -1,0 +1,305 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "ios/World_Bingo/Audio/1.mp3",
+      "sha1": "4c3c2644002b7490bf8cb9b090bf366bd4aff996"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/10.mp3",
+      "sha1": "320bc7716b88849a66597eb20a2f652f7e2545b8"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/11.mp3",
+      "sha1": "e33a7f0166df2d31d2f839b8b51d35130ab36135"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/12.mp3",
+      "sha1": "bff409ee8b5a62fef9fd626b53af9d1a7a9fe449"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/13.mp3",
+      "sha1": "8e09f7c56577e2fe303568bf1671e89c909529d7"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/14.mp3",
+      "sha1": "388aa9a2c522e4a2a969c153d2e7e57ed3a5d991"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/15.mp3",
+      "sha1": "746e89f2ad15ea1b8cde749a328e0eed3791ce53"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/16.mp3",
+      "sha1": "4774394442931ab84355ba57101612a1211010a4"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/17.mp3",
+      "sha1": "683bc7924448927ade5a2cb8c50a78d9dc6f2562"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/18.mp3",
+      "sha1": "310be74abe3268a7db3087470189b1c3ed38e8b9"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/19.mp3",
+      "sha1": "ae515d89fb62045c12512d44b9f0903f49022f18"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/2.mp3",
+      "sha1": "37140fc2b2ffbf85d3e2ea618854f57c3799f508"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/20.mp3",
+      "sha1": "0cc8de6371d2ce98b0c68f89f0bc9d80e17b8023"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/21.mp3",
+      "sha1": "33c36bead589ad7400f2e33629718918986d7b90"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/22.mp3",
+      "sha1": "9640d3d58fdd6a329b441130899a2c8a96a05a70"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/23.mp3",
+      "sha1": "ff489a46a0500336b03f5260160ef67af06bc805"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/24.mp3",
+      "sha1": "46da56f1e7c0a32dc601d6404f97590ecc75b870"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/25.mp3",
+      "sha1": "a55f8aed85526534b6045c9a88dc74bb012a6231"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/26.mp3",
+      "sha1": "d4cd2b34f634c5e34552a287d12f1cd6cb4208d5"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/27.mp3",
+      "sha1": "7cfa66a15e98ea4c4f303e1463c68c6c0355490a"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/28.mp3",
+      "sha1": "2b5051acabc02793999ffaae4cab7207bb085ecc"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/29.mp3",
+      "sha1": "4c84d0e012af1159a870a170a4928b57665b8add"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/3.mp3",
+      "sha1": "f629b035d2c980c8a2404f58385d6a3696f1c292"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/30.mp3",
+      "sha1": "1ef33bb6e0ddcd36fa04e363bcca24e9e5363de3"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/31.mp3",
+      "sha1": "c12464635f4bc107aeb853c4856794f5d1cad102"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/32.mp3",
+      "sha1": "f8f09fb3f33d942d51a2723a229eeb6bc83d75b7"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/33.mp3",
+      "sha1": "6780ce1e8f7a01c977538338aea2db58d9b30851"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/34.mp3",
+      "sha1": "a93d3da39e06ac7ace51703c63d4402e0a887e91"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/35.mp3",
+      "sha1": "9fd57d68bb67ce951ae79de6994241f586085a9b"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/36.mp3",
+      "sha1": "e882da05159834d53891816da8249f4713e694a4"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/37.mp3",
+      "sha1": "454bba0b046305ec18b09a3892dfd9027d183b8a"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/38.mp3",
+      "sha1": "6cc9232b48b9eceba148aa420bf992fce9577bc4"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/39.mp3",
+      "sha1": "388ad487d321de0bec614b93317b96fd2a90eefe"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/4.mp3",
+      "sha1": "cb713c3211a3368ef939e916d11395db0f33fd51"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/40.mp3",
+      "sha1": "767bd759daf42d32fed1a2ed709b9a9690c49db7"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/41.mp3",
+      "sha1": "d219f8e156b62b30b40c39398d84de5326150bba"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/42.mp3",
+      "sha1": "2370889c0a24b6cf5ff6bee66890b1680ba130aa"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/43.mp3",
+      "sha1": "0d41c2f7e949bbe1811bdb3aef1e7395ee470486"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/44.mp3",
+      "sha1": "2aa2ef24420e1d7e1bbd54e31bd2fb81315576c7"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/45.mp3",
+      "sha1": "8e57267ef4e095b588d925e434594fdbbfde149c"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/46.mp3",
+      "sha1": "fd7903f350891d27b11ae0854d46f3a0c8507176"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/47.mp3",
+      "sha1": "73ca769cc98021e4dbdf0e8894a9f24fa47f1c86"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/48.mp3",
+      "sha1": "1ffd730349c4c036c8138007cf3cbe675eee449e"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/49.mp3",
+      "sha1": "ee4153b3d2e62e707941287ed1f4e28f123946d9"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/5.mp3",
+      "sha1": "bd5e380aece3cf6364fad3f5a87f943f09ea003c"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/50.mp3",
+      "sha1": "345c6cd4506aee68184ab6daf072f415e0190151"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/51.mp3",
+      "sha1": "8c5aa16fb3fe95f29022f0a0b103c64be0934940"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/52.mp3",
+      "sha1": "dd1e84965791210965215d2ff37228b0d63f25f1"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/53.mp3",
+      "sha1": "44db70eb932abb253e5a02764aea815f03c0c09e"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/54.mp3",
+      "sha1": "2f03b38db3aa77fb73ced91213ddcbd54196db75"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/55.mp3",
+      "sha1": "6c8b05c8cab3901b17f2008447f008f0d9013711"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/56.mp3",
+      "sha1": "8ba6defc591750b4ec47f322c20d78c07d0cde15"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/57.mp3",
+      "sha1": "611865b51683df07b77ebb89935de39fb448b961"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/58.mp3",
+      "sha1": "597edbdfe0c53e38547ecc184e3b7f095e5bd79d"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/59.mp3",
+      "sha1": "7f4765b5ae9222dd5416334adde8be9cb03a956c"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/6.mp3",
+      "sha1": "a7802dc71a6ce83849a5e4f0ee9b29ae8480215f"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/60.mp3",
+      "sha1": "e41321741065d0be8cd6ecc6dd6b135cef268fdb"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/61.mp3",
+      "sha1": "e6204f0186d3e60ac2ecc430b19bbe2a361bb181"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/62.mp3",
+      "sha1": "ef70f997951df0fa0b0193dc5d748cf4a7386742"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/63.mp3",
+      "sha1": "d08a380666fd186d0204b7db99be46dd82c2b13b"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/64.mp3",
+      "sha1": "b32f859a06264f31298cb2b91dc4843fcd27e896"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/65.mp3",
+      "sha1": "7ecea532c7fb6cc8c88fd091cf7b48d8856c1b71"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/66.mp3",
+      "sha1": "54a83a4250051dd465a1ef9842ff0196dce0450c"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/67.mp3",
+      "sha1": "18ebcae9d97f455e9671d92fc8044cf245da6ae2"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/68.mp3",
+      "sha1": "bb8596c071890ecd5e176b9edfe1378bcaea8f77"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/69.mp3",
+      "sha1": "0f3b03fb1e887af75c4348b53437e194e05fbad1"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/7.mp3",
+      "sha1": "2d36ccba6376cc9b33b985728bc46a2dae496505"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/70.mp3",
+      "sha1": "94f08db35b0a051b030d7a6781bf68b90a3377db"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/71.mp3",
+      "sha1": "6401ff6e5568841aaef04d4cfb57818189f6ca9d"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/72.mp3",
+      "sha1": "f4f54efa46b7e9e358a879321ac0e9502c50595c"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/73.mp3",
+      "sha1": "4476e3b9c93e7d0fab7b52934b19fbf69df994bc"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/74.mp3",
+      "sha1": "d41650b43982cc206c24b6e47e9b194183f2cc72"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/75.mp3",
+      "sha1": "b9a67ae02a2f08fbfba6b8a6555bcc49f900fe45"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/8.mp3",
+      "sha1": "ac993dc74698ce6e8de18caf9cbf95356da7c362"
+    },
+    {
+      "path": "ios/World_Bingo/Audio/9.mp3",
+      "sha1": "16fb9d8c663a95bf9171246a1a05435b03223664"
+    }
+  ]
+}

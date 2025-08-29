@@ -1,0 +1,112 @@
+{
+  "common": {
+    "continue": "ቀጥል",
+    "cancel": "ሰርዝ",
+    "back": "ተመለስ",
+    "next": "ቀጣይ",
+    "save": "አስቀምጥ",
+    "delete": "ሰርዝ",
+    "edit": "አርም",
+    "loading": "በመጫን ላይ...",
+    "error": "ስህተት",
+    "success": "ተሳክቷል",
+    "yes": "አዎ",
+    "no": "አይ"
+  },
+  "auth": {
+    "login": "ግባ",
+    "signup": "ተመዝገብ",
+    "email": "ኢሜይል",
+    "password": "የይለፍ ቃል",
+    "confirmPassword": "የይለፍ ቃል አረጋግጥ",
+    "name": "ሙሉ ስም",
+    "forgotPassword": "የይለፍ ቃል ረሳህ?",
+    "dontHaveAccount": "መለያ የለህም?",
+    "alreadyHaveAccount": "መለያ አለህ?",
+    "resetPassword": "የይለፍ ቃል ዳግም አስተካክል",
+    "sendResetLink": "የመጀመሪያ አገናኝ ላክ",
+    "otpVerification": "ኦቲፒ ማረጋገጫ",
+    "enterOtp": "ወደ ኢሜይልህ የተላከውን 4 አሀዝ ኮድ አስገባ",
+    "changePassword": "የይለፍ ቃል ቀይር",
+    "newPassword": "አዲስ የይለፍ ቃል",
+    "logout": "ውጣ",
+    "enterAsGuest": "እንደ እንግዳ ግባ",
+    "guestUser": "እንግዳ ተጠቃሚ"
+  },
+  "splash": {
+    "welcome": "ወደ ዓለም ቢንጎ እንኳን በደህና መጡ",
+    "loading": "ልምድዎን በመጫን ላይ..."
+  },
+  "home": {
+    "playBingo": "ቢንጎ ይጫወቱ",
+    "bingoCard": "ቢንጎ ካርድ",
+    "settings": "ቅንብሮች",
+    "profile": "መገለጫ",
+    "welcomeBack": "እንኳን ደህና ተመለሱ!",
+    "readyToPlay": "ቢንጎ ለመጫወት ዝግጁ ነዎት?"
+  },
+  "settings": {
+    "title": "የጨዋታ ቅንብሮች",
+    "patternSelection": "የንድፍ ምርጫ",
+    "classic": "ባህላዊ",
+    "modern": "ዘመናዊ",
+    "default": "ነባሪ",
+    "blackWhite": "ጥቁር እና ነጭ",
+    "voiceSettings": "የድምጽ ቅንብሮች",
+    "gender": "ጾታ",
+    "male": "ወንድ",
+    "female": "ሴት",
+    "language": "ቋንቋ",
+    "english": "እንግሊዝኛ",
+    "amharic": "አማርኛ",
+    "appLanguage": "የመተግበሪያ ቋንቋ",
+    "theme": "ገጽታ",
+    "light": "ቀላል",
+    "dark": "ጨለማ",
+    "system": "የስርዓት ነባሪ",
+    "rtp": "አርቲፒ (ለተጫዋች መመለሻ)",
+    "rtpInfo": "ከፍተኛ አርቲፒ ማለት በጊዜ ሂደት የተሻሉ ክፍያዎች ማለት ነው",
+    "selectPattern": "ለመጫወት መጀመር እባክዎ ንድፍ ይምረጡ",
+    "previewVoice": "ድምጽ አቅጣጫ"
+  },
+  "patterns": {
+    "one_line": "1 መስመር",
+    "two_lines": "2 መስመሮች",
+    "three_lines": "3 መስመሮች",
+    "full_house": "ሙሉ ቤት",
+    "t_shape": "ቲ ቅርጽ",
+    "u_shape": "ዩ ቅርጽ",
+    "x_shape": "ኤክስ ቅርጽ",
+    "plus_sign": "ፕላስ ምልክት",
+    "diamond": "አልማዝ",
+    "descriptions": {
+      "one_line": "ማንኛውንም አግድም፣ ቀድ የወረደ፣ ወይም ሰያፍ መስመር አጠናቅቅ",
+      "two_lines": "ማንኛውንም ሁለት አግድም መስመሮች አጠናቅቅ",
+      "three_lines": "ማንኛውንም ሶስት አግድም መስመሮች አጠናቅቅ",
+      "full_house": "ሙሉውን ቢንጎ ካርድ ሙላ",
+      "t_shape": "የላይኛውን ረድፍ እና መሃከለኛውን አምድ አጠናቅቅ",
+      "u_shape": "የግራ አምድ፣ የቀኝ አምድ እና የግርጌ ረድፍ አጠናቅቅ",
+      "x_shape": "ሁለቱንም ሰያፍ መስመሮች አጠናቅቅ",
+      "plus_sign": "መሃከለኛውን ረድፍ እና መሃከለኛውን አምድ አጠናቅቅ",
+      "diamond": "በመሃከል የአልማዝ ንድፍ አጠናቅቅ"
+    }
+  },
+  "game": {
+    "pause": "ቆም",
+    "resume": "ቀጥል",
+    "newGame": "አዲስ ጨዋታ",
+    "callingNumbers": "ቁጥሮችን በመደወል ላይ...",
+    "currentCall": "አሁኑ ጥሪ",
+    "drawnNumbers": "የተወጡ ቁጥሮች",
+    "yourCard": "የእርስዎ ካርድ",
+    "bingo": "ቢንጎ!",
+    "congratulations": "እንኳን ደስ አለዎት!",
+    "youWon": "በ{{pattern}} አሸንፈዋል!",
+    "playAgain": "እንደገና ይጫወቱ",
+    "backToHome": "ወደ ቤት ተመለስ"
+  },
+  "voice": {
+    "calling": "{{letter}} {{number}} በመደወል ላይ",
+    "bingo": "ቢንጎ!"
+  }
+}

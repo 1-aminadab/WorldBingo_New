@@ -1,0 +1,113 @@
+{
+  "common": {
+    "continue": "Continuer",
+    "cancel": "Annuler",
+    "back": "Retour",
+    "next": "Suivant",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès",
+    "yes": "Oui",
+    "no": "Non"
+  },
+  "auth": {
+    "login": "Connexion",
+    "signup": "Inscription",
+    "email": "Email",
+    "password": "Mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "name": "Nom complet",
+    "forgotPassword": "Mot de passe oublié ?",
+    "dontHaveAccount": "Pas de compte ?",
+    "alreadyHaveAccount": "Vous avez déjà un compte ?",
+    "resetPassword": "Réinitialiser le mot de passe",
+    "sendResetLink": "Envoyer le lien de réinitialisation",
+    "otpVerification": "Vérification du code",
+    "enterOtp": "Saisissez le code à 4 chiffres envoyé à votre email",
+    "changePassword": "Changer le mot de passe",
+    "newPassword": "Nouveau mot de passe",
+    "logout": "Déconnexion",
+    "enterAsGuest": "Entrer en tant qu'invité",
+    "guestUser": "Utilisateur invité"
+  },
+  "splash": {
+    "welcome": "Bienvenue dans World Bingo",
+    "loading": "Chargement de votre expérience..."
+  },
+  "home": {
+    "playBingo": "Jouer au Bingo",
+    "bingoCard": "Carte de Bingo",
+    "settings": "Paramètres",
+    "profile": "Profil",
+    "welcomeBack": "Bon retour !",
+    "readyToPlay": "Prêt à jouer au Bingo ?"
+  },
+  "settings": {
+    "title": "Paramètres du jeu",
+    "patternSelection": "Sélection du motif",
+    "classic": "Classique",
+    "modern": "Moderne",
+    "default": "Par défaut",
+    "blackWhite": "Noir et blanc",
+    "voiceSettings": "Paramètres de la voix",
+    "gender": "Genre",
+    "male": "Homme",
+    "female": "Femme",
+    "language": "Langue",
+    "english": "Anglais",
+    "amharic": "Amharique",
+    "appLanguage": "Langue de l'application",
+    "theme": "Thème",
+    "light": "Clair",
+    "dark": "Sombre",
+    "system": "Par défaut du système",
+    "rtp": "RTP (Retour au joueur)",
+    "rtpInfo": "Un RTP plus élevé signifie des gains plus généreux sur la durée",
+    "selectPattern": "Veuillez sélectionner un motif pour commencer",
+    "previewVoice": "Aperçu de la voix"
+  },
+  "patterns": {
+    "one_line": "1 ligne",
+    "two_lines": "2 lignes",
+    "three_lines": "3 lignes",
+    "full_house": "Carton plein",
+    "t_shape": "Forme T",
+    "u_shape": "Forme U",
+    "x_shape": "Forme X",
+    "plus_sign": "Signe plus",
+    "diamond": "Losange",
+    "descriptions": {
+      "one_line": "Compléter une ligne horizontale, verticale ou diagonale",
+      "two_lines": "Compléter deux lignes horizontales",
+      "three_lines": "Compléter trois lignes horizontales",
+      "full_house": "Remplir toute la carte de bingo",
+      "t_shape": "Compléter la ligne du haut et la colonne du milieu",
+      "u_shape": "Compléter la colonne de gauche, la colonne de droite et la ligne du bas",
+      "x_shape": "Compléter les deux diagonales",
+      "plus_sign": "Compléter la ligne du milieu et la colonne du milieu",
+      "diamond": "Compléter le motif en losange au centre"
+    }
+  },
+  "game": {
+    "pause": "Pause",
+    "resume": "Reprendre",
+    "newGame": "Nouvelle partie",
+    "callingNumbers": "Annonce des numéros...",
+    "currentCall": "Annonce actuelle",
+    "drawnNumbers": "Numéros tirés",
+    "yourCard": "Votre carte",
+    "bingo": "BINGO !",
+    "congratulations": "Félicitations !",
+    "youWon": "Vous avez gagné avec {{pattern}} !",
+    "playAgain": "Rejouer",
+    "backToHome": "Retour à l'accueil"
+  },
+  "voice": {
+    "calling": "Annonce {{letter}} {{number}}",
+    "bingo": "Bingo !"
+  }
+}
+
