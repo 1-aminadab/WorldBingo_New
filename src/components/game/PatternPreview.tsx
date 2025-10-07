@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
 import Animated, { useSharedValue, withTiming, useAnimatedStyle } from 'react-native-reanimated';
 import { BingoPattern, ClassicLineType, PatternCategory } from '../../types';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -35,20 +35,29 @@ export const PatternPreview: React.FC<Props> = ({ size = 120 }) => {
     <Animated.View style={[styles.container, { width: size, height: size, backgroundColor: theme.colors.card }, animated]}>
       {Array.from({ length: 5 }).map((_, r) => (
         <View key={r} style={styles.row}>
-          {Array.from({ length: 5 }).map((_, c) => (
-            <View
-              key={`${r}-${c}`}
-              style={[
-                styles.cell,
-                {
-                  width: cellSize,
-                  height: cellSize,
-                  backgroundColor: activeCells[r][c] ? theme.colors.primary : 'transparent',
-                  borderColor: theme.colors.border,
-                },
-              ]}
-            />
-          ))}
+          {Array.from({ length: 5 }).map((_, c) => {
+            const isCenter = r === 2 && c === 2;
+            return (
+              <View
+                key={`${r}-${c}`}
+                style={[
+                  styles.cell,
+                  {
+                    width: cellSize,
+                    height: cellSize,
+                    backgroundColor: activeCells[r][c] ? theme.colors.primary : 'transparent',
+                    borderColor: theme.colors.border,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  },
+                ]}
+              >
+                {isCenter && (
+                  <Text style={[styles.starIcon, { fontSize: cellSize * 0.6 }]}>⭐</Text>
+                )}
+              </View>
+            );
+          })}
         </View>
       ))}
     </Animated.View>
@@ -120,14 +129,22 @@ function createPreview(
 const styles = StyleSheet.create({
   container: {
     borderRadius: 8,
-    padding: 8,
+    padding: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  row: { 
+    flexDirection: 'row',
     justifyContent: 'center',
   },
-  row: { flexDirection: 'row' },
   cell: {
     borderWidth: 1,
     margin: 1,
     borderRadius: 3,
+  },
+  starIcon: {
+    textAlign: 'center',
+    fontWeight: 'bold',
   },
 });
 

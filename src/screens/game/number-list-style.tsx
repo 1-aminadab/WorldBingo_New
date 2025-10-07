@@ -4,6 +4,7 @@ const { width } = Dimensions.get('window');
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
+    marginTop: 18
   },
   header: {
     flexDirection: 'column',
@@ -38,10 +39,8 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   numberButton: {
-    width: width / 5 - 10,
-    height: width / 5 - 10,
-
-    // borderWidth: 2,
+    width: width / 5-12,
+    height: width / 5-12,
     borderRadius: 8,
     borderColor: 'rgb(1, 150, 63)',
     backgroundColor: '#e7f1ff',

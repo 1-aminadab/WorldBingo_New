@@ -43,10 +43,29 @@ export type BingoCard = {
 export type GameState = 'idle' | 'playing' | 'paused' | 'completed';
 
 // Settings Types
+export type VoiceLanguage = 'english' | 'amharic' | 'spanish';
+export type AppLanguage = 'en' | 'am' | 'es';
+export type Theme = 'dark';
+export type NumberCallingMode = 'automatic' | 'manual';
+
+// Voice and Gender Types
 export type VoiceGender = 'male' | 'female';
-export type VoiceLanguage = 'english' | 'amharic' | 'arabic' | 'french';
-export type AppLanguage = 'en' | 'am' | 'ar' | 'fr';
-export type Theme = 'light' | 'dark' | 'system';
+
+export interface VoiceOption {
+  id: string;
+  name: string;
+  language: VoiceLanguage;
+  gender: VoiceGender;
+  displayName: string;
+}
+
+// Game Sound Types
+export type GameSoundType = 
+  | 'game_start'
+  | 'check_winner'
+  | 'winner_found'
+  | 'no_winner_continue'
+  | 'game_end';
 
 // Card visual theme
 export type CardTheme = 'default' | 'black_white';
@@ -54,7 +73,6 @@ export type CardTheme = 'default' | 'black_white';
 export interface GameSettings {
   selectedPattern: BingoPattern | null;
   patternCategory: PatternCategory;
-  voiceGender: VoiceGender;
   voiceLanguage: VoiceLanguage;
   appLanguage: AppLanguage;
   rtpPercentage: number;
@@ -63,7 +81,10 @@ export interface GameSettings {
   classicLinesTarget?: number; // how many lines must be completed for classic mode
   classicSelectedLineTypes?: ClassicLineType[]; // which line orientations are valid
   cardTheme?: CardTheme; // visual theme for cards
+  allowedLateCalls?: number | 'off'; // number of balls after winning number player can still call bingo, or 'off' for unlimited
   selectedCardTypeName?: string; // which cartela set is currently selected
+  numberCallingMode?: NumberCallingMode; // automatic or manual number calling
+  gameDuration?: number; // duration in seconds between each number call (3-60 seconds)
 }
 
 // Custom cartela/card type structure
@@ -131,6 +152,7 @@ export type MainStackParamList = {
   MainTabs: undefined;
   GameStack: undefined;
   CardTypeEditor?: { mode?: 'create' | 'manage'; name?: string };
+  BingoCards: undefined;
 };
 
 export type GameStackParamList = {
@@ -141,12 +163,24 @@ export type GameStackParamList = {
     playerCartelaNumbers?: number[];
     numPlayers?: number;
   };
+  SinglePlayerGame?: {
+    selectedCardNumbers?: number[];
+    singleSelectedNumbers?: number[];
+    medebAmount?: number;
+    derashValue?: number;
+    totalSelections?: number;
+    selectedCardTypeName?: string;
+    customCardTypes?: any[];
+  };
   GameSummary?: {
     totalDrawn: number;
     derashShownBirr: number;
     medebBirr: number;
     durationSeconds: number;
     history: DrawnNumber[];
+    totalCardsSold?: number;
+    totalCollectedAmount?: number;
+    profitAmount?: number;
   };
 };
 
@@ -155,3 +189,58 @@ export interface SlotMachineResult {
   letter: BingoLetter;
   number: number;
 }
+
+// Report Types
+export interface GameReport {
+  id: string;
+  date: string; // YYYY-MM-DD format
+  totalGames: number;
+  totalCardsSold: number;
+  totalCollectedAmount: number; // 100% amount without RTP applied
+  totalProfit: number; // calculated as totalCollectedAmount * (100 - RTP) / 100
+  rtpPercentage: number;
+  games: GameReportEntry[];
+}
+
+export interface GameReportEntry {
+  id: string;
+  timestamp: Date;
+  gameNumber: number; // game number for the day
+  cardsSold: number; // number of cards/selections in this game
+  collectedAmount: number; // total amount collected for this game
+  rtpPercentage: number;
+  profitAmount: number; // calculated profit for this game
+  gameDurationMinutes: number;
+  totalNumbersCalled: number;
+  pattern: string;
+  winnerFound: boolean;
+}
+
+export interface CashReport {
+  id: string;
+  date: string; // YYYY-MM-DD format
+  transactions: CashTransaction[];
+  totalDebit: number;
+  totalCredit: number;
+  netBalance: number;
+}
+
+export interface CashTransaction {
+  id: string;
+  timestamp: Date;
+  type: 'debit' | 'credit';
+  amount: number;
+  reason: string;
+  description?: string;
+}
+
+export type CashTransactionReason = 
+  | 'game_profit' // Credit from game profits
+  | 'game_expense' // Debit for game expenses
+  | 'withdrawal' // Debit for cash withdrawal
+  | 'deposit' // Credit for cash deposit
+  | 'prize_payout' // Debit for winner payouts
+  | 'operational_cost' // Debit for operational expenses
+  | 'bonus_payout' // Debit for bonus payments
+  | 'refund' // Debit for refunds
+  | 'other'; // Other reasons

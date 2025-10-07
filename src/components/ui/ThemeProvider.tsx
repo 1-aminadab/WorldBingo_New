@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
 import { useSettingsStore } from '../../store/settingsStore';
-import { AppTheme, getTheme } from '../../utils/theme';
+import { AppTheme, getTheme, getGameTheme } from '../../utils/theme';
 
 interface ThemeContextValue {
   theme: AppTheme;
@@ -17,10 +17,9 @@ interface ThemeProviderProps {
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const systemColorScheme = useColorScheme() || 'light';
   const themeMode = useSettingsStore(state => state.theme);
-  const cardTheme = useSettingsStore(state => state.cardTheme);
   
-  const theme = getTheme(themeMode, systemColorScheme, cardTheme);
-  const isDark = themeMode === 'dark' || (themeMode === 'system' && systemColorScheme === 'dark');
+  const theme = getTheme(themeMode, systemColorScheme);
+  const isDark = true; // Always dark theme
 
   const value: ThemeContextValue = {
     theme,
@@ -40,4 +39,23 @@ export const useTheme = (): ThemeContextValue => {
     throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;
+};
+
+export const useGameTheme = (): ThemeContextValue => {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useGameTheme must be used within a ThemeProvider');
+  }
+  
+  const systemColorScheme = useColorScheme() || 'light';
+  const themeMode = useSettingsStore(state => state.theme);
+  const cardTheme = useSettingsStore(state => state.cardTheme);
+  
+  const gameTheme = getGameTheme(themeMode, systemColorScheme, cardTheme);
+  const isDark = true; // Always dark theme
+  
+  return {
+    theme: gameTheme,
+    isDark,
+  };
 };

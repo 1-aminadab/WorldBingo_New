@@ -1,12 +1,14 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthState, User } from '../types';
+import firebaseAuthService from '../services/firebaseAuthService';
 
 interface AuthStore extends AuthState {
   login: (email: string, password: string) => Promise<boolean>;
   signup: (email: string, password: string, name: string) => Promise<boolean>;
   loginAsGuest: () => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   forgotPassword: (email: string) => Promise<boolean>;
   verifyOTP: (email: string, otp: string) => Promise<boolean>;
   changePassword: (token: string, newPassword: string) => Promise<boolean>;
@@ -14,6 +16,7 @@ interface AuthStore extends AuthState {
   updateUserStats: (gamesPlayed: number, gamesWon: number, playTime: number) => void;
   setUser: (user: User) => void;
   setLoading: (loading: boolean) => void;
+  initializeAuth: () => void;
 }
 
 export const useAuthStore = create<AuthStore>()(
@@ -27,24 +30,23 @@ export const useAuthStore = create<AuthStore>()(
       login: async (email: string, password: string) => {
         set({ isLoading: true });
         try {
-          // Simulate API call
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          const result = await firebaseAuthService.signInWithEmailAndPassword(email, password);
           
-          // Mock successful login
-          const user: User = {
-            id: '1',
-            email,
-            name: email.split('@')[0],
-            createdAt: new Date(),
-          };
-          
-          set({ 
-            user, 
-            isAuthenticated: true, 
-            isLoading: false 
-          });
-          return true;
+          if (result.success && result.user) {
+            set({ 
+              user: result.user, 
+              isAuthenticated: true, 
+              isGuest: false,
+              isLoading: false 
+            });
+            return true;
+          } else {
+            console.error('Login failed:', result.error);
+            set({ isLoading: false });
+            return false;
+          }
         } catch (error) {
+          console.error('Login error:', error);
           set({ isLoading: false });
           return false;
         }
@@ -53,23 +55,27 @@ export const useAuthStore = create<AuthStore>()(
       signup: async (email: string, password: string, name: string) => {
         set({ isLoading: true });
         try {
-          // Simulate API call
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          const result = await firebaseAuthService.signUpWithEmailAndPassword(
+            email, 
+            password, 
+            name
+          );
           
-          const user: User = {
-            id: Date.now().toString(),
-            email,
-            name,
-            createdAt: new Date(),
-          };
-          
-          set({ 
-            user, 
-            isAuthenticated: true, 
-            isLoading: false 
-          });
-          return true;
+          if (result.success && result.user) {
+            set({ 
+              user: result.user, 
+              isAuthenticated: true, 
+              isGuest: false,
+              isLoading: false 
+            });
+            return true;
+          } else {
+            console.error('Signup failed:', result.error);
+            set({ isLoading: false });
+            return false;
+          }
         } catch (error) {
+          console.error('Signup error:', error);
           set({ isLoading: false });
           return false;
         }
@@ -98,23 +104,30 @@ export const useAuthStore = create<AuthStore>()(
         console.log('Guest state set successfully. New state:', get());
       },
 
-      logout: () => {
-        set({ 
-          user: null, 
-          isAuthenticated: false,
-          isGuest: false,
-          isLoading: false 
-        });
+      logout: async () => {
+        set({ isLoading: true });
+        try {
+          await firebaseAuthService.signOut();
+          set({ 
+            user: null, 
+            isAuthenticated: false,
+            isGuest: false,
+            isLoading: false 
+          });
+        } catch (error) {
+          console.error('Logout error:', error);
+          set({ isLoading: false });
+        }
       },
 
       forgotPassword: async (email: string) => {
         set({ isLoading: true });
         try {
-          // Simulate API call
-          await new Promise(resolve => setTimeout(resolve, 1500));
+          const result = await firebaseAuthService.sendPasswordResetEmail(email);
           set({ isLoading: false });
-          return true;
+          return result.success;
         } catch (error) {
+          console.error('Password reset error:', error);
           set({ isLoading: false });
           return false;
         }
@@ -149,29 +162,39 @@ export const useAuthStore = create<AuthStore>()(
       convertGuestToUser: async (email: string, password: string, name: string) => {
         set({ isLoading: true });
         try {
-          // Simulate API call to convert guest to real user
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          
           const { user: currentUser } = get();
-          const newUser: User = {
-            id: Date.now().toString(),
-            email,
-            name,
-            gamesPlayed: currentUser?.gamesPlayed || 0,
-            gamesWon: currentUser?.gamesWon || 0,
-            totalPlayTime: currentUser?.totalPlayTime || 0,
-            isGuest: false,
-            createdAt: new Date(),
-          };
           
-          set({ 
-            user: newUser, 
-            isAuthenticated: true,
-            isGuest: false,
-            isLoading: false 
-          });
-          return true;
+          // Create Firebase account with guest user stats
+          const result = await firebaseAuthService.signUpWithEmailAndPassword(
+            email, 
+            password, 
+            name
+          );
+          
+          if (result.success && result.user) {
+            // Preserve guest user stats
+            const updatedUser: User = {
+              ...result.user,
+              gamesPlayed: currentUser?.gamesPlayed || 0,
+              gamesWon: currentUser?.gamesWon || 0,
+              totalPlayTime: currentUser?.totalPlayTime || 0,
+              isGuest: false,
+            };
+            
+            set({ 
+              user: updatedUser, 
+              isAuthenticated: true,
+              isGuest: false,
+              isLoading: false 
+            });
+            return true;
+          } else {
+            console.error('Convert guest failed:', result.error);
+            set({ isLoading: false });
+            return false;
+          }
         } catch (error) {
+          console.error('Convert guest error:', error);
           set({ isLoading: false });
           return false;
         }
@@ -192,24 +215,40 @@ export const useAuthStore = create<AuthStore>()(
 
       setUser: (user: User) => set({ user }),
       setLoading: (loading: boolean) => set({ isLoading: loading }),
+      
+      initializeAuth: () => {
+        // Set up Firebase auth state listener
+        firebaseAuthService.onAuthStateChanged((user) => {
+          if (user) {
+            set({ 
+              user, 
+              isAuthenticated: true, 
+              isGuest: false,
+              isLoading: false 
+            });
+          } else {
+            // Only clear state if not already a guest
+            const { isGuest } = get();
+            if (!isGuest) {
+              set({ 
+                user: null, 
+                isAuthenticated: false, 
+                isGuest: false,
+                isLoading: false 
+              });
+            }
+          }
+        });
+      },
     }),
     {
       name: 'auth-storage',
-      // Temporarily disable persistence for debugging
-      storage: createJSONStorage(() => ({
-        getItem: (name: string) => {
-          console.log('Auth storage getItem:', name);
-          return Promise.resolve(null);
-        },
-        setItem: (name: string, value: string) => {
-          console.log('Auth storage setItem:', name, value);
-          return Promise.resolve();
-        },
-        removeItem: (name: string) => {
-          console.log('Auth storage removeItem:', name);
-          return Promise.resolve();
-        },
-      })),
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+        isGuest: state.isGuest,
+      }),
     }
   )
 );

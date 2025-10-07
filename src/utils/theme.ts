@@ -68,7 +68,7 @@ const lightColors: Colors = {
   disabled: '#A0AEC0',
   placeholder: '#CBD5E0',
   backdrop: 'rgba(0,0,0,0.5)',
-  accent: '#9F7AEA',
+  accent: '#9F7AEA',  
 };
 
 const darkColors: Colors = {
@@ -149,8 +149,12 @@ export const darkTheme: AppTheme = {
   ...baseTheme,
 };
 
-export const getTheme = (theme: Theme, systemColorScheme: 'light' | 'dark', cardTheme?: CardTheme): AppTheme => {
-  const base = theme === 'system' ? (systemColorScheme === 'dark' ? darkTheme : lightTheme) : (theme === 'dark' ? darkTheme : lightTheme);
+export const getTheme = (theme: Theme, systemColorScheme: 'light' | 'dark'): AppTheme => {
+  return darkTheme; // Always return dark theme
+};
+
+export const getGameTheme = (theme: Theme, systemColorScheme: 'light' | 'dark', cardTheme?: CardTheme): AppTheme => {
+  const base = darkTheme; // Always use dark theme as base
   if (cardTheme === 'black_white') {
     // Convert colors to grayscale-ish palette
     const gray = {

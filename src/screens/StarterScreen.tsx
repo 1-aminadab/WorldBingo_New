@@ -4,11 +4,11 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Alert,
   Dimensions,
   Linking,
   Image,
+  Share,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -24,6 +24,9 @@ import { useTheme } from '../components/ui/ThemeProvider';
 import { Button } from '../components/ui/Button';
 import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
+import { Youtube, Volume2, VolumeX, Share as ShareIcon } from 'lucide-react-native';
+import { audioService } from '../services/audioService';
+import { TouchableWithSound } from '../components/ui/TouchableWithSound';
 
 const { width } = Dimensions.get('window');
 
@@ -32,23 +35,13 @@ export const StarterScreen: React.FC = () => {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const { user, isGuest, logout } = useAuthStore();
-  const { isGameReadyToStart } = useSettingsStore();
+  const { isGameReadyToStart, isMusicEnabled, setMusicEnabled } = useSettingsStore();
 
-  // Animations
-  const logoScale = useSharedValue(1);
+  // Card floating animation and shine effect
   const cardRotate = useSharedValue(0);
+  const shinePosition = useSharedValue(-100);
 
   React.useEffect(() => {
-    // Subtle breathing animation for logo
-    logoScale.value = withRepeat(
-      withSequence(
-        withTiming(1.05, { duration: 2000 }),
-        withTiming(1, { duration: 2000 })
-      ),
-      -1,
-      false
-    );
-
     // Card floating animation
     cardRotate.value = withRepeat(
       withSequence(
@@ -58,17 +51,28 @@ export const StarterScreen: React.FC = () => {
       -1,
       true
     );
-  }, []);
 
-  const logoAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: logoScale.value }],
-    };
-  });
+    // Shine effect animation with pause
+    shinePosition.value = withRepeat(
+      withSequence(
+        withTiming(-80, { duration: 0 }), // Start position (off screen left)
+        withTiming(320, { duration: 1200 }), // Shine passes across logo width + buffer
+        withTiming(320, { duration: 4000 }) // Pause before next shine (4s)
+      ),
+      -1,
+      false
+    );
+  }, []);
 
   const cardAnimatedStyle = useAnimatedStyle(() => {
     return {
       transform: [{ rotate: `${cardRotate.value}deg` }],
+    };
+  });
+
+  const shineAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateX: shinePosition.value }],
     };
   });
 
@@ -98,13 +102,7 @@ export const StarterScreen: React.FC = () => {
   };
 
   const handleBingoCard = () => {
-    // Navigate to Play Store
-    const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.worldbingo';
-    // For iOS, you might want to use: https://apps.apple.com/app/world-bingo/id123456789
-    
-    Linking.openURL(playStoreUrl).catch(() => {
-      Alert.alert('Error', 'Could not open Play Store');
-    });
+    navigation.getParent()?.navigate('BingoCards' as never);
   };
 
   const handleSettings = () => {
@@ -133,111 +131,89 @@ export const StarterScreen: React.FC = () => {
     );
   };
 
-  return (
-    <LinearGradient
-      colors={[theme.colors.background, theme.colors.surface]}
-      style={styles.container}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.profileSection}>
-            <View style={[styles.avatar, { backgroundColor: theme.colors.primary }]}>
-              <Text style={styles.avatarText}>
-                {user?.name?.charAt(0).toUpperCase() || '👤'}
-              </Text>
-            </View>
-            <View style={styles.welcomeText}>
-              <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>
-                {isGuest ? 'Playing as Guest' : t('home.welcomeBack')}
-              </Text>
-              <Text style={[styles.userName, { color: theme.colors.text }]}>
-                {user?.name || 'Player'}
-              </Text>
-              {isGuest && (
-                <TouchableOpacity onPress={handleProfile}>
-                  <Text style={[styles.upgradePrompt, { color: theme.colors.primary }]}>
-                    Tap to create account →
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
+  const handleYouTube = () => {
+    Linking.openURL('https://youtube.com');
+  };
 
-          <TouchableOpacity onPress={handleSettings} style={styles.settingsButton}>
-            <Text style={styles.settingsIcon}>⚙️</Text>
-          </TouchableOpacity>
-        </View>
+  const handleMusicToggle = () => {
+    audioService.toggleMusic();
+  };
+
+  const handleShare = () => {
+    Share.share({
+      message: 'Check out World Bingo - the ultimate bingo game experience!',
+      title: 'World Bingo',
+    });
+  };
+
+  return (
+    <View style={styles.container}>
+      <Image 
+        source={require('../assets/images/app-bgaround.png')}
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      />
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
         {/* Main Logo */}
         <View style={styles.logoSection}>
-          <Animated.View style={[styles.logoContainer, logoAnimatedStyle]}>
-            <LinearGradient
-              colors={[theme.colors.primary, theme.colors.primaryDark]}
-              style={styles.logo}
-            >
+          <View style={styles.iconsColumn}>
+            <TouchableWithSound style={styles.iconCircle} onPress={handleYouTube}>
+              <Youtube size={24} color="#FF0000" />
+            </TouchableWithSound>
+            <TouchableWithSound style={styles.iconCircle} onPress={handleMusicToggle}>
+              {isMusicEnabled ? (
+                <Volume2 size={24} color="#1e3a8a" />
+              ) : (
+                <VolumeX size={24} color="#666" />
+              )}
+            </TouchableWithSound>
+            <TouchableWithSound style={styles.iconCircle} onPress={handleShare}>
+              <ShareIcon size={24} color="#1e3a8a" />
+            </TouchableWithSound>
+          </View>
+          <View style={styles.logoContainer}>
+            <View style={styles.logoWrapper}>
               <Image 
                 source={require('../assets/images/world-Bingo-Logo.png')}
                 style={styles.logoImage}
                 resizeMode="contain"
               />
-            </LinearGradient>
-          </Animated.View>
-          <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-            {t('home.readyToPlay')}
-          </Text>
+              <Animated.View style={[styles.shineOverlay, shineAnimatedStyle]}>
+                <LinearGradient
+                  colors={[
+                    'rgba(255, 255, 255, 0)', 
+                    'rgba(255, 255, 255, 0.2)', 
+                    'rgba(255, 255, 255, 0.6)', 
+                    'rgba(255, 255, 255, 0.2)', 
+                    'rgba(255, 255, 255, 0)'
+                  ]}
+                  style={styles.shineGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                />
+              </Animated.View>
+            </View>
+          </View>
         </View>
 
         {/* Main Actions */}
         <View style={styles.actionsContainer}>
-          <View style={[styles.actionCard, { backgroundColor: theme.colors.card }]}>
-            <TouchableOpacity
-              style={[styles.playButton, { backgroundColor: theme.colors.primary }]}
-              onPress={handlePlayBingo}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={[theme.colors.primary, theme.colors.primaryDark]}
-                style={styles.playButtonGradient}
-              >
-                <Text style={styles.playIcon}>🎯</Text>
-                <Text style={styles.playButtonText}>{t('home.playBingo')}</Text>
-                <Text style={styles.playButtonSubtext}>Start a new game</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
+          <TouchableWithSound
+            style={styles.playButton}
+            onPress={handlePlayBingo}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.buttonText}>Play Bingo 75</Text>
+          </TouchableWithSound>
 
-          <View style={styles.secondaryActions}>
-            <TouchableOpacity
-              style={[styles.cardButton, { backgroundColor: theme.colors.card }]}
-              onPress={handleBingoCard}
-              activeOpacity={0.8}
-            >
-              <Animated.View style={cardAnimatedStyle}>
-                <Text style={styles.cardIcon}>🎴</Text>
-              </Animated.View>
-              <Text style={[styles.cardButtonText, { color: theme.colors.text }]}>
-                {t('home.bingoCard')}
-              </Text>
-              <Text style={[styles.cardButtonSubtext, { color: theme.colors.textSecondary }]}>
-                View your card
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.profileButton, { backgroundColor: theme.colors.card }]}
-              onPress={handleProfile}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.profileIcon}>👤</Text>
-              <Text style={[styles.profileButtonText, { color: theme.colors.text }]}>
-                {t('home.profile')}
-              </Text>
-              <Text style={[styles.profileButtonSubtext, { color: theme.colors.textSecondary }]}>
-                Your stats
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableWithSound
+            style={styles.cardButton}
+            onPress={handleBingoCard}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.buttonText}>Bingo Card</Text>
+          </TouchableWithSound>
         </View>
 
         {/* Quick Stats */}
@@ -272,10 +248,13 @@ export const StarterScreen: React.FC = () => {
           title={isGuest ? 'Exit Guest Session' : t('auth.logout')}
           onPress={handleLogout}
           variant="ghost"
-          style={styles.logoutButton}
+          style={[
+            styles.logoutButton,
+            ...(isGuest ? [{ backgroundColor: 'rgba(220, 53, 69, 0.9)' }] : [])
+          ]}
         />
       </ScrollView>
-    </LinearGradient>
+    </View>
   );
 };
 
@@ -283,180 +262,119 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  backgroundImage: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
   scrollContent: {
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 40,
-    paddingRight: 30
-  },
-  profileSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  welcomeText: {
-    flex: 1,
-  },
-  greeting: {
-    fontSize: 14,
-    marginBottom: 2,
-  },
-  userName: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  upgradePrompt: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  settingsButton: {
-    padding: 8,
-  },
-  settingsIcon: {
-    fontSize: 24,
+    paddingHorizontal: 40,
+    paddingVertical: 60,
   },
   logoSection: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 80,
+    width: '100%',
+    position: 'relative',
+  },
+  iconsColumn: {
+    position: 'absolute',
+    left: 10,
+    top: '50%',
+    transform: [{ translateY: -85,  }, {translateX: -40}],
+    flexDirection: 'column',
+    gap: 12,
+    alignItems: 'center',
+  },
+  iconCircle: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   logoContainer: {
     marginBottom: 16,
-  },
-  logo: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
   },
-  logoEmoji: {
-    fontSize: 50,
-  },
-  logoImage: {
-    width: 70,
-    height: 70,
-  },
-  appTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  actionsContainer: {
-    marginBottom: 30,
-  },
-  actionCard: {
-    borderRadius: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  playButton: {
-    borderRadius: 20,
+  logoWrapper: {
+    position: 'relative',
+    width: 300,
+    height: 200,
     overflow: 'hidden',
   },
-  playButtonGradient: {
-    paddingVertical: 30,
-    paddingHorizontal: 20,
+  logoImage: {
+    width: 300,
+    height: 200,
+  },
+  shineOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 80,
+    height: 200,
+    zIndex: 1,
+    pointerEvents: 'none',
+    transform: [{ skewX: '-20deg' }],
+  },
+  shineGradient: {
+    width: '100%',
+    height: '100%',
+    opacity: 0.9,
+    mixBlendMode: 'soft-light',
+  },
+  actionsContainer: {
+    width: '100%',
+    gap: 20,
+  },
+  playButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 25,
+    paddingVertical: 18,
+    paddingHorizontal: 40,
     alignItems: 'center',
-  },
-  playIcon: {
-    fontSize: 40,
-    marginBottom: 8,
-  },
-  playButtonText: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  playButtonSubtext: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 14,
-  },
-  secondaryActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    borderBottomWidth: 6,
+    borderBottomColor: 'rgba(80, 80, 80, 0.8)',
+    borderRightWidth: 2,
+    borderRightColor: 'rgba(100, 100, 100, 0.4)',
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
   },
   cardButton: {
-    flex: 1,
-    marginRight: 10,
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 25,
+    paddingVertical: 18,
+    paddingHorizontal: 40,
     alignItems: 'center',
+    borderBottomWidth: 6,
+    borderBottomColor: 'rgba(80, 80, 80, 0.8)',
+    borderRightWidth: 2,
+    borderRightColor: 'rgba(100, 100, 100, 0.4)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 2, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
   },
-  cardIcon: {
-    fontSize: 30,
-    marginBottom: 8,
-  },
-  cardButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  cardButtonSubtext: {
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  profileButton: {
-    flex: 1,
-    marginLeft: 10,
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  profileIcon: {
-    fontSize: 30,
-    marginBottom: 8,
-  },
-  profileButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  profileButtonSubtext: {
-    fontSize: 12,
-    textAlign: 'center',
+  buttonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1e3a8a',
+    textShadowColor: 'rgba(255, 255, 255, 0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
   },
   statsContainer: {
     borderRadius: 16,

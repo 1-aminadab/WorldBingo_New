@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useTheme } from './ThemeProvider';
-import { audioManager } from '../../utils/audioManager';
+import { audioService } from '../../services/audioService';
 
 interface ButtonProps {
   title: string;
@@ -36,7 +36,7 @@ export const Button: React.FC<ButtonProps> = ({
   const { theme } = useTheme();
 
   const handlePress = () => {
-    audioManager.playButtonClick();
+    audioService.playClickSound();
     onPress();
   };
 

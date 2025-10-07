@@ -126,7 +126,7 @@ export const SplashScreen: React.FC = () => {
       <View style={styles.content}>
         {/* Logo */}
         <Animated.View style={[styles.logoContainer, logoAnimatedStyle]}>
-          <View style={[styles.logo, { backgroundColor: theme.colors.card }]}>
+          <View style={[styles.logo, { backgroundColor: theme.colors.surface }]}>
             <Image 
               source={require('../assets/images/world-Bingo-Logo.png')}
               style={styles.logoImage}
@@ -146,9 +146,9 @@ export const SplashScreen: React.FC = () => {
         </Animated.Text>
 
         {/* Shimmer effect */}
-        <View style={styles.shimmerContainer}>
+        <Animated.View style={styles.shimmerContainer}>
           <Animated.View style={[styles.shimmer, shimmerAnimatedStyle]} />
-        </View>
+        </Animated.View>
       </View>
 
       {/* Bottom decoration */}
@@ -163,65 +163,64 @@ export const SplashScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   content: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
+    paddingHorizontal: 24,
   },
   logoContainer: {
-    marginBottom: 40,
+    marginBottom: 24,
   },
   logo: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 6,
   },
   logoText: {
     fontSize: 60,
   },
   logoImage: {
-    width: 100,
-    height: 100,
+    width: 80,
+    height: 80,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '700',
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
     textShadowColor: 'rgba(0,0,0,0.3)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: 16,
     color: 'rgba(255,255,255,0.9)',
     textAlign: 'center',
-    fontWeight: '300',
+    fontWeight: '400',
+    marginBottom: 40,
   },
   shimmerContainer: {
-    position: 'absolute',
-    bottom: 100,
-    width: '80%',
-    height: 4,
+    width: '70%',
+    height: 3,
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 2,
     overflow: 'hidden',
+    marginTop: 20,
   },
   shimmer: {
-    width: 100,
+    width: 80,
     height: '100%',
-    backgroundColor: 'rgba(255,255,255,0.8)',
+    backgroundColor: 'rgba(255,255,255,0.7)',
     borderRadius: 2,
   },
   bottomDecoration: {

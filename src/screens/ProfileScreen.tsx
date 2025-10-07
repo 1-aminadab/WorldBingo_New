@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Modal,
   StatusBar,
   SafeAreaView,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -24,8 +25,12 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Dropdown } from '../components/ui/Dropdown';
+
 import { useAuthStore } from '../store/authStore';
+import { useSettingsStore } from '../store/settingsStore';
 import { formatTime } from '../utils/gameHelpers';
+import { ReportStorageManager } from '../utils/reportStorage';
 
 const { width } = Dimensions.get('window');
 
@@ -148,9 +153,10 @@ const CustomModal: React.FC<CustomModalProps> = ({
 
 export const ProfileScreen: React.FC = () => {
   const navigation = useNavigation();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { theme } = useTheme();
   const { user, isAuthenticated, isGuest, logout, convertGuestToUser, isLoading } = useAuthStore();
+  const { appLanguage, setAppLanguage } = useSettingsStore();
 
   // Form states
   const [showCreateAccount, setShowCreateAccount] = useState(false);
@@ -163,7 +169,14 @@ export const ProfileScreen: React.FC = () => {
   const [errors, setErrors] = useState<{[key: string]: string}>({});
 
   // Data states
-  const [userCoins] = useState(1250); // Reference-only balance
+  const [userCoins] = useState(1000); // Default coin balance from transaction system
+  const [referralCode] = useState('WB' + (user?.id || 'GUEST').slice(-6).toUpperCase());
+  const [todaysGameStats, setTodaysGameStats] = useState({
+    totalGames: 0,
+    totalCards: 0,
+    averageRTP: 0,
+    totalTime: 0,
+  });
 
   // Modal states
   const [modalConfig, setModalConfig] = useState<{
@@ -189,6 +202,33 @@ export const ProfileScreen: React.FC = () => {
   const hideModal = () => {
     setModalConfig(prev => ({ ...prev, visible: false }));
   };
+
+  // Load today's game statistics
+  const loadTodaysGameStats = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const todaysReport = await ReportStorageManager.getGameReportByDate(today);
+      
+      if (todaysReport) {
+        const totalTime = todaysReport.games.reduce((sum, game) => sum + game.gameDurationMinutes, 0);
+        const totalRTP = todaysReport.games.reduce((sum, game) => sum + game.rtpPercentage, 0);
+        const averageRTP = todaysReport.games.length > 0 ? totalRTP / todaysReport.games.length : 0;
+        
+        setTodaysGameStats({
+          totalGames: todaysReport.totalGames,
+          totalCards: todaysReport.totalCardsSold,
+          averageRTP: averageRTP,
+          totalTime: totalTime,
+        });
+      }
+    } catch (error) {
+      console.error('Error loading today\'s game stats:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadTodaysGameStats();
+  }, []);
 
   const handleLogout = () => {
     showModal({
@@ -264,28 +304,11 @@ export const ProfileScreen: React.FC = () => {
   };
 
   const handleViewCoins = () => {
-    showModal({
-      title: '💰 Coin Balance',
-      message: `Current Balance: ${userCoins.toLocaleString()} Birr\n\nNote: Coins are managed by reference only. Contact your administrator for balance updates.`,
-      type: 'info',
-    });
+    navigation.navigate('TransactionReport' as never);
   };
 
   const handleCoinPurchase = () => {
-    showModal({
-      title: '💰 Buy Coins',
-      message: 'Choose a coin package:',
-      type: 'confirm',
-      confirmText: '100 Coins - 50 Birr',
-      cancelText: 'Cancel',
-      onConfirm: () => {
-        showModal({
-          title: '🎉 Purchase Successful!',
-          message: `✅ Transaction completed successfully!\n\n💰 Amount: 100 coins\n💸 Cost: 50 Birr\n📊 New Balance: ${(userCoins + 100).toLocaleString()} coins\n\nThank you for your purchase!`,
-          type: 'success',
-        });
-      },
-    });
+    navigation.navigate('TransactionReport' as never);
   };
 
   const handleInviteFriends = async () => {
@@ -302,6 +325,12 @@ export const ProfileScreen: React.FC = () => {
         type: 'error',
       });
     }
+  };
+
+  const handleLanguageChange = (language: string) => {
+    const newLang = language as 'en' | 'am';
+    setAppLanguage(newLang);
+    i18n.changeLanguage(newLang);
   };
 
   const handleCopyInviteLink = () => {
@@ -339,108 +368,75 @@ export const ProfileScreen: React.FC = () => {
     navigation.navigate('GameReport' as never);
   };
 
+
   const getWinRate = (): string => {
     if (!user?.gamesPlayed || user.gamesPlayed === 0) return '0';
     return Math.round((user.gamesWon || 0) / user.gamesPlayed * 100).toString();
   };
 
-  const renderProfileHeader = () => {
-    const avatarScale = useSharedValue(1);
-    
-    const animatedAvatarStyle = useAnimatedStyle(() => ({
-      transform: [{ scale: avatarScale.value }],
-    }));
-
-    const handleAvatarPress = () => {
-      avatarScale.value = withSequence(
-        withSpring(0.95),
-        withSpring(1.1),
-        withSpring(1)
-      );
-    };
-
-    return (
-      <LinearGradient
-        colors={[theme.colors.primary, theme.colors.primaryDark, theme.colors.secondary]}
-        style={styles.headerGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.profileHeader}>
-          <TouchableOpacity onPress={handleAvatarPress} activeOpacity={0.8}>
-            <Animated.View style={[styles.avatar, { backgroundColor: theme.colors.card }, animatedAvatarStyle]}>
-              <Text style={[styles.avatarText, { color: theme.colors.primary }]}>
-                {user?.name?.charAt(0).toUpperCase() || '👤'}
-              </Text>
-            </Animated.View>
-          </TouchableOpacity>
-          
-          <View style={styles.userInfo}>
-            <Text style={styles.userName}>{user?.name || 'Guest Host'}</Text>
-            {isGuest ? (
-              <View style={styles.guestBadge}>
-                <Text style={styles.guestBadgeText}>👤 Guest Account</Text>
-              </View>
-            ) : (
-              <Text style={styles.userEmail}>{user?.email}</Text>
-            )}
-            <View style={styles.hostBadge}>
-              <Text style={styles.hostBadgeText}>🎯 Bingo Host</Text>
-            </View>
+  const renderProfileHeader = () => (
+    <View style={[{ backgroundColor: theme.colors.surface, borderRadius: 8, padding: 16 }]}>
+      <View style={styles.newProfileHeader}>
+        <View style={styles.newAvatarContainer}>
+          <View style={[styles.newAvatar, { backgroundColor: theme.colors.primary }]}>
+            <Text style={[styles.newAvatarText, { color: '#fff' }]}>
+              {user?.name?.charAt(0).toUpperCase() || 'D'}
+            </Text>
           </View>
         </View>
-      </LinearGradient>
-    );
-  };
-
-  const renderStatsCard = () => (
-    <View style={[styles.card, styles.statsCard, { backgroundColor: theme.colors.card }]}>
-      <View style={styles.cardHeader}>
-        <Text style={[styles.cardTitle, { color: theme.colors.text }]}>📊 Host Statistics</Text>
-      </View>
-      
-      <View style={styles.statsGrid}>
-        <View style={[styles.statItem, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.statNumber, { color: theme.colors.primary }]}>
-            {user?.gamesPlayed || 0}
-          </Text>
-          <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
-            Games Hosted
-          </Text>
+        
+        <View style={styles.newUserInfo}>
+          <Text style={[styles.newUserName, { color: theme.colors.text }]}>{user?.name || 'Dage Tadese'}</Text>
+          <Text style={[styles.newUserPhone, { color: theme.colors.textSecondary }]}>{user?.phone || '09 12 34 56 78'}</Text>
         </View>
         
-        <View style={[styles.statItem, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.statNumber, { color: '#4CAF50' }]}>
-            {user?.gamesWon || 0}
-          </Text>
-          <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
-            Winners Called
-          </Text>
-        </View>
-        
-        <View style={[styles.statItem, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.statNumber, { color: '#FF9800' }]}>
-            {getWinRate()}%
-          </Text>
-          <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
-            Success Rate
-          </Text>
-        </View>
-        
-        <View style={[styles.statItem, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.statNumber, { color: '#9C27B0' }]}>
-            {formatTime(user?.totalPlayTime || 0)}
-          </Text>
-          <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
-            Total Time
-          </Text>
-        </View>
+        <TouchableOpacity style={[styles.editButton, { borderColor: theme.colors.border }]}>
+          <Text style={[styles.editButtonText, { color: theme.colors.textSecondary }]}>Edit</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 
+  const renderCoinSection = () => (
+    <View style={[{ backgroundColor: theme.colors.surface, borderRadius: 8, padding: 16 }]}>
+      <View style={styles.coinRow}>
+        <Text style={[styles.coinText, { color: theme.colors.text }]}>120 coine</Text>
+        <TouchableOpacity style={[styles.buyCoinBtn, { backgroundColor: theme.colors.surface }]} onPress={handleCoinPurchase}>
+          <Text style={[styles.buyCoinBtnText, { color: theme.colors.text }]}>Buy coin</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderInvitationCard = () => (
+    <View style={[{ backgroundColor: theme.colors.surface, borderRadius: 8, padding: 16 }]}>
+      <View style={styles.invitationHeader}>
+        <Text style={[styles.invitationTitle, { color: theme.colors.text }]}>Invite friend and get up</Text>
+        <Text style={[styles.invitationTitle, { color: theme.colors.text }]}>
+          to <Text style={styles.cashbackHighlight}>10% cash back</Text> on
+        </Text>
+        <Text style={[styles.invitationTitle, { color: theme.colors.text }]}>there coin purchases.</Text>
+        <View style={styles.invitationIcon}>
+          <Text style={styles.iconText}>🤝💰</Text>
+        </View>
+      </View>
+      
+      <View style={styles.invitationCodeSection}>
+        <Text style={[styles.codeLabel, { color: theme.colors.textSecondary }]}>Your invitation code</Text>
+        <View style={[styles.codeRow, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
+          <Text style={styles.invitationCode}>123424</Text>
+          <TouchableOpacity style={[styles.shareButton, { backgroundColor: theme.colors.surface }]} onPress={handleCopyInviteLink}>
+            <Text style={[styles.shareButtonText, { color: theme.colors.text }]}>Share</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      
+      <Text style={[styles.friendCashback, { color: theme.colors.text }]}>Frend you invit will get 5% cash back</Text>
+    </View>
+  );
+
   const renderCoinsCard = () => (
-    <View style={[styles.card, styles.coinsCard, { backgroundColor: theme.colors.card }]}>
+    <View style={[{ backgroundColor: theme.colors.surface, borderRadius: 8, padding: 16 }]}>
       <View style={styles.cardHeader}>
         <Text style={[styles.cardTitle, { color: theme.colors.text }]}>💰 Coin Management</Text>
         <Text style={[styles.coinBalance, { color: theme.colors.primary }]}>
@@ -473,59 +469,59 @@ export const ProfileScreen: React.FC = () => {
     </View>
   );
 
-  const renderSocialCard = () => (
-    <View style={[styles.card, styles.socialCard, { backgroundColor: theme.colors.card }]}>
-      <View style={styles.cardHeader}>
-        <Text style={[styles.cardTitle, { color: theme.colors.text }]}>👥 Social Features</Text>
+
+  const renderReportSections = () => (
+    <View style={styles.reportsContainer}>
+      <View style={styles.reportsRow}>
+        <View style={[styles.reportCardHalf, { backgroundColor: theme.colors.surface }]}>
+          <TouchableOpacity 
+            style={styles.reportCardContent}
+            onPress={showTransactionHistory}
+          >
+            <View style={styles.reportIcon}>
+              <Text style={styles.reportIconText}>💰</Text>
+            </View>
+            <Text style={[styles.reportTitle, { color: theme.colors.text }]}>Transaction Report</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <View style={[styles.reportCardHalf, { backgroundColor: theme.colors.surface }]}>
+          <TouchableOpacity 
+            style={styles.reportCardContent}
+            onPress={showGameHistory}
+          >
+            <View style={styles.reportIcon}>
+              <Text style={styles.reportIconText}>🎮</Text>
+            </View>
+            <Text style={[styles.reportTitle, { color: theme.colors.text }]}>Game Report</Text>
+            <View style={styles.reportSubRow}>
+              <Text style={[styles.reportSubTitle, { color: theme.colors.textSecondary }]}>Date</Text>
+              <Text style={[styles.reportSubTitle, { color: theme.colors.textSecondary }]}>Coins you make</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
       </View>
       
-      <View style={styles.socialActions}>
-        <TouchableOpacity
-          style={[styles.socialButton, { backgroundColor: '#2196F3' }]}
-          onPress={handleInviteFriends}
-        >
-          <Text style={styles.socialButtonIcon}>📤</Text>
-          <Text style={styles.socialButtonText}>Invite Friends</Text>
-          <Text style={styles.socialButtonSubtext}>Earn 100 coins per invite</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.socialButton, { backgroundColor: '#4CAF50' }]}
-          onPress={handleCopyInviteLink}
-        >
-          <Text style={styles.socialButtonIcon}>🔗</Text>
-          <Text style={styles.socialButtonText}>Copy Invite Link</Text>
-          <Text style={styles.socialButtonSubtext}>Share your referral code</Text>
-        </TouchableOpacity>
+    </View>
+  );
+
+  const renderLanguageCard = () => (
+    <View style={[{ backgroundColor: theme.colors.surface, borderRadius: 8, padding: 16 }]}>
+      <View style={styles.cardHeader}>
+        <Text style={[styles.cardTitle, { color: theme.colors.text }]}>🌐 Language</Text>
+      </View>
+      
+      <View style={styles.settingItem}>
+        <Dropdown
+          value={appLanguage as any}
+          options={["am","en","ar","fr"] as any}
+          onChange={(v: any) => handleLanguageChange(v)}
+          getLabel={(v: any) => v === 'am' ? 'Amharic' : v === 'en' ? 'English' : v === 'ar' ? 'Arabic' : 'French'}
+        />
       </View>
     </View>
   );
 
-  const renderReportsCard = () => (
-    <View style={[styles.card, styles.reportsCard, { backgroundColor: theme.colors.card }]}>
-      <View style={styles.cardHeader}>
-        <Text style={[styles.cardTitle, { color: theme.colors.text }]}>📋 Reports & History</Text>
-      </View>
-      
-      <View style={styles.reportActions}>
-        <TouchableOpacity
-          style={[styles.reportButton, { backgroundColor: theme.colors.surface }]}
-          onPress={showTransactionHistory}
-        >
-          <Text style={[styles.reportButtonIcon, { color: theme.colors.primary }]}>💸</Text>
-          <Text style={[styles.reportButtonText, { color: theme.colors.text }]}>Transaction Report</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.reportButton, { backgroundColor: theme.colors.surface }]}
-          onPress={showGameHistory}
-        >
-          <Text style={[styles.reportButtonIcon, { color: theme.colors.primary }]}>🎯</Text>
-          <Text style={[styles.reportButtonText, { color: theme.colors.text }]}>Game Report</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
 
   const renderGuestUpgrade = () => {
     if (!isGuest) return null;
@@ -623,27 +619,18 @@ export const ProfileScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <StatusBar backgroundColor={theme.colors.primary} barStyle="light-content" />
+    <SafeAreaView style={[styles.newContainer, { backgroundColor: theme.colors.background }]}>
+      <StatusBar 
+        backgroundColor={theme.colors.background} 
+        barStyle={theme.theme === 'dark' ? 'light-content' : 'dark-content'} 
+      />
       
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {renderProfileHeader()}
-        
-        <View style={styles.content}>
-          {renderGuestUpgrade()}
-          {renderStatsCard()}
-          {renderCoinsCard()}
-          {renderSocialCard()}
-          {renderReportsCard()}
-          
-          <TouchableOpacity
-            style={[styles.logoutButton, { backgroundColor: '#FF5722' }]}
-            onPress={handleLogout}
-          >
-            <Text style={styles.logoutButtonText}>
-              {isGuest ? '🚪 Exit Session' : '🔓 Logout'}
-            </Text>
-          </TouchableOpacity>
+      <ScrollView style={[styles.newScrollView, { backgroundColor: theme.colors.background }]} showsVerticalScrollIndicator={false}>
+        <View style={styles.newContent}>
+          {renderProfileHeader()}
+          {renderCoinSection()}
+          {renderInvitationCard()}
+          {renderReportSections()}
         </View>
       </ScrollView>
 
@@ -665,50 +652,277 @@ export const ProfileScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  // New clean UI styles
+  newContainer: {
     flex: 1,
   },
-  scrollView: {
+  newScrollView: {
     flex: 1,
   },
-  headerGradient: {
-    paddingBottom: 24,
+  newContent: {
+    padding: 16,
+    gap: 12,
   },
-  profileHeader: {
+  
+  // Profile Header Card
+  newProfileCard: {
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  newProfileHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 24,
   },
-  avatar: {
+  newAvatarContainer: {
+    marginRight: 16,
+  },
+  newAvatar: {
     width: 80,
     height: 80,
     borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 20,
+  },
+  newAvatarText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+  },
+  newUserInfo: {
+    flex: 1,
+  },
+  newUserName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  newUserPhone: {
+    fontSize: 16,
+  },
+  editButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  editButtonText: {
+    fontSize: 14,
+  },
+  
+  // Coin Section Card
+  newCoinCard: {
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 8,
+    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  coinRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  coinText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  buyCoinBtn: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  buyCoinBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  
+  // Invitation Card
+  newInvitationCard: {
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  invitationHeader: {
+    marginBottom: 20,
+    position: 'relative',
+  },
+  invitationTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    lineHeight: 24,
+  },
+  cashbackHighlight: {
+    color: '#E91E63',
+  },
+  invitationIcon: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  iconText: {
+    fontSize: 24,
+  },
+  invitationCodeSection: {
+    marginBottom: 16,
+  },
+  codeLabel: {
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  codeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  invitationCode: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#4285F4',
+    letterSpacing: 1,
+  },
+  shareButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  shareButtonText: {
+    fontSize: 14,
+  },
+  friendCashback: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  
+  // Report Cards
+  reportsContainer: {
+    gap: 12,
+  },
+  reportsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  reportCardHalf: {
+    flex: 1,
+    borderRadius: 12,
+    padding: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  reportCardFull: {
+    borderRadius: 12,
+    padding: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  reportCardContent: {
+    alignItems: 'center',
+  },
+  reportIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginBottom: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  reportIconText: {
+    fontSize: 24,
+  },
+  reportTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  reportSubRow: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 4,
+  },
+  reportSubTitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  
+  // Legacy styles (keeping for compatibility)
+  container: {
+    flex: 1,
+  },
+  backgroundImage: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  profileCard: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 4,
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  avatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   avatarText: {
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: 'bold',
   },
   userInfo: {
     flex: 1,
   },
   userName: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
     marginBottom: 4,
   },
-  userEmail: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.8)',
+  userPhone: {
+    fontSize: 14,
     marginBottom: 8,
   },
   guestBadge: {
@@ -738,27 +952,61 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 20,
+    paddingBottom: 5,
+  },
+  coinSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.1)',
+  },
+  coinBalance: {
+    flex: 1,
+  },
+  coinLabel: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  coinAmount: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  buyCoinButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  buyCoinText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
   card: {
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 6,
+    elevation: 3,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  statsSubtitle: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   coinBalance: {
     fontSize: 20,
@@ -877,11 +1125,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   logoutButton: {
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 12,
+    borderRadius: 8,
     alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 40,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 20,
   },
   logoutButtonText: {
     color: 'white',
@@ -1008,6 +1257,10 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: '#9C27B0',
   },
+  languageCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
+  },
   reportsCard: {
     borderLeftWidth: 4,
     borderLeftColor: '#607D8B',
@@ -1029,5 +1282,76 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.9)',
     marginTop: 4,
     fontWeight: '600',
+  },
+  settingItem: {
+    marginBottom: 20,
+  },
+  // Invitation Card Styles
+  invitationContent: {
+    gap: 16,
+  },
+  referralSection: {
+    gap: 6,
+  },
+  referralLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  referralCodeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 10,
+    borderRadius: 6,
+  },
+  referralCode: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    letterSpacing: 2,
+  },
+  copyIcon: {
+    fontSize: 16,
+  },
+  cashbackSection: {
+    gap: 6,
+  },
+  cashbackTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  cashbackText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  inviteButton: {
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  inviteButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Report Navigation Styles
+  reportGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  reportNavButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    gap: 6,
+  },
+  reportNavIcon: {
+    fontSize: 20,
+  },
+  reportNavText: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });

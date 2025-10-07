@@ -9,6 +9,7 @@ import {
   Alert,
   TextInput,
   Modal,
+  Image,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../components/ui/ThemeProvider';
@@ -19,9 +20,11 @@ import { CLASSIC_PATTERNS, MODERN_PATTERNS } from './patterns';
 import { audioManager } from '../../utils/audioManager';
 import { PatternCard } from '../../components/ui/PatternCard';
 import { Dropdown } from '../../components/ui/Dropdown';
-import { Check, Download, Volume2, Trash2 } from 'lucide-react-native';
+import { Check, Download, Volume2, Mic } from 'lucide-react-native';
+import Slider from '@react-native-community/slider';
 import { useNavigation } from '@react-navigation/native';
 import { ClassicLineType } from '../../types';
+import VoiceLanguageSelector from '../../components/ui/VoiceLanguageSelector';
 
 export const SettingsScreen: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -30,11 +33,8 @@ export const SettingsScreen: React.FC = () => {
   const {
     selectedPattern,
     patternCategory,
-    voiceGender,
     voiceLanguage,
-    selectedVoiceName,
-    maleVoiceNames,
-    femaleVoiceNames,
+    selectedVoice,
     appLanguage,
     rtpPercentage,
     theme: themeMode,
@@ -45,17 +45,18 @@ export const SettingsScreen: React.FC = () => {
     cardTheme,
     customCardTypes,
     selectedCardTypeName,
+    allowedLateCalls,
     setPattern,
     setPatternCategory,
-    setVoiceGender,
     setVoiceLanguage,
-    setSelectedVoiceName,
+    setSelectedVoice,
     setAppLanguage,
     setRtpPercentage,
     setTheme,
     setRewardAmount,
     setPlayerBinding,
     setCardTheme,
+    setAllowedLateCalls,
     setClassicLinesTarget,
     incrementClassicLinesTarget,
     decrementClassicLinesTarget,
@@ -66,6 +67,10 @@ export const SettingsScreen: React.FC = () => {
     removeCustomCardType,
     clearPattern,
     isGameReadyToStart,
+    numberCallingMode,
+    setNumberCallingMode,
+    gameDuration,
+    setGameDuration,
   } = useSettingsStore();
 
   const [activeTab, setActiveTab] = useState<'classic' | 'modern'>(patternCategory);
@@ -76,22 +81,12 @@ export const SettingsScreen: React.FC = () => {
   const [csvNumbers, setCsvNumbers] = useState('');
   const [singleNumber, setSingleNumber] = useState('');
   const [currentCardNumbers, setCurrentCardNumbers] = useState<number[]>([]);
-  const [tempRtpPercentage, setTempRtpPercentage] = useState(rtpPercentage?.toString() || '');
-  const [isEditingRtp, setIsEditingRtp] = useState(false);
-  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [cardToDelete, setCardToDelete] = useState<string | null>(null);
   const callerLanguages = useMemo(() => ['amharic','english','arabic','french'] as const, []);
   const appLanguages = useMemo(() => ['am','en'] as const, []);
-  const themeOptions = useMemo(() => ['light','dark','system'] as const, []);
+  const themeOptions = useMemo(() => ['dark'] as const, []);
   const cardThemeOptions = useMemo(() => ['default','black_white'] as const, []);
   const isClassicTab = activeTab === 'classic';
-  const selectMale = () => setVoiceGender('male');
-  const selectFemale = () => setVoiceGender('female');
   const selectDefaultCardName = () => selectCardTypeByName('default');
-  const currentVoiceNames = useMemo(
-    () => (voiceGender === 'male' ? maleVoiceNames : femaleVoiceNames),
-    [voiceGender, maleVoiceNames, femaleVoiceNames]
-  );
   const isDefaultCardSelected = useMemo(
     () => (!selectedCardTypeName || selectedCardTypeName === 'default'),
     [selectedCardTypeName]
@@ -114,15 +109,9 @@ export const SettingsScreen: React.FC = () => {
     setPattern(patternKey as any);
   };
 
-  const handleLanguageChange = (language: string) => {
-    const newLang = language as 'en' | 'am';
-    setAppLanguage(newLang);
-    i18n.changeLanguage(newLang);
-  };
 
   const handleVoicePreview = () => {
-    audioManager.setVoiceSettings(voiceGender, voiceLanguage);
-    audioManager.previewVoice('B 15');
+    audioManager.previewVoice();
   };
 
   // Classic checkbox row renderer
@@ -161,32 +150,10 @@ export const SettingsScreen: React.FC = () => {
     Alert.alert('Success', 'Player binding saved successfully!');
   };
 
-  const handleSaveRtp = () => {
-    const percentage = parseFloat(tempRtpPercentage);
-    if (!isNaN(percentage) && percentage >= 0 && percentage <= 100) {
-      setRtpPercentage(percentage);
-      setIsEditingRtp(false);
-    } else {
-      Alert.alert('Invalid Percentage', 'Please enter a valid RTP percentage between 0-100.');
-      setTempRtpPercentage(rtpPercentage?.toString() || '');
-    }
-  };
 
-  const handleDeleteCard = (cardName: string) => {
-    setCardToDelete(cardName);
-    setDeleteModalVisible(true);
-  };
-
-  const confirmDelete = () => {
-    if (cardToDelete) {
-      removeCustomCardType(cardToDelete);
-      setDeleteModalVisible(false);
-      setCardToDelete(null);
-    }
-  };
 
   const renderPatternSection = () => (
-    <View style={[styles.section, { backgroundColor: theme.colors.card }]}> 
+    <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
       <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
         {t('Pattern Selection Options')}
       </Text>
@@ -235,7 +202,7 @@ export const SettingsScreen: React.FC = () => {
         <View>
           {/* Classic lines stepper */}
           <View style={[styles.classicStepperRow, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}> 
-            <Text style={[styles.classicStepperTitle, { color: theme.colors.textSecondary }]}>Number of pattern required</Text>
+            <Text style={[styles.classicStepperTitle, { color: theme.colors.textSecondary }]}>Pattern required</Text>
             <View style={styles.stepperControls}>
               <TouchableOpacity
                 onPress={decrementClassicLinesTarget}
@@ -296,84 +263,122 @@ export const SettingsScreen: React.FC = () => {
     </View>
   );
 
-  const renderVoiceSection = () => (
-    <View style={[styles.section, { backgroundColor: theme.colors.card }]}> 
-      <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Bingo caller language</Text>
-
-      {/* Caller language dropdown */}
-      <View style={styles.settingItem}>
-        <Dropdown
-          value={voiceLanguage as any}
-          options={["english", "amharic"] as any}
-          onChange={(v: any) => setVoiceLanguage(v)}
-          getLabel={(v: any) => v.charAt(0).toUpperCase() + v.slice(1)}
-        />
-      </View>
-
-      {/* Gender tabs */}
-      <View style={[styles.tabContainer, { backgroundColor: theme.colors.surface }]}> 
+  const renderNumberCallingSection = () => (
+    <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+      <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Number Calling Mode</Text>
+      <Text style={[styles.sectionDescription, { color: theme.colors.textSecondary, marginBottom: 12 }]}>
+        Choose how numbers are called during the game
+      </Text>
+      
+      <View style={[styles.tabContainer, { backgroundColor: theme.colors.surface }]}>
         <TouchableOpacity
-          style={[styles.tab, voiceGender === 'male' && { backgroundColor: theme.colors.primary }]}
-          onPress={selectMale}
+          style={[
+            styles.tab,
+            numberCallingMode === 'automatic' && { backgroundColor: theme.colors.primary },
+          ]}
+          onPress={() => setNumberCallingMode('automatic')}
         >
-          <Text style={[styles.tabText, { color: voiceGender === 'male' ? '#FFFFFF' : theme.colors.text }]}>Male</Text>
+          <Text
+            style={[
+              styles.tabText,
+              {
+                color: numberCallingMode === 'automatic' ? '#FFFFFF' : theme.colors.text,
+              },
+            ]}
+          >
+            Automatic
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, voiceGender === 'female' && { backgroundColor: theme.colors.primary }]}
-          onPress={selectFemale}
+          style={[
+            styles.tab,
+            numberCallingMode === 'manual' && { backgroundColor: theme.colors.primary },
+          ]}
+          onPress={() => setNumberCallingMode('manual')}
         >
-          <Text style={[styles.tabText, { color: voiceGender === 'female' ? '#FFFFFF' : theme.colors.text }]}>Women</Text>
+          <Text
+            style={[
+              styles.tabText,
+              {
+                color: numberCallingMode === 'manual' ? '#FFFFFF' : theme.colors.text,
+              },
+            ]}
+          >
+            Manual
+          </Text>
         </TouchableOpacity>
       </View>
-
-      {/* Voice list */}
-      <View>
-        {currentVoiceNames.slice(0,5).map((name) => {
-          const isJohn = name === 'John' && voiceGender === 'male';
-          const isSelectable = isJohn; // John is selectable for both English and Amharic
+      
+      <Text style={[styles.helpText, { color: theme.colors.textSecondary }]}>
+        {numberCallingMode === 'automatic' 
+          ? 'Numbers will be called automatically with a timer' 
+          : 'Click the lottery ball to call the next number manually'
+        }
+      </Text>
+      
+      {numberCallingMode === 'manual' && (
+        <View style={[styles.warningContainer, { backgroundColor: '#FFF3CD', borderColor: '#FFEAA7' }]}>
+          <Text style={[styles.warningText, { color: '#856404' }]}>
+            ⚠️ Note: Single Player mode will always use automatic calling regardless of this setting.
+          </Text>
+        </View>
+      )}
+      
+      {numberCallingMode === 'automatic' && (
+        <View style={styles.sliderWithButtonsContainer}>
+          <Text style={[styles.sliderTitleLabel, { color: theme.colors.text }]}>
+            Call Duration: {gameDuration || 10} seconds
+          </Text>
           
-          return (
+          <View style={styles.sliderWithSideButtons}>
             <TouchableOpacity 
-              key={name} 
-              onPress={() => isSelectable ? setSelectedVoiceName(name) : undefined} 
-              style={[styles.voiceRow, { opacity: isSelectable ? 1 : 0.6 }]}
+              onPress={() => setGameDuration(Math.max(3, (gameDuration || 10) - 1))} 
+              style={[styles.sliderSideButton, { borderColor: theme.colors.border }]}
             >
-              {/* Selection/Download Icon */}
-              {isSelectable ? (
-                <View style={[styles.radioOuter, { borderColor: theme.colors.border }]}>
-                  {selectedVoiceName === name && <View style={[styles.radioInner, { backgroundColor: theme.colors.primary }]} />}
-                </View>
-              ) : (
-                <View style={styles.downloadIconContainer}>
-                  <Download size={20} color={theme.colors.text} />
-                </View>
-              )}
-              
-              {/* Voice Name */}
-              <Text style={[styles.radioLabel, { color: theme.colors.text, flex: 1 }]}>
-                {`${voiceLanguage.charAt(0).toUpperCase()+voiceLanguage.slice(1)} ${name}`}
-              </Text>
-              
-              {/* Voice Preview Icon */}
-              <TouchableOpacity 
-                onPress={() => {
-                  console.log('Voice preview clicked for:', name, voiceGender, voiceLanguage);
-                  audioManager.setVoiceSettings(voiceGender, voiceLanguage);
-                  audioManager.previewVoice('B 15');
-                }}
-                style={styles.voicePreviewBtn}
-              >
-                <Volume2 size={16} color={theme.colors.text} />
-              </TouchableOpacity>
+              <Text style={[styles.sliderButtonText, { color: theme.colors.text }]}>-</Text>
             </TouchableOpacity>
-          );
-        })}
+            
+            <Slider
+              style={styles.sliderWithButtons}
+              minimumValue={3}
+              maximumValue={60}
+              value={gameDuration || 10}
+              onValueChange={setGameDuration}
+              step={1}
+              minimumTrackTintColor={theme.colors.primary}
+              maximumTrackTintColor={theme.colors.border}
+            />
+            
+            <TouchableOpacity 
+              onPress={() => setGameDuration(Math.min(60, (gameDuration || 10) + 1))} 
+              style={[styles.sliderSideButton, { borderColor: theme.colors.border }]}
+            >
+              <Text style={[styles.sliderButtonText, { color: theme.colors.text }]}>+</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.sliderLabels}>
+            <Text style={[styles.sliderEndLabel, { color: theme.colors.textSecondary }]}>3s</Text>
+            <Text style={[styles.sliderEndLabel, { color: theme.colors.textSecondary }]}>60s</Text>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+
+  const renderVoiceSection = () => (
+    <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+      <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Bingo Caller Voice & Language</Text>
+      
+      {/* Embedded Voice Language Selector */}
+      <View style={styles.voiceContainer}>
+        <VoiceLanguageSelector />
       </View>
     </View>
   );
 
   const renderAppSettingsSection = () => (
-    <View style={[styles.section, { backgroundColor: theme.colors.card }]}>
+    <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
       <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
         App Settings
       </Text>
@@ -381,52 +386,107 @@ export const SettingsScreen: React.FC = () => {
   );
 
   const renderRTPSection = () => (
-    <View style={[styles.section, { backgroundColor: theme.colors.card }]}> 
+    <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
       <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('settings.rtp')}</Text>
-      <Text style={[styles.sectionDescription, { color: theme.colors.textSecondary }]}>{t('settings.rtpInfo')}</Text>
+      <Text style={[styles.sectionDescription, { color: theme.colors.textSecondary, marginBottom: 12 }]}>{t('settings.rtpInfo')}</Text>
       
-      <View style={styles.rtpRow}>
-        <TouchableOpacity onPress={() => useSettingsStore.getState().decreaseRtp()} style={[styles.stepperButton, { borderColor: theme.colors.border }]}>
-          <Text style={[styles.stepperButtonText, { color: theme.colors.text }]}>-</Text>
-        </TouchableOpacity>
+      <View style={styles.sliderWithButtonsContainer}>
+        <Text style={[styles.sliderTitleLabel, { color: theme.colors.text }]}>
+          RTP: {rtpPercentage}%
+        </Text>
         
-        {/* Editable RTP Value */}
-        <TouchableOpacity 
-          onPress={() => {
-            setIsEditingRtp(true);
-            setTempRtpPercentage(rtpPercentage?.toString() || '');
-          }}
-          style={[styles.rtpValuePill, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-        >
-          {isEditingRtp ? (
-            <TextInput
-              style={[styles.rtpEditInput, { color: theme.colors.text }]}
-              value={tempRtpPercentage}
-              onChangeText={setTempRtpPercentage}
-              onBlur={handleSaveRtp}
-              onSubmitEditing={handleSaveRtp}
-              keyboardType="numeric"
-              autoFocus
-              selectTextOnFocus
-            />
-          ) : (
-            <Text style={[styles.rtpValueText, { color: theme.colors.text }]}>{rtpPercentage}%</Text>
-          )}
-        </TouchableOpacity>
+        <View style={styles.sliderWithSideButtons}>
+          <TouchableOpacity 
+            onPress={() => useSettingsStore.getState().decreaseRtp()} 
+            style={[styles.sliderSideButton, { borderColor: theme.colors.border }]}
+          >
+            <Text style={[styles.sliderButtonText, { color: theme.colors.text }]}>-</Text>
+          </TouchableOpacity>
+          
+          <Slider
+            style={styles.sliderWithButtons}
+            minimumValue={0}
+            maximumValue={100}
+            value={rtpPercentage || 60}
+            onValueChange={setRtpPercentage}
+            step={1}
+            minimumTrackTintColor={theme.colors.primary}
+            maximumTrackTintColor={theme.colors.border}
+          />
+          
+          <TouchableOpacity 
+            onPress={() => useSettingsStore.getState().increaseRtp()} 
+            style={[styles.sliderSideButton, { borderColor: theme.colors.border }]}
+          >
+            <Text style={[styles.sliderButtonText, { color: theme.colors.text }]}>+</Text>
+          </TouchableOpacity>
+        </View>
         
-        <TouchableOpacity onPress={() => useSettingsStore.getState().increaseRtp()} style={[styles.stepperButton, { borderColor: theme.colors.border }]}>
-          <Text style={[styles.stepperButtonText, { color: theme.colors.text }]}>+</Text>
-        </TouchableOpacity>
+        <View style={styles.sliderLabels}>
+          <Text style={[styles.sliderEndLabel, { color: theme.colors.textSecondary }]}>0%</Text>
+          <Text style={[styles.sliderEndLabel, { color: theme.colors.textSecondary }]}>100%</Text>
+        </View>
       </View>
     </View>
   );
 
+  const renderBingoCallTimingSection = () => {
+    const options = ['off', '0', '1', '2', '3', '4', '5'] as const;
+    
+    const getLabel = (value: string) => {
+      switch (value) {
+        case 'off': return 'Off (Unlimited)';
+        case '0': return '0 (Immediate Only)';
+        case '1': return '1 Ball After';
+        case '2': return '2 Balls After';
+        case '3': return '3 Balls After';
+        case '4': return '4 Balls After';
+        case '5': return '5 Balls After';
+        default: return value;
+      }
+    };
+
+    return (
+      <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Bingo Call Timing</Text>
+        <Text style={[styles.sectionDescription, { color: theme.colors.textSecondary, marginBottom: 12 }]}>
+          Set how many balls after the winning number a player can still call "Bingo!" and be accepted. This prevents delayed calls to see better patterns.
+        </Text>
+        
+        <Dropdown
+          value={String(allowedLateCalls) as any}
+          options={options as any}
+          getLabel={getLabel}
+          onChange={(value: string) => {
+            if (value === 'off') {
+              setAllowedLateCalls('off');
+            } else {
+              setAllowedLateCalls(parseInt(value));
+            }
+          }}
+        />
+        
+        <View style={styles.timingExplanation}>
+          <Text style={[styles.timingTitle, { color: theme.colors.text }]}>Current Setting:</Text>
+          <Text style={[styles.timingDescription, { color: theme.colors.textSecondary }]}>
+            {allowedLateCalls === 'off' 
+              ? 'Players can call bingo at any time (no time limit)'
+              : allowedLateCalls === 0
+              ? 'Players must call bingo immediately when their winning number is called'
+              : `Players can call bingo up to ${allowedLateCalls} ball${allowedLateCalls !== 1 ? 's' : ''} after their winning number`
+            }
+          </Text>
+        </View>
+      </View>
+    );
+  };
+
   const renderHostSettingsSection = () => (
-    <View style={[styles.section, { backgroundColor: theme.colors.card }]}> 
+    <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
       <Text style={[styles.sectionTitle, { color: theme.colors.text }]}> 
         🎯 {t('settings.title')}
       </Text>
-      <Text style={[styles.sectionDescription, { color: theme.colors.textSecondary }]}> 
+      <Text style={[styles.sectionDescription, { color: theme.colors.textSecondary, marginBottom: 12 }]}> 
         {t('settings.selectPattern')}
       </Text>
 
@@ -521,30 +581,17 @@ export const SettingsScreen: React.FC = () => {
     );
   };
 
-  const renderLanguageSection = () => (
-    <View style={[styles.section, { backgroundColor: theme.colors.card }]}> 
-      <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('language')}</Text>
-      <View style={styles.settingItem}>
-        <Dropdown
-          value={appLanguage as any}
-          options={["am","en","ar","fr"] as any}
-          onChange={(v: any) => handleLanguageChange(v)}
-          getLabel={(v: any) => v === 'am' ? 'Amharic' : v === 'en' ? 'English' : v === 'ar' ? 'Arabic' : 'French'}
-        />
-      </View>
-    </View>
-  );
 
   const renderGameThemeSection = () => (
-    <View style={[styles.section, { backgroundColor: theme.colors.card }]}> 
-      <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>App theme</Text>
-      {/* Toggle between Default (System/Light/Dark) vs Black & White */}
+    <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+      <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Game Theme</Text>
+      {/* Toggle between Default (Dark) vs Black & White */}
       <View style={styles.radioHorizontal}>
         <TouchableOpacity style={styles.radioRow} onPress={() => setCardTheme(THEME_DEFAULT)}> 
           <View style={[styles.radioOuter, { borderColor: theme.colors.border }]}>
             {isDefaultCardTheme && <View style={[styles.radioInner, { backgroundColor: theme.colors.primary }]} />} 
           </View>
-          <Text style={[styles.radioLabel, { color: theme.colors.text }]}>Default</Text>
+          <Text style={[styles.radioLabel, { color: theme.colors.text }]}>Default (Dark)</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.radioRow} onPress={() => setCardTheme(THEME_BW)}> 
           <View style={[styles.radioOuter, { borderColor: theme.colors.border }]}>
@@ -554,116 +601,125 @@ export const SettingsScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Show theme previews only when Default is selected */}
+      {/* Theme information for Default selection */}
       {isDefaultCardTheme && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.themePreviewScroll}>
-          {/* System preview (half light, half dark) */}
-          <TouchableOpacity onPress={() => setTheme('system')}>
-            <View style={[styles.themePreviewCard, { borderColor: themeMode === 'system' ? theme.colors.primary : theme.colors.border, borderWidth: themeMode === 'system' ? 2 : 1 }]}> 
-              <View style={styles.systemRow}>
-                <View style={[styles.systemHalf, { backgroundColor: '#FFFFFF' }]} />
-                <View style={[styles.systemHalf, { backgroundColor: '#1A202C' }]} />
-              </View>
-              <Text style={styles.themePreviewLabel}>System</Text>
-            </View>
-          </TouchableOpacity>
-          {/* Light preview */}
-          <TouchableOpacity onPress={() => setTheme('light')}>
-            <View style={[styles.themePreviewCard, { borderColor: themeMode === 'light' ? theme.colors.primary : theme.colors.border, borderWidth: themeMode === 'light' ? 2 : 1 }]}> 
-              <View style={[styles.lightPreview]} />
-              <Text style={styles.themePreviewLabel}>Light</Text>
-            </View>
-          </TouchableOpacity>
-          {/* Dark preview */}
-          <TouchableOpacity onPress={() => setTheme('dark')}>
-            <View style={[styles.themePreviewCard, { borderColor: themeMode === 'dark' ? theme.colors.primary : theme.colors.border, borderWidth: themeMode === 'dark' ? 2 : 1 }]}> 
-              <View style={[styles.darkPreview]} />
-              <Text style={styles.themePreviewLabel}>Dark</Text>
-            </View>
-          </TouchableOpacity>
-        </ScrollView>
+        <View style={styles.themeInfo}>
+          <Text style={[styles.themeInfoText, { color: theme.colors.textSecondary }]}>
+            Default theme uses dark colors for optimal gaming experience.
+          </Text>
+        </View>
       )}
     </View>
   );
 
-  const renderCardTypeSection = () => (
-    <View style={[styles.section, { backgroundColor: theme.colors.card }]}> 
-      <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Bingo Card Type</Text>
-      <View style={styles.radioHorizontal}>
-        <TouchableOpacity style={styles.radioRow} onPress={selectDefaultCardName}> 
-          <View style={[styles.radioOuter, { borderColor: theme.colors.border }]}>
-            {isDefaultCardSelected && <View style={[styles.radioInner, { backgroundColor: theme.colors.primary }]} />}
-          </View>
-          <Text style={[styles.radioLabel, { color: theme.colors.text }]}>Default</Text>
-        </TouchableOpacity>
-      </View>
-      {customCardTypes.length === 0 && (
-        <View style={{ alignItems: 'flex-end', marginTop: 8 }}>
-          <Button title="Add New" onPress={() => (navigation as any).navigate('CardTypeEditor', { mode: 'create' })} />
-        </View>
-      )}
-      {customCardTypes.length > 0 && (
-        <View style={{ marginTop: 12 }}>
-          {customCardTypes.map(c => (
-            <View key={c.name} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <TouchableOpacity style={styles.radioRow} onPress={() => selectCardTypeByName(c.name)}>
-                <View style={[styles.radioOuter, { borderColor: theme.colors.border }]}>
-                  {useSettingsStore.getState().selectedCardTypeName === c.name && <View style={[styles.radioInner, { backgroundColor: theme.colors.primary }]} />}
-                </View>
-                <Text style={[styles.radioLabel, { color: theme.colors.text }]}>{c.name}</Text>
-              </TouchableOpacity>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                <Button title="Show" variant="outline" onPress={() => (navigation as any).navigate('CardTypeEditor', { mode: 'manage', name: c.name })} />
-                <TouchableOpacity 
-                  onPress={() => handleDeleteCard(c.name)}
-                  style={[styles.deleteButton, { borderColor: '#dc3545' }]}
-                >
-                  <Trash2 size={16} color="#dc3545" />
-                </TouchableOpacity>
-              </View>
+  const renderCardTypeSection = () => {
+    // Find default and custom card types
+    const defaultCardType = customCardTypes.find(c => c.name === 'default');
+    const customCardType = customCardTypes.find(c => c.name === 'custom');
+    
+    // Check if custom cards have any cards in them
+    const hasCustomCards = customCardType && customCardType.cards && customCardType.cards.length > 0;
+    
+    // Determine button text and action based on selected card type
+    const getButtonConfig = () => {
+      if (selectedCardTypeName === 'default') {
+        return {
+          title: 'Show World Bingo Cards',
+          variant: 'outline' as const,
+          onPress: () => (navigation as any).navigate('CardTypeEditor', { mode: 'manage', name: 'default' })
+        };
+      } else {
+        // Custom is selected
+        if (hasCustomCards) {
+          return {
+            title: 'Show Custom Cards',
+            variant: 'outline' as const,
+            onPress: () => (navigation as any).navigate('CardTypeEditor', { mode: 'manage', name: 'custom' })
+          };
+        } else {
+          return {
+            title: 'Create Custom Cards',
+            variant: undefined,
+            onPress: () => (navigation as any).navigate('CardTypeEditor', { mode: 'create', name: 'custom' })
+          };
+        }
+      }
+    };
+    
+    const buttonConfig = getButtonConfig();
+    
+    return (
+      <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Bingo Card Type</Text>
+        
+        {/* World Bingo Cards Option */}
+        <View style={styles.radioHorizontal}>
+          <TouchableOpacity style={styles.radioRow} onPress={() => selectCardTypeByName('default')}> 
+            <View style={[styles.radioOuter, { borderColor: theme.colors.border }]}>
+              {selectedCardTypeName === 'default' && <View style={[styles.radioInner, { backgroundColor: theme.colors.primary }]} />}
             </View>
-          ))}
+            <Text style={[styles.radioLabel, { color: theme.colors.text }]}>World Bingo</Text>
+          </TouchableOpacity>
         </View>
-      )}
-    </View>
-  );
+        
+        {/* Custom Cards Option */}
+        <View style={styles.radioHorizontal}>
+          <TouchableOpacity style={styles.radioRow} onPress={() => selectCardTypeByName('custom')}> 
+            <View style={[styles.radioOuter, { borderColor: theme.colors.border }]}>
+              {selectedCardTypeName === 'custom' && <View style={[styles.radioInner, { backgroundColor: theme.colors.primary }]} />}
+            </View>
+            <Text style={[styles.radioLabel, { color: theme.colors.text }]}>Custom</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {/* Single Show/Create Button */}
+        <View style={styles.showButtonsContainer}>
+          <Button 
+            title={buttonConfig.title}
+            variant={buttonConfig.variant}
+            onPress={buttonConfig.onPress}
+            style={styles.showButton}
+          />
+        </View>
+      </View>
+    );
+  };
+
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {renderLanguageSection()}
+    <View style={styles.container}>
+      <Image 
+        source={require('../../assets/images/app-bgaround.png')}
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      />
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Game Configuration Group */}
         {renderPatternSection()}
+        {renderNumberCallingSection()}
+        <View style={styles.groupSeparator} />
+        
+        {/* Audio & Voice Group */}
         {renderVoiceSection()}
+        <View style={styles.groupSeparator} />
+        
+        {/* Game Rules Group */}
         {renderRTPSection()}
+        {renderBingoCallTimingSection()}
+        <View style={styles.groupSeparator} />
+        
+        {/* Appearance Group */}
         {renderGameThemeSection()}
+        <View style={styles.groupSeparator} />
+        
+        {/* Card Management Group */}
         {renderCardTypeSection()}
       </ScrollView>
       
-      {/* Delete Confirmation Modal */}
-      <Modal visible={deleteModalVisible} transparent animationType="fade" onRequestClose={() => setDeleteModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
-            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Delete Cartela</Text>
-            <Text style={[styles.modalMessage, { color: theme.colors.textSecondary }]}>
-              Are you sure you want to delete "{cardToDelete}"? This action cannot be undone.
-            </Text>
-            <View style={styles.modalActions}>
-              <TouchableOpacity 
-                onPress={() => setDeleteModalVisible(false)}
-                style={[styles.modalButton, { backgroundColor: theme.colors.surface }]}
-              >
-                <Text style={[styles.modalButtonText, { color: theme.colors.text }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                onPress={confirmDelete}
-                style={[styles.modalButton, { backgroundColor: '#dc3545' }]}
-              >
-                <Text style={[styles.modalButtonText, { color: '#fff' }]}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 };
@@ -672,19 +728,29 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  backgroundImage: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
   scrollContent: {
+    flexGrow: 1,
+    alignItems: 'center',
     padding: 20,
     paddingBottom: 40,
+    paddingTop: 35,
   },
   section: {
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+    width: '100%',
+    maxWidth: 600,
   },
   sectionTitle: {
     fontSize: 20,
@@ -695,6 +761,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 16,
+    flexWrap: 'wrap',
   },
   tabContainer: {
     flexDirection: 'row',
@@ -727,9 +794,9 @@ const styles = StyleSheet.create({
   stepperButton: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   stepperButtonText: { fontSize: 18, fontWeight: '700' },
   stepperValue: { width: 30, textAlign: 'center', fontSize: 16, fontWeight: '700' },
-  checkboxRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  checkboxRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' },
   checkboxBox: { width: 24, height: 24, borderRadius: 6, borderWidth: 1 },
-  checkboxLabel: { fontSize: 16, fontWeight: '500' },
+  checkboxLabel: { fontSize: 16, fontWeight: '500', flex: 1, flexWrap: 'wrap' },
   helperNote: { fontSize: 12, marginTop: -4, marginBottom: 8 },
   patternGrid: {
     flexDirection: 'row',
@@ -770,17 +837,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-  listRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
+  listRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, flexWrap: 'wrap' },
   checkIcon: { width: 22, height: 22, borderRadius: 11, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
-  listLabel: { fontSize: 16, fontWeight: '500' },
-  radioRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  listLabel: { fontSize: 16, fontWeight: '500', flex: 1, flexWrap: 'wrap' },
+  radioRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap' },
   radioOuter: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
   radioInner: { width: 10, height: 10, borderRadius: 5 },
-  radioLabel: { fontSize: 16 },
+  radioLabel: { fontSize: 16, flex: 1, flexWrap: 'wrap' },
   radioHorizontal: { marginTop: 6 },
-  rtpRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8 },
-  rtpValuePill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 18, borderWidth: 1 },
-  rtpValueText: { fontWeight: '700' },
   themeButtons: {
     flexDirection: 'row',
     gap: 8,
@@ -811,6 +875,8 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 20,
     alignItems: 'center',
+    width: '100%',
+    maxWidth: 600,
   },
   statusText: {
     color: '#FFFFFF',
@@ -858,8 +924,18 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontStyle: 'italic',
   },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
-  modalContent: { borderRadius: 12, padding: 16 },
+  warningContainer: {
+    marginTop: 8,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    width: '100%',
+    maxWidth: 600,
+  },
+  warningText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
   voiceRow: { 
     flexDirection: 'row', 
     alignItems: 'center', 
@@ -878,46 +954,112 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rtpEditInput: {
+  sliderLabel: {
     fontSize: 16,
-    fontWeight: '700',
-    textAlign: 'center',
-    minWidth: 40,
-  },
-  deleteButton: {
-    width: 40,
-    height: 44,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(220, 53, 69, 0.1)',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '500',
     marginBottom: 12,
     textAlign: 'center',
   },
-  modalMessage: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 20,
-    textAlign: 'center',
+  slider: {
+    width: '100%',
+    height: 40,
   },
-  modalActions: {
+  sliderLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 12,
+    marginTop: 4,
+    paddingHorizontal: 8,
   },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
+  sliderEndLabel: {
+    fontSize: 12,
+    fontWeight: '500',
   },
-  modalButtonText: {
+  showButtonsContainer: {
+    marginTop: 16,
+    gap: 8,
+  },
+  showButton: {
+    width: '100%',
+  },
+  sliderWithButtonsContainer: {
+    marginTop: 16,
+  },
+  sliderTitleLabel: {
     fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  sliderWithSideButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 8,
+  },
+  sliderSideButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sliderWithButtons: {
+    flex: 1,
+    height: 40,
+  },
+  sliderButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  timingExplanation: {
+    marginTop: 16,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  timingTitle: {
+    fontSize: 14,
     fontWeight: '600',
+    marginBottom: 4,
+  },
+  timingDescription: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  dropdown: {
+    marginTop: 8,
+  },
+  themeInfo: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  themeInfoText: {
+    fontSize: 14,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  voiceContainer: {
+    marginBottom: 12,
+  },
+  previewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 8,
+  },
+  previewButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  groupSeparator: {
+    height: 6,
+    marginVertical: 2,
   },
 });

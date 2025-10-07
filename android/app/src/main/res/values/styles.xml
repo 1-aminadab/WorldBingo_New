@@ -6,4 +6,12 @@
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
     </style>
 
+    <!-- Full screen theme for hiding system navigation -->
+    <style name="FullScreenTheme" parent="AppTheme">
+        <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:windowTranslucentNavigation">true</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">false</item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
+
 </resources>

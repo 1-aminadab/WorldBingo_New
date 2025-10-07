@@ -5,12 +5,23 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useTheme } from '../../components/ui/ThemeProvider';
 import { useSettingsStore } from '../../store/settingsStore';
 
+
 export const StakeSetupScreen: React.FC = () => {
   const navigation = useNavigation();
   const { theme } = useTheme();
   const { derashAmount, medebAmount, setDerashAmount, setMedebAmount, rtpPercentage } = useSettingsStore();
   const [derash, setDerash] = useState(String(derashAmount ?? 100));
   const [medeb, setMedeb] = useState(String(medebAmount ?? 20));
+
+  // Auto-fill with persisted values on component mount
+  React.useEffect(() => {
+    if (derashAmount) {
+      setDerash(String(derashAmount));
+    }
+    if (medebAmount) {
+      setMedeb(String(medebAmount));
+    }
+  }, [derashAmount, medebAmount]);
 
   const startGame = () => {
     const d = Math.max(0, parseInt(derash || '0', 10));
@@ -25,7 +36,8 @@ export const StakeSetupScreen: React.FC = () => {
   return (
     <LinearGradient colors={[theme.colors.surface, theme.colors.background]} style={styles.container}>
       <KeyboardAvoidingScreen>
-        <ScrollView style={[styles.card, { backgroundColor: theme.colors.card }]}> 
+        <View style={[{ backgroundColor: theme.colors.surface, borderRadius: 8, padding: 16 }]}>
+          <ScrollView style={styles.card}> 
           <Text style={[styles.title, { color: theme.colors.text }]}>Enter Stakes</Text>
 
           <View style={styles.row}> 
@@ -56,7 +68,8 @@ export const StakeSetupScreen: React.FC = () => {
           <TouchableOpacity onPress={startGame} style={[styles.startButton, { backgroundColor: theme.colors.primary }]}> 
             <Text style={styles.startText}>Start Game</Text>
           </TouchableOpacity>
-        </ScrollView>
+          </ScrollView>
+        </View>
       </KeyboardAvoidingScreen>
     </LinearGradient>
   );
@@ -71,8 +84,9 @@ const KeyboardAvoidingScreen: React.FC<{ children: React.ReactNode }> = ({ child
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 20 },
-  card: { borderRadius: 16, padding: 20 },
+  container: { flex: 1, justifyContent: 'center', padding: 20, alignItems: 'center' },
+  cardContainer: { alignSelf: 'center' },
+  card: { flex: 1 },
   title: { fontSize: 20, fontWeight: '700', marginBottom: 12, textAlign: 'center' },
   row: { marginBottom: 16 },
   label: { fontSize: 14, marginBottom: 6 },
