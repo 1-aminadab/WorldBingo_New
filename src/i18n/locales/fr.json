@@ -76,6 +76,7 @@
     "full_house": "Carton plein",
     "t_shape": "Forme T",
     "u_shape": "Forme U",
+    "l_shape": "Forme L",
     "x_shape": "Forme X",
     "plus_sign": "Signe plus",
     "diamond": "Losange",
@@ -86,6 +87,7 @@
       "full_house": "Remplir toute la carte de bingo",
       "t_shape": "Compléter la ligne du haut et la colonne du milieu",
       "u_shape": "Compléter la colonne de gauche, la colonne de droite et la ligne du bas",
+      "l_shape": "Compléter la colonne de gauche et la ligne du bas",
       "x_shape": "Compléter les deux diagonales",
       "plus_sign": "Compléter la ligne du milieu et la colonne du milieu",
       "diamond": "Compléter le motif en losange au centre"

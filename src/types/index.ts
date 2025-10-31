@@ -8,6 +8,7 @@ export type BingoPattern =
   // Modern patterns
   | 't_shape'
   | 'u_shape'
+  | 'l_shape'
   | 'x_shape'
   | 'plus_sign'
   | 'diamond';
@@ -97,6 +98,8 @@ export interface CustomCardType {
 // Auth Types
 export interface User {
   id: string;
+  userId?: string;
+  phoneNumber?: string;
   email: string;
   name: string;
   avatar?: string;
@@ -138,8 +141,8 @@ export type AuthStackParamList = {
   Login: undefined;
   SignUp: undefined;
   ForgotPassword: undefined;
-  OTPVerification: { email: string };
-  ChangePassword: { token: string };
+  OTPVerification: { phoneNumber: string };
+  ChangePassword: { phoneNumber: string; otp: string };
 };
 
 export type MainTabParamList = {

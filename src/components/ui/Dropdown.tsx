@@ -19,7 +19,7 @@ export function Dropdown<T extends string>({ label, value, options, getLabel, on
     <View style={styles.container}>
       {label && <Text style={[styles.label, { color: theme.colors.text }]}>{label}</Text>}
       <TouchableOpacity
-        style={[styles.control, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+        style={[styles.control, { backgroundColor: 'rgb(0, 6, 62)', borderColor: theme.colors.border }]}
         onPress={() => setOpen(!open)}
         activeOpacity={0.8}
       >
@@ -27,7 +27,7 @@ export function Dropdown<T extends string>({ label, value, options, getLabel, on
         <Text style={{ color: theme.colors.textSecondary }}>{open ? '▲' : '▼'}</Text>
       </TouchableOpacity>
       {open && (
-        <View style={[styles.menu, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}> 
+        <View style={[styles.menu, { backgroundColor:'rgb(0, 6, 62)', borderColor: theme.colors.border }]}> 
           {options.map((opt) => (
             <TouchableOpacity key={opt} style={styles.item} onPress={() => { onChange(opt); setOpen(false); }}>
               <Text style={{ color: theme.colors.text }}>{resolve(opt)}</Text>

@@ -4,6 +4,8 @@ import { useSettingsStore } from '../store/settingsStore';
 class AudioService {
   private isInitialized = false;
   private backgroundMusicStarted = false;
+  private rehydrationCheckAttempts = 0;
+  private maxRehydrationAttempts = 20; // Max 2 seconds (20 * 100ms)
 
   /**
    * Initialize the audio service - should be called on app startup
@@ -13,18 +15,11 @@ class AudioService {
     
     console.log('🎵 AudioService: Initializing...');
     
-    // Get the current music state from persistent storage
-    const { isMusicEnabled } = useSettingsStore.getState();
-    
-    console.log('🎵 AudioService: Music enabled from storage:', isMusicEnabled);
-    
-    // Start background music if enabled
-    if (isMusicEnabled && !this.backgroundMusicStarted) {
-      this.startBackgroundMusic();
-    }
+    // Wait for store rehydration to complete before starting music
+    this.waitForRehydrationAndStart();
     
     // Subscribe to music state changes
-    let previousMusicState = isMusicEnabled;
+    let previousMusicState = useSettingsStore.getState().isMusicEnabled;
     useSettingsStore.subscribe((state) => {
       if (state.isMusicEnabled !== previousMusicState) {
         console.log('🎵 AudioService: Music state changed to:', state.isMusicEnabled);
@@ -39,6 +34,31 @@ class AudioService {
     
     this.isInitialized = true;
     console.log('🎵 AudioService: Initialization complete');
+  }
+
+  /**
+   * Wait for store rehydration and start music if enabled
+   * This prevents starting music before persisted state is loaded
+   */
+  private waitForRehydrationAndStart() {
+    const checkAndStart = () => {
+      this.rehydrationCheckAttempts++;
+      
+      const { isMusicEnabled } = useSettingsStore.getState();
+      
+      console.log(`🎵 AudioService: Check attempt ${this.rehydrationCheckAttempts}, isMusicEnabled:`, isMusicEnabled);
+      
+      // Start music if enabled
+      if (isMusicEnabled && !this.backgroundMusicStarted) {
+        console.log('🎵 AudioService: Starting background music (rehydration complete)');
+        this.startBackgroundMusic();
+      } else if (!isMusicEnabled) {
+        console.log('🎵 AudioService: Music is disabled, not starting');
+      }
+    };
+    
+    // Wait for rehydration to complete (500ms should be enough for AsyncStorage to load)
+    setTimeout(checkAndStart, 500);
   }
 
   /**
@@ -108,6 +128,30 @@ class AudioService {
   disableMusic() {
     const { setMusicEnabled } = useSettingsStore.getState();
     setMusicEnabled(false);
+  }
+
+  /**
+   * Temporarily pause music without changing the persisted state
+   * Used when entering game screens where other audio plays
+   */
+  pauseMusic() {
+    if (this.backgroundMusicStarted) {
+      console.log('🎵 AudioService: Temporarily pausing music for game');
+      audioManager.stopBackgroundMusic();
+      this.backgroundMusicStarted = false; // Update flag so music can be resumed
+    }
+  }
+
+  /**
+   * Resume music if it was enabled before pausing
+   * Restores music based on the persisted state
+   */
+  resumeMusic() {
+    const { isMusicEnabled } = useSettingsStore.getState();
+    if (isMusicEnabled) {
+      console.log('🎵 AudioService: Resuming music after game');
+      this.startBackgroundMusic();
+    }
   }
 }
 

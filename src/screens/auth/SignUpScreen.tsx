@@ -5,82 +5,111 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   KeyboardAvoidingView,
   Platform,
-  Image,
   Dimensions,
+  StatusBar,
+  ImageBackground,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useTranslation } from 'react-i18next';
-import LinearGradient from 'react-native-linear-gradient';
-import { Mail, Lock, User, UserPlus } from 'lucide-react-native';
+import { ArrowLeft, Eye, EyeOff } from 'lucide-react-native';
 import { useTheme } from '../../components/ui/ThemeProvider';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
+import AuthField from '../../components/ui/AuthField';
+import PhoneField from '../../components/ui/PhoneField';
+import BlueButton from '../../components/ui/BlueButton';
+import { LoadingOverlay } from '../../components/ui/LoadingOverlay';
+import { useToast } from '../../components/ui/Toast/ToastProvider';
 import { useAuthStore } from '../../store/authStore';
-import { useFirebaseAuth } from '../../hooks/useFirebaseAuth';
+import StatusModal from '../../components/ui/StatusModal';
+import BlurBackground from '../../components/ui/BlurBackground';
+import { ScreenNames } from '../../constants/ScreenNames';
 
 const { width, height } = Dimensions.get('window');
 
 export const SignUpScreen: React.FC = () => {
   const navigation = useNavigation();
-  const { t } = useTranslation();
   const { theme } = useTheme();
-  const { signup, isLoading } = useAuthStore();
+  const { register, isLoading } = useAuthStore();
+  const { showSuccess, showError } = useToast();
   
-  // Initialize Firebase Auth state listener
-  useFirebaseAuth();
-
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
+    firstName: '',
+    lastName: '',
+    phoneNumber: '',
     password: '',
     confirmPassword: '',
+    promoCode: '',
   });
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [countryCode, setCountryCode] = useState('+251'); // Ethiopia default
+  const [showPassword, setShowPassword] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [status, setStatus] = useState<{visible: boolean; variant: 'success'|'error'; title?: string; message?: string}>({visible:false, variant:'success'});
 
   const validateForm = (): boolean => {
-    const newErrors: {[key: string]: string} = {};
-
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
-    } else if (formData.name.trim().length < 2) {
-      newErrors.name = 'Name must be at least 2 characters';
+    if (!formData.firstName.trim()) {
+      setStatus({ visible: true, variant: 'error', title: 'First name required', message: 'Please enter your first name' });
+      return false;
     }
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email';
+    if (formData.firstName.trim().length < 2) {
+      setStatus({ visible: true, variant: 'error', title: 'Name too short', message: 'First name must be at least 2 characters' });
+      return false;
     }
-
+    if (!formData.lastName.trim()) {
+      setStatus({ visible: true, variant: 'error', title: 'Last name required', message: 'Please enter your last name' });
+      return false;
+    }
+    if (formData.lastName.trim().length < 2) {
+      setStatus({ visible: true, variant: 'error', title: 'Name too short', message: 'Last name must be at least 2 characters' });
+      return false;
+    }
+    if (!formData.phoneNumber.trim()) {
+      setStatus({ visible: true, variant: 'error', title: 'Phone number required', message: 'Please enter your phone number' });
+      return false;
+    }
     if (!formData.password.trim()) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+      setStatus({ visible: true, variant: 'error', title: 'Password required', message: 'Please enter your password' });
+      return false;
     }
-
+    if (formData.password.length < 6) {
+      setStatus({ visible: true, variant: 'error', title: 'Weak password', message: 'Password must be at least 6 characters' });
+      return false;
+    }
     if (!formData.confirmPassword.trim()) {
-      newErrors.confirmPassword = 'Please confirm your password';
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      setStatus({ visible: true, variant: 'error', title: 'Confirm password', message: 'Please confirm your password' });
+      return false;
     }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    if (formData.password !== formData.confirmPassword) {
+      setStatus({ visible: true, variant: 'error', title: 'Passwords do not match', message: 'Please re-enter matching passwords' });
+      return false;
+    }
+    return true;
   };
 
   const handleSignUp = async () => {
     if (!validateForm()) return;
 
+    setStatus((s)=>({ ...s, visible:false }));
+    setIsValidating(true);
+
     try {
-      const success = await signup(formData.email, formData.password, formData.name);
-      if (!success) {
-        Alert.alert('Error', 'Failed to create account');
+      const fullName = `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim();
+      const fullPhoneNumber = `${countryCode}${formData.phoneNumber}`;
+      const result = await register(fullName, fullPhoneNumber, formData.password, formData.confirmPassword, formData.promoCode);
+      if (result.success) {
+        if (result.requiresOtp) {
+          setStatus({ visible: true, variant: 'success', title: 'OTP sent', message: 'Check your phone for the code' });
+          setTimeout(() => (navigation as any).navigate(ScreenNames.OTP_VERIFICATION, { phoneNumber: fullPhoneNumber }), 1200);
+        } else {
+          setStatus({ visible: true, variant: 'success', title: 'Account created', message: 'Redirecting...' });
+          setTimeout(() => navigation.navigate(ScreenNames.MAIN as never), 1200);
+        }
+      } else {
+        setStatus({ visible: true, variant: 'error', title: 'Sign up failed', message: result.message || 'Please try again' });
       }
     } catch (error) {
-      Alert.alert('Error', 'An error occurred during sign up');
+      setStatus({ visible: true, variant: 'error', title: 'Sign up error', message: 'An error occurred during sign up' });
+    } finally {
+      setIsValidating(false);
     }
   };
 
@@ -88,24 +117,46 @@ export const SignUpScreen: React.FC = () => {
     navigation.goBack();
   };
 
+  const goBack = () => {
+    navigation.goBack();
+  };
+
   const updateFormData = (key: string, value: string) => {
     setFormData(prev => ({ ...prev, [key]: value }));
-    // Clear error when user starts typing
-    if (errors[key]) {
-      setErrors(prev => ({ ...prev, [key]: '' }));
+    // Only clear status if it's currently visible to avoid unnecessary re-renders
+    if (status.visible) {
+      setStatus((s)=>({ ...s, visible:false }));
     }
+  };
+
+  const renderLoadingOverlay = () => {
+    if (isLoading || isValidating) {
+      return (
+        <LoadingOverlay
+          visible={true}
+          message="Creating account..."
+        />
+      );
+    }
+    return null;
   };
 
   return (
     <View style={styles.container}>
-      {/* Beautiful Background */}
-      <LinearGradient
-        colors={[theme.colors.primary, theme.colors.primaryDark]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.backgroundGradient}
-      />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       
+      {/* Background */}
+      <ImageBackground 
+        source={require('../../assets/images/auth-bg.png')}
+        style={styles.background}
+        resizeMode="cover"
+        blurRadius={6}
+      >
+        <BlurBackground intensity={6} />
+      </ImageBackground>
+      
+
+
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -115,115 +166,76 @@ export const SignUpScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <Image
-              source={require('../../assets/images/world-Bingo-Logo.png')}
-              style={styles.logo}
-              resizeMode="contain"
+
+          {/* Form */}
+          <View style={styles.formContainer}>
+            <View style={styles.row}>
+              <AuthField
+                label="First Name*"
+                placeholder="First name"
+                value={formData.firstName}
+                onChangeText={(value) => updateFormData('firstName', value)}
+                containerStyle={{ flex: 1, marginRight: 8 }}
+              />
+              <AuthField
+                label="Last Name*"
+                placeholder="Last name"
+                value={formData.lastName}
+                onChangeText={(value) => updateFormData('lastName', value)}
+                containerStyle={{ flex: 1, marginLeft: 8 }}
+              />
+            </View>
+
+            <PhoneField
+              label="Phone Number*"
+              placeholder="Enter your phone number"
+              value={formData.phoneNumber}
+              onChangeText={(value) => updateFormData('phoneNumber', value)}
+              onChangeCountryCode={setCountryCode}
             />
-            <Text style={styles.title}>Join World Bingo</Text>
-            <Text style={styles.subtitle}>Create your account to get started</Text>
-          </View>
-          
-          <View style={[styles.formContainer, { backgroundColor: theme.colors.surface }]}>
 
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Full Name</Text>
-              <View style={[styles.inputContainer, { backgroundColor: theme.colors.background }]}>
-                <User size={20} color={theme.colors.primary} style={styles.inputIcon} />
-                <Input
-                  placeholder="Enter your full name"
-                  value={formData.name}
-                  onChangeText={(value) => updateFormData('name', value)}
-                  error={errors.name}
-                  style={[styles.textInput, { color: theme.colors.text }]}
-                  placeholderTextColor={theme.colors.textSecondary}
-                />
-              </View>
-              {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
-            </View>
+            <AuthField
+              label="Password*"
+              placeholder="Enter your password"
+              value={formData.password}
+              onChangeText={(value) => updateFormData('password', value)}
+              secureTextEntry
+            />
 
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Email</Text>
-              <View style={[styles.inputContainer, { backgroundColor: theme.colors.background }]}>
-                <Mail size={20} color={theme.colors.primary} style={styles.inputIcon} />
-                <Input
-                  placeholder="Enter your email"
-                  value={formData.email}
-                  onChangeText={(value) => updateFormData('email', value)}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  error={errors.email}
-                  style={[styles.textInput, { color: theme.colors.text }]}
-                  placeholderTextColor={theme.colors.textSecondary}
-                />
-              </View>
-              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
-            </View>
+            <AuthField
+              label="Confirm Password*"
+              placeholder="Confirm your password"
+              value={formData.confirmPassword}
+              onChangeText={(value) => updateFormData('confirmPassword', value)}
+              secureTextEntry
+            />
 
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Password</Text>
-              <View style={[styles.inputContainer, { backgroundColor: theme.colors.background }]}>
-                <Lock size={20} color={theme.colors.primary} style={styles.inputIcon} />
-                <Input
-                  placeholder="Create a password"
-                  value={formData.password}
-                  onChangeText={(value) => updateFormData('password', value)}
-                  secureTextEntry
-                  error={errors.password}
-                  style={[styles.textInput, { color: theme.colors.text }]}
-                  placeholderTextColor={theme.colors.textSecondary}
-                />
-              </View>
-              {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
-            </View>
+            <AuthField
+              label="Promo Code (Optional)"
+              placeholder="Enter promo code"
+              value={formData.promoCode}
+              onChangeText={(value) => updateFormData('promoCode', value)}
+            />
 
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Confirm Password</Text>
-              <View style={[styles.inputContainer, { backgroundColor: theme.colors.background }]}>
-                <Lock size={20} color={theme.colors.primary} style={styles.inputIcon} />
-                <Input
-                  placeholder="Confirm your password"
-                  value={formData.confirmPassword}
-                  onChangeText={(value) => updateFormData('confirmPassword', value)}
-                  secureTextEntry
-                  error={errors.confirmPassword}
-                  style={[styles.textInput, { color: theme.colors.text }]}
-                  placeholderTextColor={theme.colors.textSecondary}
-                />
-              </View>
-              {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
-            </View>
+            <StatusModal visible={status.visible} variant={status.variant} title={status.title} message={status.message} onDismiss={() => setStatus((s)=>({ ...s, visible:false }))} />
 
-            <TouchableOpacity
-              style={[styles.signupButton, isLoading && styles.buttonDisabled]}
+            <BlueButton
+              title={isLoading || isValidating ? 'Creating...' : 'Register'}
               onPress={handleSignUp}
-              disabled={isLoading}
-            >
-              <LinearGradient
-                colors={[theme.colors.primary, theme.colors.primaryDark]}
-                style={styles.buttonGradient}
-              >
-                <UserPlus size={18} color="#ffffff" style={styles.buttonIcon} />
-                <Text style={styles.buttonText}>
-                  {isLoading ? 'Creating Account...' : 'Create Account'}
-                </Text>
-              </LinearGradient>
-            </TouchableOpacity>
+              disabled={isLoading || isValidating}
+            />
 
             <View style={styles.loginPrompt}>
-              <Text style={[styles.loginText, { color: theme.colors.textSecondary }]}>
+              <Text style={styles.loginText}>
                 Already have an account? 
               </Text>
               <TouchableOpacity onPress={navigateToLogin}>
-                <Text style={[styles.loginLink, { color: theme.colors.primary }]}>
-                  Sign In
-                </Text>
+                <Text style={styles.loginLink}>Sign In</Text>
               </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
+        {renderLoadingOverlay()}
       </KeyboardAvoidingView>
     </View>
   );
@@ -232,8 +244,9 @@ export const SignUpScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#1a1a1a',
   },
-  backgroundGradient: {
+  background: {
     position: 'absolute',
     top: 0,
     left: 0,
@@ -247,100 +260,67 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingTop: 40,
+    paddingTop: 120,
     paddingBottom: 40,
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: 28,
-  },
-  logo: {
-    width: 90,
-    height: 90,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#ffffff',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.9)',
-    textAlign: 'center',
-    fontWeight: '400',
-  },
   formContainer: {
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 8,
+    width: '100%',
   },
-  inputGroup: {
-    marginBottom: 14,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  inputContainer: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
   },
-  inputIcon: {
-    marginRight: 12,
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#ffffff',
+    marginBottom: 8,
   },
   textInput: {
-    flex: 1,
     fontSize: 16,
-    paddingVertical: 12,
-    backgroundColor: 'transparent',
-    borderWidth: 0,
-  },
-  errorText: {
-    fontSize: 12,
-    color: '#dc3545',
-    marginTop: 4,
-    marginLeft: 4,
-  },
-  signupButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    color: '#ffffff',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 12,
-    overflow: 'hidden',
-    marginTop: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  passwordContainer: {
+    position: 'relative',
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: 16,
+    top: 16,
+    bottom: 16,
+    justifyContent: 'center',
+  },
+  registerButton: {
+    width: '100%',
+    height: 56,
+    backgroundColor: '#7BC4FF',
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 24,
+    marginBottom: 32,
+    shadowColor: '#7BC4FF',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 6,
   },
   buttonDisabled: {
     opacity: 0.7,
   },
-  buttonGradient: {
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  buttonIcon: {
-    marginRight: 8,
-  },
-  buttonText: {
-    fontSize: 16,
+  registerButtonText: {
+    fontSize: 18,
     fontWeight: '600',
-    color: '#ffffff',
+    color: '#1a1a1a',
   },
   loginPrompt: {
     flexDirection: 'row',
@@ -350,10 +330,12 @@ const styles = StyleSheet.create({
   loginText: {
     fontSize: 15,
     fontWeight: '400',
+    color: 'rgba(255,255,255,0.7)',
   },
   loginLink: {
     fontSize: 15,
     fontWeight: '600',
+    color: '#7BC4FF',
     marginLeft: 4,
   },
 });

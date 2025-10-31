@@ -28,6 +28,7 @@ interface VersionStore {
   versionInfo: VersionInfo | null;
   isUpdateAvailable: boolean;
   isCheckingForUpdates: boolean;
+  isUpdateDismissed: boolean; // Track if update was dismissed but should show floating button
   
   // Download state
   downloadProgress: DownloadProgress;
@@ -43,6 +44,8 @@ interface VersionStore {
   installUpdate: () => Promise<void>;
   uninstallApp: () => Promise<void>;
   dismissUpdate: () => void;
+  dismissUpdateModal: () => void; // New action to hide modal but keep floating button
+  completeUpdate: () => void; // New action to mark update as completed
   resetDownloadState: () => void;
 }
 
@@ -50,6 +53,7 @@ const initialState = {
   versionInfo: null,
   isUpdateAvailable: false,
   isCheckingForUpdates: false,
+  isUpdateDismissed: false,
   downloadProgress: {
     isDownloading: false,
     progress: 0,
@@ -71,6 +75,7 @@ export const useVersionStore = create<VersionStore>()(
         set({
           versionInfo: info,
           isUpdateAvailable,
+          isUpdateDismissed: false, // Reset dismissed state for new updates
         });
       },
 
@@ -83,7 +88,8 @@ export const useVersionStore = create<VersionStore>()(
             get().setVersionInfo(versionData);
           }
         } catch (error) {
-          console.error('Failed to check for updates:', error);
+          console.warn('Failed to check for updates (non-critical):', error);
+          // Don't block the app if version check fails
         } finally {
           set({ isCheckingForUpdates: false });
         }
@@ -237,6 +243,21 @@ export const useVersionStore = create<VersionStore>()(
         set({
           isUpdateAvailable: false,
           versionInfo: null,
+          isUpdateDismissed: false,
+        });
+      },
+
+      dismissUpdateModal: () => {
+        set({
+          isUpdateDismissed: true,
+        });
+      },
+
+      completeUpdate: () => {
+        set({
+          isUpdateAvailable: false,
+          versionInfo: null,
+          isUpdateDismissed: false,
         });
       },
 

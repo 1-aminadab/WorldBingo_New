@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,12 @@ import {
   Linking,
   Image,
   Share,
+  TouchableOpacity,
+  Animated,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import Animated, {
+import {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
@@ -24,9 +26,9 @@ import { useTheme } from '../components/ui/ThemeProvider';
 import { Button } from '../components/ui/Button';
 import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
-import { Youtube, Volume2, VolumeX, Share as ShareIcon } from 'lucide-react-native';
 import { audioService } from '../services/audioService';
 import { TouchableWithSound } from '../components/ui/TouchableWithSound';
+import { ScreenNames } from '../constants/ScreenNames';
 
 const { width } = Dimensions.get('window');
 
@@ -34,12 +36,15 @@ export const StarterScreen: React.FC = () => {
   const navigation = useNavigation();
   const { t } = useTranslation();
   const { theme } = useTheme();
-  const { user, isGuest, logout } = useAuthStore();
-  const { isGameReadyToStart, isMusicEnabled, setMusicEnabled } = useSettingsStore();
+  const { user, isGuest, logout, setPendingAuthScreen, logoutSilent } = useAuthStore();
+  const { isGameReadyToStart, isMusicEnabled, setMusicEnabled, isFirstTimeStartup, setFirstTimeStartup } = useSettingsStore();
 
-  // Card floating animation and shine effect
+  // Card floating animation
   const cardRotate = useSharedValue(0);
-  const shinePosition = useSharedValue(-100);
+  
+  // Auth toggle state
+  const [activeAuthTab, setActiveAuthTab] = useState<'login' | 'signup'>('login');
+  const authTabAnimation = useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
     // Card floating animation
@@ -51,18 +56,34 @@ export const StarterScreen: React.FC = () => {
       -1,
       true
     );
-
-    // Shine effect animation with pause
-    shinePosition.value = withRepeat(
-      withSequence(
-        withTiming(-80, { duration: 0 }), // Start position (off screen left)
-        withTiming(320, { duration: 1200 }), // Shine passes across logo width + buffer
-        withTiming(320, { duration: 4000 }) // Pause before next shine (4s)
-      ),
-      -1,
-      false
-    );
   }, []);
+
+  // Handle first-time music startup
+  React.useEffect(() => {
+    const initializeMusic = async () => {
+      try {
+        if (isFirstTimeStartup) {
+          console.log('🎵 First time startup detected - starting background music');
+          // Start music on first time if music is enabled
+          if (isMusicEnabled) {
+            await audioService.startBackgroundMusic();
+          }
+          // Mark as no longer first time
+          setFirstTimeStartup(false);
+        } else {
+          console.log('🎵 Not first time startup - checking music state');
+          // On subsequent startups, check if music should be playing
+          if (isMusicEnabled) {
+            await audioService.startBackgroundMusic();
+          }
+        }
+      } catch (error) {
+        console.log('🎵 Error initializing music:', error);
+      }
+    };
+
+    initializeMusic();
+  }, [isFirstTimeStartup, isMusicEnabled, setFirstTimeStartup]);
 
   const cardAnimatedStyle = useAnimatedStyle(() => {
     return {
@@ -70,11 +91,6 @@ export const StarterScreen: React.FC = () => {
     };
   });
 
-  const shineAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateX: shinePosition.value }],
-    };
-  });
 
   const handlePlayBingo = () => {
     if (!isGameReadyToStart()) {
@@ -84,7 +100,7 @@ export const StarterScreen: React.FC = () => {
         [
           {
             text: 'Go to Settings',
-            onPress: () => navigation.getParent()?.navigate('Settings' as never),
+            onPress: () => navigation.getParent()?.navigate(ScreenNames.SETTINGS as never),
           },
           {
             text: 'Cancel',
@@ -95,22 +111,22 @@ export const StarterScreen: React.FC = () => {
       return;
     }
     // Navigate to GameStack first, then to PlayerCartelaSelection
-    navigation.getParent()?.navigate('GameStack' as never);
+    navigation.getParent()?.navigate(ScreenNames.GAME_STACK as never);
     setTimeout(() => {
-      navigation.navigate('PlayerCartelaSelection' as never);
+      navigation.navigate(ScreenNames.PLAYER_CARTELA_SELECTION as never);
     }, 100);
   };
 
   const handleBingoCard = () => {
-    navigation.getParent()?.navigate('BingoCards' as never);
+    navigation.getParent()?.navigate(ScreenNames.BINGO_CARDS as never);
   };
 
   const handleSettings = () => {
-    navigation.getParent()?.navigate('Settings' as never);
+    navigation.getParent()?.navigate(ScreenNames.SETTINGS as never);
   };
 
   const handleProfile = () => {
-    navigation.getParent()?.navigate('Profile' as never);
+    navigation.getParent()?.navigate(ScreenNames.PROFILE as never);
   };
 
   const handleLogout = () => {
@@ -132,7 +148,7 @@ export const StarterScreen: React.FC = () => {
   };
 
   const handleYouTube = () => {
-    Linking.openURL('https://youtube.com');
+    Linking.openURL('https://help.myworldbingo.com');
   };
 
   const handleMusicToggle = () => {
@@ -140,10 +156,36 @@ export const StarterScreen: React.FC = () => {
   };
 
   const handleShare = () => {
+    const userId = user?.userId || user?.id;
+    const shareMessage = `I'm using World Bingo App! 🎯
+This Bingo app is awesome — you should try it!
+Use my invite code ${userId} for 5% cashback on your first coin purchase.
+
+Download now 👉
+
+https://myworldbingo.com/app`;
+    
     Share.share({
-      message: 'Check out World Bingo - the ultimate bingo game experience!',
-      title: 'World Bingo',
+      message: shareMessage,
+      title: 'World Bingo - Join me!',
     });
+  };
+
+  const switchAuthTab = (tab: 'login' | 'signup') => {
+    setActiveAuthTab(tab);
+    Animated.timing(authTabAnimation, {
+      toValue: tab === 'login' ? 0 : 1,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  };
+
+  const handleAuthNavigation = () => {
+    if (activeAuthTab === 'login') {
+      navigation.navigate(ScreenNames.LOGIN as never);
+    } else {
+      navigation.navigate(ScreenNames.LOGIN_SIGNUP as never);
+    }
   };
 
   return (
@@ -158,42 +200,37 @@ export const StarterScreen: React.FC = () => {
         {/* Main Logo */}
         <View style={styles.logoSection}>
           <View style={styles.iconsColumn}>
-            <TouchableWithSound style={styles.iconCircle} onPress={handleYouTube}>
-              <Youtube size={24} color="#FF0000" />
-            </TouchableWithSound>
-            <TouchableWithSound style={styles.iconCircle} onPress={handleMusicToggle}>
-              {isMusicEnabled ? (
-                <Volume2 size={24} color="#1e3a8a" />
-              ) : (
-                <VolumeX size={24} color="#666" />
-              )}
-            </TouchableWithSound>
-            <TouchableWithSound style={styles.iconCircle} onPress={handleShare}>
-              <ShareIcon size={24} color="#1e3a8a" />
-            </TouchableWithSound>
-          </View>
-          <View style={styles.logoContainer}>
-            <View style={styles.logoWrapper}>
+            <TouchableOpacity style={styles.iconCircle} onPress={handleYouTube}>
               <Image 
-                source={require('../assets/images/world-Bingo-Logo.png')}
-                style={styles.logoImage}
+                source={require('../assets/images/youtubeHelp.png')}
+                style={styles.iconImage}
                 resizeMode="contain"
               />
-              <Animated.View style={[styles.shineOverlay, shineAnimatedStyle]}>
-                <LinearGradient
-                  colors={[
-                    'rgba(255, 255, 255, 0)', 
-                    'rgba(255, 255, 255, 0.2)', 
-                    'rgba(255, 255, 255, 0.6)', 
-                    'rgba(255, 255, 255, 0.2)', 
-                    'rgba(255, 255, 255, 0)'
-                  ]}
-                  style={styles.shineGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                />
-              </Animated.View>
-            </View>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconCircle} onPress={handleMusicToggle}>
+              <Image 
+                source={isMusicEnabled 
+                  ? require('../assets/images/unmute.png')
+                  : require('../assets/images/mute.png')
+                }
+                style={styles.iconImage}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconCircle} onPress={handleShare}>
+              <Image 
+                source={require('../assets/images/share.png')}
+                style={styles.iconImage}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.logoContainer}>
+            <Image 
+              source={require('../assets/images/world-Bingo-Logo.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
           </View>
         </View>
 
@@ -214,6 +251,33 @@ export const StarterScreen: React.FC = () => {
           >
             <Text style={styles.buttonText}>Bingo Card</Text>
           </TouchableWithSound>
+
+          {/* Auth buttons for guest users */}
+          {isGuest && (
+            <View style={styles.authContainer}>
+              <View style={styles.authTabContainer}>
+                <TouchableOpacity 
+                  style={[styles.authTabButton, styles.loginTab, { backgroundColor: 'rgb(224, 171, 0)', borderWidth: 0, borderColor: 'rgb(201, 181, 1)' }]}
+                  onPress={async () => {
+                    setPendingAuthScreen('Login'); // Set desired screen for login
+                    await logoutSilent(); // Exit guest mode silently
+                  }}
+                >
+                  <Text style={[styles.authTabButtonText, { color: 'white', fontWeight: 'bold' }]}>Sign In</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.authTabButton, styles.signUpTab, { backgroundColor: '#1e3a8a' }]}
+                  onPress={async () => {
+                    setPendingAuthScreen('SignUp'); // Set desired screen for signup
+                    await logoutSilent(); // Exit guest mode silently
+                  }}
+                >
+                  <Text style={[styles.authTabButtonText, { color: 'white', fontWeight: '600' }]}>Sign Up</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Quick Stats */}
@@ -243,16 +307,6 @@ export const StarterScreen: React.FC = () => {
           </View>
         </View> */}
 
-        {/* Logout Button */}
-        <Button
-          title={isGuest ? 'Exit Guest Session' : t('auth.logout')}
-          onPress={handleLogout}
-          variant="ghost"
-          style={[
-            styles.logoutButton,
-            ...(isGuest ? [{ backgroundColor: 'rgba(220, 53, 69, 0.9)' }] : [])
-          ]}
-        />
       </ScrollView>
     </View>
   );
@@ -272,11 +326,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 40,
-    paddingVertical: 60,
+    paddingTop: 40,
+    paddingBottom: 60,
   },
   logoSection: {
     alignItems: 'center',
-    marginBottom: 80,
+    marginBottom: 20,
     width: '100%',
     position: 'relative',
   },
@@ -284,53 +339,30 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 10,
     top: '50%',
-    transform: [{ translateY: -85,  }, {translateX: -40}],
+    transform: [{ translateY: -120,  }, {translateX: -40}],
     flexDirection: 'column',
     gap: 12,
+    zIndex: 1000,
     alignItems: 'center',
   },
   iconCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+  },
+  iconImage: {
+    width: 40,
+    height: 40,
   },
   logoContainer: {
     marginBottom: 16,
     alignItems: 'center',
-  },
-  logoWrapper: {
-    position: 'relative',
-    width: 300,
-    height: 200,
-    overflow: 'hidden',
+    
   },
   logoImage: {
-    width: 300,
-    height: 200,
-  },
-  shineOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: 80,
-    height: 200,
-    zIndex: 1,
-    pointerEvents: 'none',
-    transform: [{ skewX: '-20deg' }],
-  },
-  shineGradient: {
-    width: '100%',
-    height: '100%',
-    opacity: 0.9,
-    mixBlendMode: 'soft-light',
+    width: 380,
+    height: 260,
   },
   actionsContainer: {
     width: '100%',
@@ -407,7 +439,33 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 12,
   },
-  logoutButton: {
+  authContainer: {
+    width: '100%',
     marginTop: 20,
+  },
+  authTabContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(170, 176, 255, 0.24)',
+    borderRadius: 28,
+    padding: 4,
+    height: 56,
+  },
+  authTabButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 48,
+    borderRadius: 24,
+  },
+  loginTab: {
+    marginRight: 2,
+  },
+  signUpTab: {
+    marginLeft: 2,
+  },
+  authTabButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.7)',
   },
 });

@@ -11,7 +11,7 @@ import { useSettingsStore } from '../../store/settingsStore';
 import { VoiceOption, VoiceLanguage } from '../../types';
 import { AVAILABLE_VOICES, getVoicesByLanguage, LANGUAGE_DISPLAY_NAMES } from '../../utils/voiceConfig';
 import { audioManager } from '../../utils/audioManager';
-import { Play, Pause, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { Play, Pause, ChevronDown, ChevronUp, Check } from 'lucide-react-native';
 
 interface VoiceLanguageSelectorProps {
   onSelectionChange?: (language: VoiceLanguage, voice: VoiceOption) => void;
@@ -31,7 +31,6 @@ const VoiceLanguageSelector: React.FC<VoiceLanguageSelectorProps> = ({
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState<VoiceLanguage>(voiceLanguage);
   const [selectedVoiceId, setSelectedVoiceId] = useState(selectedVoice.id);
-  const [activeGenderTab, setActiveGenderTab] = useState<'male' | 'female'>('male');
   const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
 
   const languages: VoiceLanguage[] = ['amharic', 'english', 'spanish'];
@@ -78,51 +77,47 @@ const VoiceLanguageSelector: React.FC<VoiceLanguageSelectorProps> = ({
       if (playingVoiceId) {
         audioManager.stopPreview();
       }
-      audioManager.previewVoiceById(voiceId);
-      setPlayingVoiceId(voiceId);
       
-      // Set a timeout to reset the playing state when preview ends
-      // Assuming preview duration is around 3-5 seconds
+      // Start playing the new voice
+      setPlayingVoiceId(voiceId);
+      audioManager.previewVoiceById(voiceId);
+      
+      // Listen for audio completion or set a longer timeout
+      // Most voice previews are 3-5 seconds, but we'll wait 12 seconds to be safe
       setTimeout(() => {
         setPlayingVoiceId(null);
-      }, 4000);
+      }, 12000);
     }
   };
 
   const selectedLanguageVoices = getVoicesByLanguage(selectedLanguage);
-  const maleVoices = selectedLanguageVoices.filter(voice => voice.gender === 'male');
-  const femaleVoices = selectedLanguageVoices.filter(voice => voice.gender === 'female');
   
-  const hasGenderedVoices = selectedLanguage === 'amharic';
+  // Merge male and female voices with female voices first
+  const mergedVoices = [
+    ...selectedLanguageVoices.filter(voice => voice.gender === 'female'),
+    ...selectedLanguageVoices.filter(voice => voice.gender === 'male')
+  ];
 
   const renderVoiceItem = (voice: VoiceOption) => {
     const isPlaying = playingVoiceId === voice.id;
+    const isSelected = selectedVoiceId === voice.id;
     
     return (
-      <View key={voice.id} style={styles.voiceItem}>
-        <TouchableOpacity
-          style={[
-            styles.voiceButton,
-            {
-              backgroundColor: selectedVoiceId === voice.id 
-                ? theme.colors.primary 
-                : theme.colors.background,
-              borderColor: theme.colors.border,
-            }
-          ]}
-          onPress={() => handleVoiceSelect(voice.id)}
-        >
-          <Text style={[
-            styles.voiceName,
-            { 
-              color: selectedVoiceId === voice.id 
-                ? '#fff' 
-                : theme.colors.text 
-            }
-          ]}>
-            {hasGenderedVoices ? voice.name : voice.displayName}
-          </Text>
-        </TouchableOpacity>
+      <TouchableOpacity 
+        key={voice.id} 
+        style={styles.voiceRow}
+        onPress={() => handleVoiceSelect(voice.id)}
+      >
+        <View style={[styles.checkIcon, { borderColor: theme.colors.border, backgroundColor: isSelected ? theme.colors.primary : 'transparent' }]}>
+          {isSelected && <Check size={16} color="#fff" />}
+        </View>
+        
+        <Text style={[
+          styles.voiceLabel,
+          { color: theme.colors.text }
+        ]}>
+          {voice.displayName}
+        </Text>
         
         <TouchableOpacity
           style={[
@@ -140,7 +135,7 @@ const VoiceLanguageSelector: React.FC<VoiceLanguageSelectorProps> = ({
             <Play size={16} color={theme.colors.primary} />
           )}
         </TouchableOpacity>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -155,7 +150,7 @@ const VoiceLanguageSelector: React.FC<VoiceLanguageSelectorProps> = ({
           style={[
             styles.dropdownButton,
             {
-              backgroundColor: theme.colors.surface,
+              backgroundColor: 'rgb(0, 6, 62)',
               borderColor: theme.colors.border,
             }
           ]}
@@ -172,7 +167,7 @@ const VoiceLanguageSelector: React.FC<VoiceLanguageSelectorProps> = ({
         </TouchableOpacity>
         
         {isLanguageDropdownOpen && (
-          <View style={[styles.dropdownList, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+          <View style={[styles.dropdownList, { backgroundColor: 'rgb(0, 6, 62)', borderColor: theme.colors.border }]}>
             {languages.map((language) => (
               <TouchableOpacity
                 key={language}
@@ -204,77 +199,12 @@ const VoiceLanguageSelector: React.FC<VoiceLanguageSelectorProps> = ({
 
       {/* Voice Selection */}
       <ScrollView style={styles.voicesContainer} showsVerticalScrollIndicator={false}>
-        {hasGenderedVoices ? (
-          <>
-            {/* Gender Tabs */}
-            <View style={styles.tabsContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.tab,
-                  {
-                    backgroundColor: activeGenderTab === 'male' 
-                      ? theme.colors.primary 
-                      : 'transparent',
-                    borderColor: theme.colors.border,
-                  }
-                ]}
-                onPress={() => setActiveGenderTab('male')}
-              >
-                <Text style={[
-                  styles.tabText,
-                  { 
-                    color: activeGenderTab === 'male' 
-                      ? '#fff' 
-                      : theme.colors.text 
-                  }
-                ]}>
-                  Male ♂
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[
-                  styles.tab,
-                  {
-                    backgroundColor: activeGenderTab === 'female' 
-                      ? theme.colors.primary 
-                      : 'transparent',
-                    borderColor: theme.colors.border,
-                  }
-                ]}
-                onPress={() => setActiveGenderTab('female')}
-              >
-                <Text style={[
-                  styles.tabText,
-                  { 
-                    color: activeGenderTab === 'female' 
-                      ? '#fff' 
-                      : theme.colors.text 
-                  }
-                ]}>
-                  Female ♀
-                </Text>
-              </TouchableOpacity>
-            </View>
-            
-            {/* Tab Content */}
-            <View style={styles.tabContent}>
-              {activeGenderTab === 'male' ? (
-                maleVoices.map(renderVoiceItem)
-              ) : (
-                femaleVoices.map(renderVoiceItem)
-              )}
-            </View>
-          </>
-        ) : (
-          /* Non-gendered voices - just list the sounds */
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-              Available Sounds
-            </Text>
-            {selectedLanguageVoices.map(renderVoiceItem)}
-          </View>
-        )}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+            Available Voices
+          </Text>
+          {mergedVoices.map(renderVoiceItem)}
+        </View>
       </ScrollView>
     </View>
   );
@@ -319,6 +249,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
+    marginTop: 17
   },
   dropdownItem: {
     paddingVertical: 12,
@@ -351,22 +282,25 @@ const styles = StyleSheet.create({
   tabContent: {
     flex: 1,
   },
-  voiceItem: {
+  voiceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-    gap: 8,
+    paddingVertical: 4,
+    marginBottom: 2,
   },
-  voiceButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+  checkIcon: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
-  voiceName: {
-    fontSize: 14,
+  voiceLabel: {
+    fontSize: 16,
     fontWeight: '500',
+    flex: 1,
   },
   previewButton: {
     width: 40,

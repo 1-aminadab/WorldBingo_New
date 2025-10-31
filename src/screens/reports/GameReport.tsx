@@ -11,46 +11,36 @@ import {
   Alert,
   Modal,
 } from 'react-native';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, TrendingUp, Users, DollarSign, Target, Clock, Trophy, BarChart3, Gamepad2, Zap } from 'lucide-react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../components/ui/ThemeProvider';
+import { useGameReportStore } from '../../store/gameReportStore';
 
 import { ReportStorageManager } from '../../utils/reportStorage';
 import { GameReport as GameReportType, GameReportEntry } from '../../types';
 import { DateRangeFilter } from '../../components/ui/DateRangeFilter';
+import { DateRangePicker } from '../../components/ui/DateRangePicker';
 import { FilterPeriod, getDateRange, isDateInRange, formatDateForDisplay, getDaysCount } from '../../utils/dateUtils';
+import { useAuthStore } from '../../store/authStore';
+import { formatCurrency } from '../../utils/numberFormat';
+import { setTabBarVisibility, restoreTabBar } from '../../utils/tabBarStyles';
 
 export const GameReport: React.FC = () => {
   const navigation = useNavigation();
   const { theme } = useTheme();
+  const { user } = useAuthStore();
+  const { currentReport, fetchCurrentUserReport } = useGameReportStore();
 
   // Hide tab bar when this screen is focused
   useFocusEffect(
     React.useCallback(() => {
-      const parent = navigation.getParent();
-      if (parent) {
-        parent.setOptions({
-          tabBarStyle: { display: 'none' }
-        });
-      }
+      setTabBarVisibility(navigation, false);
 
       return () => {
         // Show tab bar again when leaving
-        if (parent) {
-          parent.setOptions({
-            tabBarStyle: {
-              backgroundColor: theme.colors.card,
-              borderTopColor: theme.colors.border,
-              borderTopWidth: 1,
-              paddingBottom: 8,
-              paddingTop: 8,
-              height: 70,
-              marginBottom: 42
-            }
-          });
-        }
+        restoreTabBar(navigation);
       };
-    }, [navigation, theme])
+    }, [navigation])
   );
   const [allGameReports, setAllGameReports] = useState<GameReportType[]>([]);
   const [filteredReports, setFilteredReports] = useState<GameReportType[]>([]);
@@ -76,7 +66,10 @@ export const GameReport: React.FC = () => {
   const loadReports = async () => {
     setIsRefreshing(true);
     try {
-      const gameData = await ReportStorageManager.getGameReports();
+      const userId = user?.userId || user?.id; // Get userId from auth store (handle both formats)
+      console.log('🎮 Loading game reports for user:', userId);
+      const gameData = await ReportStorageManager.getGameReports(userId);
+      console.log('🎮 Loaded game reports:', gameData.length);
       setAllGameReports(gameData.sort((a, b) => b.date.localeCompare(a.date)));
     } catch (error) {
       console.error('Error loading game reports:', error);
@@ -150,6 +143,7 @@ export const GameReport: React.FC = () => {
     }
   };
 
+
   useEffect(() => {
     loadReports();
   }, []);
@@ -160,7 +154,6 @@ export const GameReport: React.FC = () => {
     }
   }, [allGameReports, selectedPeriod, customStartDate, customEndDate]);
 
-  const formatCurrency = (amount: number) => `${amount.toFixed(2)} Birr`;
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -265,132 +258,114 @@ export const GameReport: React.FC = () => {
           <RefreshControl refreshing={isRefreshing} onRefresh={loadReports} />
         }
       >
-        {/* Compact Date Filter */}
-        <View style={[styles.compactDateFilter, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.filterLabel, { color: theme.colors.textSecondary }]}>Period:</Text>
-          <TouchableOpacity
-            style={[styles.compactDateButton, { borderColor: theme.colors.border }]}
-            onPress={() => setShowDateFilterModal(true)}
-          >
-            <Text style={[styles.compactDateText, { color: theme.colors.text }]}>
-              {selectedPeriod === 'today' ? 'Today' :
-               selectedPeriod === 'yesterday' ? 'Yesterday' :
-               selectedPeriod === 'this_week' ? 'This Week' :
-               selectedPeriod === 'last_week' ? 'Last Week' :
-               selectedPeriod === 'this_month' ? 'This Month' :
-               selectedPeriod === 'last_month' ? 'Last Month' :
-               selectedPeriod === 'custom' ? 'Custom' : 'Today'}
-            </Text>
-            <Text style={{ color: theme.colors.primary, fontSize: 12 }}>📅</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Modern Date Range Picker */}
+        <DateRangePicker
+          selectedPeriod={selectedPeriod}
+          customStartDate={customStartDate}
+          customEndDate={customEndDate}
+          onFilterChange={handleFilterChange}
+          onQuickFilterPress={() => setShowDateFilterModal(true)}
+        />
 
-        {/* Compact Key Statistics */}
-        <View style={[styles.compactStatsCard, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.compactStatsTitle, { color: theme.colors.text }]}>Statistics</Text>
-          
-          <View style={styles.compactStatsGrid}>
-            <View style={styles.compactStatItem}>
-              <Text style={[styles.compactStatValue, { color: theme.colors.primary }]}>
-                {summaryStats.totalGames}
-              </Text>
-              <Text style={[styles.compactStatLabel, { color: theme.colors.textSecondary }]}>
-                Games
-              </Text>
-            </View>
-            
-            <View style={styles.compactStatItem}>
-              <Text style={[styles.compactStatValue, { color: theme.colors.primary }]}>
-                {summaryStats.totalCardsSold}
-              </Text>
-              <Text style={[styles.compactStatLabel, { color: theme.colors.textSecondary }]}>
-                Cards
-              </Text>
-            </View>
-            
-            <View style={styles.compactStatItem}>
-              <Text style={[styles.compactStatValue, { color: '#10B981' }]}>
-                {formatCurrency(summaryStats.payinAmount)}
-              </Text>
-              <Text style={[styles.compactStatLabel, { color: theme.colors.textSecondary }]}>
-                Pay-in
-              </Text>
-            </View>
-            
-            <View style={styles.compactStatItem}>
-              <Text style={[styles.compactStatValue, { color: '#EF4444' }]}>
-                {formatCurrency(summaryStats.payoutAmount)}
-              </Text>
-              <Text style={[styles.compactStatLabel, { color: theme.colors.textSecondary }]}>
-                Pay-out
-              </Text>
-            </View>
-            
-            <View style={styles.compactStatItem}>
-              <Text style={[styles.compactStatValue, { color: theme.colors.primary }]}>
-                {formatCurrency(summaryStats.profitAmount)}
-              </Text>
-              <Text style={[styles.compactStatLabel, { color: theme.colors.textSecondary }]}>
-                Profit
-              </Text>
-            </View>
-            
-            <View style={styles.compactStatItem}>
-              <Text style={[styles.compactStatValue, { color: theme.colors.primary }]}>
-                {summaryStats.averageRTP.toFixed(1)}%
-              </Text>
-              <Text style={[styles.compactStatLabel, { color: theme.colors.textSecondary }]}>
-                RTP
-              </Text>
+        {/* Dynamic Statistics Grid */}
+        <View style={styles.statsGrid}>
+          <View style={[styles.primaryStatCard, { backgroundColor: theme.colors.primary }]}>
+            <View style={styles.statRow}>
+              <View style={styles.statIconContainer}>
+                <Gamepad2 size={20} color="white" />
+              </View>
+              <View style={styles.statContent}>
+                <Text style={styles.primaryStatValue}>{summaryStats.totalGames}</Text>
+                <Text style={styles.primaryStatLabel}>Games Played</Text>
+              </View>
             </View>
           </View>
+          
+          <View style={[styles.primaryStatCard, { backgroundColor: '#10B981' }]}>
+            <View style={styles.statRow}>
+              <View style={styles.statIconContainer}>
+                <TrendingUp size={20} color="white" />
+              </View>
+              <View style={styles.statContent}>
+                <Text style={styles.primaryStatValue}>{formatCurrency(summaryStats.profitAmount)}</Text>
+                <Text style={styles.primaryStatLabel}>Total Profit</Text>
+              </View>
+            </View>
+          </View>
+          
         </View>
 
-        {/* Compact Game Reports */}
+        {/* Secondary Stats Row */}
+        <View style={styles.secondaryStatsRow}>
+          <View style={[styles.secondaryStatCard, { backgroundColor: theme.colors.surface }]}>
+            <DollarSign size={16} color="#10B981" />
+            <Text style={[styles.secondaryStatValue, { color: theme.colors.text }]}>{formatCurrency(summaryStats.payinAmount)}</Text>
+          </View>
+          
+          <View style={[styles.secondaryStatCard, { backgroundColor: theme.colors.surface }]}>
+            <Target size={16} color="#EF4444" />
+            <Text style={[styles.secondaryStatValue, { color: theme.colors.text }]}>{formatCurrency(summaryStats.payoutAmount)}</Text>
+          </View>
+          
+        </View>
+
+        {/* Game Reports */}
         {filteredReports.length > 0 ? (
           <View style={styles.reportsContainer}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-              Game Reports ({filteredReports.reduce((sum, r) => sum + r.totalGames, 0)} games)
-            </Text>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleContainer}>
+                <Trophy size={20} color={theme.colors.primary} />
+                <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Game Reports</Text>
+              </View>
+              <View style={styles.counterItem}>
+                <Users size={16} color={theme.colors.primary} />
+                <Text style={[styles.counterText, { color: theme.colors.text }]}>{filteredReports.reduce((sum, r) => sum + r.totalCardsSold, 0)}</Text>
+              </View>
+            </View>
             
             {filteredReports.map(report => (
-              <View key={report.date} style={[styles.compactDailyCard, { backgroundColor: theme.colors.surface }]}>
-                <View style={styles.compactDayHeader}>
-                  <Text style={[styles.compactDayDate, { color: theme.colors.text }]}>
-                    {formatDate(report.date)}
-                  </Text>
-                  <Text style={[styles.compactDaySummary, { color: theme.colors.textSecondary }]}>
-                    {report.totalGames} games • {formatCurrency(report.totalProfit)}
-                  </Text>
+              <View key={report.date} style={styles.dateSection}>
+                <View style={[styles.dateBanner, { backgroundColor: theme.colors.primary + '15', borderLeftColor: theme.colors.primary }]}>
+                  <Text style={[styles.dateText, { color: theme.colors.text }]}>{formatDate(report.date)}</Text>
+                  <View style={styles.dateSummary}>
+                    <View style={styles.dateMetric}>
+                      <Gamepad2 size={12} color={theme.colors.textSecondary} />
+                      <Text style={[styles.dateMetricText, { color: theme.colors.textSecondary }]}>{report.totalGames}</Text>
+                    </View>
+                    <View style={styles.dateMetric}>
+                      <DollarSign size={12} color="#10B981" />
+                      <Text style={[styles.dateMetricText, { color: theme.colors.textSecondary }]}>{formatCurrency(report.totalProfit)}</Text>
+                    </View>
+                  </View>
                 </View>
                 
-                <View style={styles.compactGamesList}>
+                <View style={styles.gamesList}>
                   {report.games
                     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
                     .map((game, index) => (
-                    <View key={`${report.date}-${index}`} style={styles.compactGameItem}>
-                      <View style={styles.compactGameHeader}>
-                        <Text style={[styles.compactGameNumber, { color: theme.colors.text }]}>
-                          Game #{game.gameNumber}
-                        </Text>
-                        <Text style={[styles.compactGameDuration, { color: theme.colors.textSecondary }]}>
-                          {game.gameDurationMinutes}m
-                        </Text>
+                    <View key={`${report.date}-${index}`} style={[styles.gameCard, { backgroundColor: theme.colors.surface }]}>
+                      <View style={styles.gameHeader}>
+                        <View style={[styles.gameNumberBadge, { backgroundColor: theme.colors.primary }]}>
+                          <Text style={styles.gameNumberText}>#{game.gameNumber}</Text>
+                        </View>
+                        <View style={styles.gameDuration}>
+                          <Clock size={10} color={theme.colors.textSecondary} />
+                          <Text style={[styles.gameDurationText, { color: theme.colors.textSecondary }]}>{game.gameDurationMinutes}m</Text>
+                        </View>
                       </View>
                       
-                      <View style={styles.compactGameStats}>
-                        <View style={styles.compactGameStatRow}>
-                          <Text style={[styles.compactGameStatLabel, { color: theme.colors.textSecondary }]}>
-                            Cards: {game.cardsSold} • Pattern: {game.pattern}
-                          </Text>
+                      <View style={styles.gameMetrics}>
+                        <View style={styles.gameMetricRow}>
+                          <View style={styles.gameMetric}>
+                            <Users size={10} color={theme.colors.textSecondary} />
+                            <Text style={[styles.gameMetricLabel, { color: theme.colors.textSecondary }]}>{game.cardsSold}</Text>
+                          </View>
+                          <Text style={[styles.gamePattern, { color: theme.colors.primary }]}>{game.pattern}</Text>
                         </View>
-                        <View style={styles.compactGameStatRow}>
-                          <Text style={[styles.compactGameStatValue, { color: '#10B981' }]}>
-                            {formatCurrency(game.collectedAmount)}
-                          </Text>
-                          <Text style={[styles.compactGameStatValue, { color: theme.colors.primary }]}>
-                            Profit: {formatCurrency(game.profitAmount)}
-                          </Text>
+                        
+                        <View style={styles.gameAmounts}>
+                          <Text style={[styles.gameAmount, { color: '#10B981' }]}>{formatCurrency(game.collectedAmount)}</Text>
+                          <Text style={[styles.gameProfit, { color: theme.colors.primary }]}>+{formatCurrency(game.profitAmount)}</Text>
                         </View>
                       </View>
                     </View>
@@ -400,11 +375,13 @@ export const GameReport: React.FC = () => {
             ))}
           </View>
         ) : (
-          <View style={[styles.emptyStateCard, { backgroundColor: theme.colors.surface }]}>
-            <Text style={styles.emptyIcon}>🎮</Text>
-            <Text style={[styles.emptyText, { color: theme.colors.text }]}>No game reports yet</Text>
+          <View style={[styles.emptyState, { backgroundColor: theme.colors.surface }]}>
+            <View style={[styles.emptyIconContainer, { backgroundColor: theme.colors.primary + '20' }]}>
+              <Gamepad2 size={32} color={theme.colors.primary} />
+            </View>
+            <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No Games Yet</Text>
             <Text style={[styles.emptySubtext, { color: theme.colors.textSecondary }]}>
-              Play some games to see detailed reports here
+              Start playing to see your game statistics
             </Text>
           </View>
         )}
@@ -464,6 +441,7 @@ export const GameReport: React.FC = () => {
           </View>
         </View>
       </Modal>
+
     </SafeAreaView>
   );
 };
@@ -476,15 +454,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 8,
-    paddingTop: 40,
+    paddingVertical: 4,
+    paddingTop: 20,
   },
   backButton: {
     padding: 8,
   },
   headerTitle: {
     flex: 1,
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: 'bold',
     color: 'white',
     textAlign: 'center',
@@ -677,87 +655,136 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // Compact UI Styles
-  compactDateFilter: {
-    marginBottom: 12,
-    borderRadius: 12,
-    padding: 12,
+  // Modern Dynamic UI Styles
+  
+  statsGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  filterLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    minWidth: 50,
-  },
-  compactDateButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    minHeight: 36,
-  },
-  compactDateText: {
-    fontSize: 14,
-    fontWeight: '500',
-    flex: 1,
-  },
-
-  compactStatsCard: {
     marginBottom: 16,
-    borderRadius: 12,
+  },
+  primaryStatCard: {
+    flex: 1,
+    borderRadius: 16,
+    padding: 16,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  statRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  statContent: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  primaryStatValue: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: 'white',
+    marginBottom: 4,
+  },
+  primaryStatLabel: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  
+  secondaryStatsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 20,
+  },
+  secondaryStatCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 12,
+    borderRadius: 12,
+    gap: 8,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
-  compactStatsTitle: {
-    fontSize: 16,
+  secondaryStatValue: {
+    fontSize: 14,
     fontWeight: '700',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  compactStatsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  compactStatItem: {
-    width: '31%',
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0,0,0,0.02)',
-  },
-  compactStatValue: {
-    fontSize: 16,
-    fontWeight: '800',
-    marginBottom: 2,
-  },
-  compactStatLabel: {
-    fontSize: 11,
-    textAlign: 'center',
-    fontWeight: '600',
   },
 
   reportsContainer: {
     marginBottom: 24,
   },
-  compactDailyCard: {
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  counterItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  counterText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  
+  dateSection: {
+    marginBottom: 20,
+  },
+  dateBanner: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderLeftWidth: 4,
     marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dateText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  dateSummary: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  dateMetric: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  dateMetricText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  
+  gamesList: {
+    gap: 8,
+  },
+  gameCard: {
+    width: '100%',
     borderRadius: 12,
     padding: 12,
     elevation: 2,
@@ -766,57 +793,62 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
-  compactDayHeader: {
+  gameHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
-    paddingBottom: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
-  compactDayDate: {
-    fontSize: 14,
+  gameNumberBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  gameNumberText: {
+    color: 'white',
+    fontSize: 10,
     fontWeight: '700',
   },
-  compactDaySummary: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  compactGamesList: {
-    gap: 6,
-  },
-  compactGameItem: {
-    backgroundColor: 'rgba(0,0,0,0.02)',
-    borderRadius: 8,
-    padding: 8,
-  },
-  compactGameHeader: {
+  gameDuration: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
-  },
-  compactGameNumber: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  compactGameDuration: {
-    fontSize: 11,
-  },
-  compactGameStats: {
     gap: 2,
   },
-  compactGameStatRow: {
+  gameDurationText: {
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  gameMetrics: {
+    gap: 6,
+  },
+  gameMetricRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  compactGameStatLabel: {
-    fontSize: 11,
-    flex: 1,
+  gameMetric: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
-  compactGameStatValue: {
+  gameMetricLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  gamePattern: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  gameAmounts: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  gameAmount: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  gameProfit: {
     fontSize: 11,
     fontWeight: '600',
   },
@@ -830,10 +862,10 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(0,0,0,0.05)',
   },
 
-  emptyStateCard: {
+  emptyState: {
     alignItems: 'center',
-    padding: 32,
-    borderRadius: 12,
+    padding: 40,
+    borderRadius: 16,
     marginTop: 20,
     elevation: 2,
     shadowColor: '#000',
@@ -841,19 +873,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
-  emptyIcon: {
-    fontSize: 48,
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 16,
   },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
+    opacity: 0.8,
   },
 
   // Modal Styles

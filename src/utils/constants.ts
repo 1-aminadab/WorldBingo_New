@@ -47,8 +47,8 @@ export const SOUND_FILES = {
 
 // Voice Settings
 export const VOICE_SETTINGS = {
-  defaultGender: 'female' as const,
-  defaultLanguage: 'english' as const,
+  defaultGender: 'male' as const,
+  defaultLanguage: 'amharic' as const,
   supportedLanguages: ['english', 'amharic'] as const,
   supportedGenders: ['male', 'female'] as const,
 };
@@ -67,7 +67,7 @@ export const PATTERN_INFO = {
 
 // API Endpoints (for future use)
 export const API_CONFIG = {
-  baseUrl: 'https://api.worldbingo.com',
+  baseUrl: 'https://world-bingo-mobile-app-backend-230041233104.us-central1.run.app',
   timeout: 10000,
   retryAttempts: 3,
 };

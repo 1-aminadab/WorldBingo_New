@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   Modal,
   Alert,
   RefreshControl,
@@ -13,6 +12,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../../components/ui/ThemeProvider';
 import { Button } from '../../components/ui/Button';
+import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import ReportService, { ShopReport, ReportSummary, CompanyBalance, DateRange } from '../../services/reportService';
 import ReportExportService, { ExportData } from '../../utils/reportExport';
 import { useReportStore, formatCurrency, getDateRangeText } from '../../store/reportStore';
@@ -378,12 +378,10 @@ export const ComprehensiveReportScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
-              Generating Report, Please Wait...
-            </Text>
-          </View>
+          <LoadingSpinner 
+            size="large" 
+            text="Generating Report, Please Wait..."
+          />
         ) : (
           <>
             {renderBalanceCards()}

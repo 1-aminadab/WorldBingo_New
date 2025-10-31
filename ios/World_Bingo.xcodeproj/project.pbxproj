@@ -7,176 +7,172 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		710A46251B66F619E77769B9 /* libPods-World_Bingo.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 12F5EC7AF096A38F53FB1A25 /* libPods-World_Bingo.a */; };
-		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
-		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
-		9F1AC279A94A12459B55B348 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
-		E9B06EA72E559B1E007DD7F3 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9B06EA62E559B1E007DD7F3 /* AVFoundation.framework */; };
-		C0222E5D5982414089A439B3 /* 1.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 5C62CB8D4FA64224B1BED7AF /* 1.mp3 */; };
-		402D666599654F77A241DC39 /* 10.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 301CD76461564AB8B745B0BA /* 10.mp3 */; };
-		CF5FCE524E0A4270BAA7E9CB /* 11.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 730F2E39E170466A8397E990 /* 11.mp3 */; };
-		AFB13D72649F445DB15846A3 /* 12.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 1A65F5045D5D46E7B7AD02D5 /* 12.mp3 */; };
-		3C1DB7179D834F86B39002E3 /* 13.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 8B8AB1F9A32949579213943D /* 13.mp3 */; };
-		EA04CCECFE8C42649EC95DA9 /* 14.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B90F640599C34C849A9448AC /* 14.mp3 */; };
-		2394157DDF834A99A9FCEAC3 /* 15.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 75032ADBA2E547DD9516744D /* 15.mp3 */; };
-		7FD1A0A75E0440E3873CE604 /* 16.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4BCB25C6B2C7485DA1BEA878 /* 16.mp3 */; };
-		71FA2B8CDD8F4A139CDB9F71 /* 17.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 6BE98C0AA2D44CC39E6443D3 /* 17.mp3 */; };
-		E0714AF1DC0D48018B89C8B4 /* 18.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 89EC6CE69CA94E54BFE42656 /* 18.mp3 */; };
-		9BD9840E16AA4BFDB4D03D4D /* 19.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 27807190BD54453BAEE1E612 /* 19.mp3 */; };
-		45B4AA201DFA4E7797946E75 /* 2.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4E0AE828A9324B7594FAF066 /* 2.mp3 */; };
-		0DE0494EB7F94291A09D1CC6 /* 20.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 8B7773FA02394905B7A050CB /* 20.mp3 */; };
-		E36CEC8293C94C87823493C9 /* 21.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 6890BA6879F04427852F505D /* 21.mp3 */; };
-		AB20CA8DD31943D3884399A6 /* 22.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 3DD8D18EABA940D68910097D /* 22.mp3 */; };
-		518AD112ADCD4932B881AE0C /* 23.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 166B151AB999461E9D9E273E /* 23.mp3 */; };
+		012E03CE02FF4158BCC3909B /* 52.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 06415DA8BBED4A9F96FE4E84 /* 52.mp3 */; };
+		02E8B7BE817C4D5AA40E2089 /* 56.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = D1C78D2038B74F5D827B3AB2 /* 56.mp3 */; };
 		066DDC5A729745B682946603 /* 24.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = BB20C3B752BC4B78B9F13ECB /* 24.mp3 */; };
-		6B75FEA39DEB4BD89155D161 /* 25.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 37B847BFA58843D3861A2F89 /* 25.mp3 */; };
-		D4B056A02CD84744BE700D4D /* 26.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B2AF130B17404E94AADBFA02 /* 26.mp3 */; };
-		14F8D97A2BCA4391A905FCAA /* 27.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = E46893F2C65E4272BB773D6E /* 27.mp3 */; };
-		38BD88D4321A474E975242D5 /* 28.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 644E03A158354837885D8A1E /* 28.mp3 */; };
 		093C44FAFE9F431CB43C1F6B /* 29.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = DE9A2C34B72747478EE0C1D9 /* 29.mp3 */; };
-		A05033D735E34507A4F23EAA /* 3.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 6DCD5988F80B4ACBB3DB30F9 /* 3.mp3 */; };
+		0DE0494EB7F94291A09D1CC6 /* 20.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 8B7773FA02394905B7A050CB /* 20.mp3 */; };
+		0F4FDB3D8A1643F392937602 /* 57.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = EA98ADF085704AB79DDE4E44 /* 57.mp3 */; };
+		1268230BA72C44CB85D68392 /* 59.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 8FED3A199D244A91AFC6A80E /* 59.mp3 */; };
+		12E925B1D7214E7C9B2253E8 /* 64.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 7ACBD90069AA497088863693 /* 64.mp3 */; };
+		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		14F8D97A2BCA4391A905FCAA /* 27.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = E46893F2C65E4272BB773D6E /* 27.mp3 */; };
 		15B74E38ACB8410DB46958F5 /* 30.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = DE64DD9A9CED44EEBF8AF012 /* 30.mp3 */; };
-		DF8DDAC8C5034BF1B66EEBD5 /* 31.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 54E01C4710164C37A1EFE234 /* 31.mp3 */; };
-		9C268AAAFD704F57BB785315 /* 32.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64CDA89D448E496B8A06E401 /* 32.mp3 */; };
+		162FE290985246E3B1D90632 /* 4.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 51918BA1C0EA4ED39DF9C23F /* 4.mp3 */; };
+		1C907CDC253843ACA686F622 /* 67.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = CE3C24A2BB254783B7C6B730 /* 67.mp3 */; };
+		1CEC803F4D80463EA91D1E86 /* 55.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = CACB122AADE84CA9A5CED314 /* 55.mp3 */; };
+		1E8659F6220242E0AEE0A432 /* 37.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 08BDEC1EB1264F9A8ADFCA2B /* 37.mp3 */; };
+		229E3728EE174381821262F8 /* 63.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4B03C0E73A24423AAE278012 /* 63.mp3 */; };
+		2394157DDF834A99A9FCEAC3 /* 15.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 75032ADBA2E547DD9516744D /* 15.mp3 */; };
+		25760494D3234184BA7C20B8 /* 8.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 695C47C640984656BC63528F /* 8.mp3 */; };
+		35212D55A8B841BC83135CE4 /* 70.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = CB71D17802CB428581014A45 /* 70.mp3 */; };
+		3647766DF67746C8AFDC6F10 /* 73.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 04738B189B2A4B6ABE6618D4 /* 73.mp3 */; };
+		38BD88D4321A474E975242D5 /* 28.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 644E03A158354837885D8A1E /* 28.mp3 */; };
+		3C1DB7179D834F86B39002E3 /* 13.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 8B8AB1F9A32949579213943D /* 13.mp3 */; };
+		3DB0CE7EA5B94C828BAF5820 /* 68.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 577EE6F4F4154360A4645181 /* 68.mp3 */; };
+		402D666599654F77A241DC39 /* 10.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 301CD76461564AB8B745B0BA /* 10.mp3 */; };
+		421F7A45291244828F3A4E16 /* 49.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 00BBC8242A234F018293B80F /* 49.mp3 */; };
+		45B4AA201DFA4E7797946E75 /* 2.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4E0AE828A9324B7594FAF066 /* 2.mp3 */; };
+		46384C0276CC41FB90A681BD /* 45.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = A6620ECB500D4019A8239519 /* 45.mp3 */; };
+		46D0888D2475444EBE562B4E /* 7.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = ACAEC3A1865145FBA1FD8C8C /* 7.mp3 */; };
+		48615A82625B448A8646FA0D /* 50.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B53F09ADECF84954B3438547 /* 50.mp3 */; };
+		518AD112ADCD4932B881AE0C /* 23.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 166B151AB999461E9D9E273E /* 23.mp3 */; };
+		57852A329D1041FE9C693800 /* 51.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = E5F3037EA7C74E3BBE990517 /* 51.mp3 */; };
+		5E436FCDF1D345E39F337021 /* 65.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B74A31E0092E44689D95F240 /* 65.mp3 */; };
+		64981401615749A5AD985BDA /* 72.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 281BAA7CF8924F0984A3CFDB /* 72.mp3 */; };
+		6B75FEA39DEB4BD89155D161 /* 25.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 37B847BFA58843D3861A2F89 /* 25.mp3 */; };
+		6CA9D88155A64326A547D235 /* 61.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 22A26D5C0D7D43C5AE36170F /* 61.mp3 */; };
+		6D4958EBEB944FA3902CC51B /* 43.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = E70894B41CCE4FAC8228A2EF /* 43.mp3 */; };
 		6F35DF29C3A54F54A3791E28 /* 33.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = E3670230ACE244AE9B94826F /* 33.mp3 */; };
+		71FA2B8CDD8F4A139CDB9F71 /* 17.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 6BE98C0AA2D44CC39E6443D3 /* 17.mp3 */; };
+		75582E45CCC54D5D9AA9F0B9 /* 47.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 7138933EC7C44E0C9718F554 /* 47.mp3 */; };
+		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
+		76C8D5790CE346D48F2B1224 /* 71.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 63A70F30CA244CE989C8E606 /* 71.mp3 */; };
+		779EABA41DCC42159721EB55 /* 39.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = E6126A5CCEB649CB97FDC590 /* 39.mp3 */; };
+		7E79A9F7C77242D794F820A6 /* 5.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = C44098EF39DD4287BAB742BC /* 5.mp3 */; };
+		7FD1A0A75E0440E3873CE604 /* 16.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4BCB25C6B2C7485DA1BEA878 /* 16.mp3 */; };
+		801E563CB40F4391B3C04CD8 /* 54.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 912F383D7361487EB18AC2F7 /* 54.mp3 */; };
+		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		86543F6A2FD749158A4F022A /* 53.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = BC7DF3912DE94AAB9E615FAF /* 53.mp3 */; };
+		92A5035CF6A14F54B198221B /* 62.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 50D7277DF37D4C898366D3BC /* 62.mp3 */; };
+		92B1450979D44BDDB33DEA62 /* 69.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 164CFBF9AF7C4653BD434911 /* 69.mp3 */; };
+		932BF8948088463CA3FCEC28 /* 38.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 0FA9228A1E5743CD9E0C54AA /* 38.mp3 */; };
 		98E4F28384E64B9F82A56151 /* 34.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 9BBF573690734028A9FA8462 /* 34.mp3 */; };
+		9BD9840E16AA4BFDB4D03D4D /* 19.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 27807190BD54453BAEE1E612 /* 19.mp3 */; };
+		9C268AAAFD704F57BB785315 /* 32.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64CDA89D448E496B8A06E401 /* 32.mp3 */; };
+		9F1AC279A94A12459B55B348 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
+		A05033D735E34507A4F23EAA /* 3.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 6DCD5988F80B4ACBB3DB30F9 /* 3.mp3 */; };
+		A3EFD04A8A6F4684B35DA861 /* 46.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 96657C7130EC435D9F07578C /* 46.mp3 */; };
+		AB20CA8DD31943D3884399A6 /* 22.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 3DD8D18EABA940D68910097D /* 22.mp3 */; };
+		AFB13D72649F445DB15846A3 /* 12.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 1A65F5045D5D46E7B7AD02D5 /* 12.mp3 */; };
+		B05533644B0544A09EFD1893 /* 74.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 1C8CAED574414B9C912CB485 /* 74.mp3 */; };
+		B32A0C8ECDF744C6AC919123 /* 41.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 1A342D9F5E284AA28E1F21AF /* 41.mp3 */; };
+		B6D44A8F057A4D36A7606D29 /* 40.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 1962E56046E349A79497ED18 /* 40.mp3 */; };
+		BCFD3C075AF2444BBE63A343 /* 66.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = D73DD45FEF4D46DEBF2BB0AE /* 66.mp3 */; };
+		C0222E5D5982414089A439B3 /* 1.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 5C62CB8D4FA64224B1BED7AF /* 1.mp3 */; };
 		C92C08B3CEC34E83944D2DCF /* 35.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 5E9A345B5D854E5A927697F2 /* 35.mp3 */; };
 		CD0304DDE4234C66BEB2525B /* 36.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 3F6346355DB74848BA7B1D90 /* 36.mp3 */; };
-		1E8659F6220242E0AEE0A432 /* 37.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 08BDEC1EB1264F9A8ADFCA2B /* 37.mp3 */; };
-		932BF8948088463CA3FCEC28 /* 38.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 0FA9228A1E5743CD9E0C54AA /* 38.mp3 */; };
-		779EABA41DCC42159721EB55 /* 39.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = E6126A5CCEB649CB97FDC590 /* 39.mp3 */; };
-		162FE290985246E3B1D90632 /* 4.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 51918BA1C0EA4ED39DF9C23F /* 4.mp3 */; };
-		B6D44A8F057A4D36A7606D29 /* 40.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 1962E56046E349A79497ED18 /* 40.mp3 */; };
-		B32A0C8ECDF744C6AC919123 /* 41.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 1A342D9F5E284AA28E1F21AF /* 41.mp3 */; };
-		D7FE72A1AAB3464AA50CADCC /* 42.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = D78EBBE8360B452997C609A5 /* 42.mp3 */; };
-		6D4958EBEB944FA3902CC51B /* 43.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = E70894B41CCE4FAC8228A2EF /* 43.mp3 */; };
-		D61FF36135EE436D904FE45A /* 44.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = D2A2925167B94B3781955A5D /* 44.mp3 */; };
-		46384C0276CC41FB90A681BD /* 45.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = A6620ECB500D4019A8239519 /* 45.mp3 */; };
-		A3EFD04A8A6F4684B35DA861 /* 46.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 96657C7130EC435D9F07578C /* 46.mp3 */; };
-		75582E45CCC54D5D9AA9F0B9 /* 47.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 7138933EC7C44E0C9718F554 /* 47.mp3 */; };
+		CF5FCE524E0A4270BAA7E9CB /* 11.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 730F2E39E170466A8397E990 /* 11.mp3 */; };
+		D4B056A02CD84744BE700D4D /* 26.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B2AF130B17404E94AADBFA02 /* 26.mp3 */; };
 		D52C67135FA6453195361A84 /* 48.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 2637791B899D462C977D0923 /* 48.mp3 */; };
-		421F7A45291244828F3A4E16 /* 49.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 00BBC8242A234F018293B80F /* 49.mp3 */; };
-		7E79A9F7C77242D794F820A6 /* 5.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = C44098EF39DD4287BAB742BC /* 5.mp3 */; };
-		48615A82625B448A8646FA0D /* 50.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B53F09ADECF84954B3438547 /* 50.mp3 */; };
-		57852A329D1041FE9C693800 /* 51.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = E5F3037EA7C74E3BBE990517 /* 51.mp3 */; };
-		012E03CE02FF4158BCC3909B /* 52.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 06415DA8BBED4A9F96FE4E84 /* 52.mp3 */; };
-		86543F6A2FD749158A4F022A /* 53.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = BC7DF3912DE94AAB9E615FAF /* 53.mp3 */; };
-		801E563CB40F4391B3C04CD8 /* 54.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 912F383D7361487EB18AC2F7 /* 54.mp3 */; };
-		1CEC803F4D80463EA91D1E86 /* 55.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = CACB122AADE84CA9A5CED314 /* 55.mp3 */; };
-		02E8B7BE817C4D5AA40E2089 /* 56.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = D1C78D2038B74F5D827B3AB2 /* 56.mp3 */; };
-		0F4FDB3D8A1643F392937602 /* 57.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = EA98ADF085704AB79DDE4E44 /* 57.mp3 */; };
-		F64D8A5F40204D4198E1CA11 /* 58.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 8FDC079DAA024609A1669805 /* 58.mp3 */; };
-		1268230BA72C44CB85D68392 /* 59.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 8FED3A199D244A91AFC6A80E /* 59.mp3 */; };
+		D61FF36135EE436D904FE45A /* 44.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = D2A2925167B94B3781955A5D /* 44.mp3 */; };
+		D7FE72A1AAB3464AA50CADCC /* 42.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = D78EBBE8360B452997C609A5 /* 42.mp3 */; };
+		DF8DDAC8C5034BF1B66EEBD5 /* 31.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 54E01C4710164C37A1EFE234 /* 31.mp3 */; };
+		E0714AF1DC0D48018B89C8B4 /* 18.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 89EC6CE69CA94E54BFE42656 /* 18.mp3 */; };
+		E36CEC8293C94C87823493C9 /* 21.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 6890BA6879F04427852F505D /* 21.mp3 */; };
+		E9B06EA72E559B1E007DD7F3 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9B06EA62E559B1E007DD7F3 /* AVFoundation.framework */; };
+		EA04CCECFE8C42649EC95DA9 /* 14.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B90F640599C34C849A9448AC /* 14.mp3 */; };
 		EA911B70F49745C78DAB15CD /* 6.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 103227F4B9E74A4793310EF4 /* 6.mp3 */; };
-		F6072DCA2E9D42F0AF4E0462 /* 60.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 67AF4115487B49CCA5D77DAE /* 60.mp3 */; };
-		6CA9D88155A64326A547D235 /* 61.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 22A26D5C0D7D43C5AE36170F /* 61.mp3 */; };
-		92A5035CF6A14F54B198221B /* 62.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 50D7277DF37D4C898366D3BC /* 62.mp3 */; };
-		229E3728EE174381821262F8 /* 63.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4B03C0E73A24423AAE278012 /* 63.mp3 */; };
-		12E925B1D7214E7C9B2253E8 /* 64.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 7ACBD90069AA497088863693 /* 64.mp3 */; };
-		5E436FCDF1D345E39F337021 /* 65.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B74A31E0092E44689D95F240 /* 65.mp3 */; };
-		BCFD3C075AF2444BBE63A343 /* 66.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = D73DD45FEF4D46DEBF2BB0AE /* 66.mp3 */; };
-		1C907CDC253843ACA686F622 /* 67.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = CE3C24A2BB254783B7C6B730 /* 67.mp3 */; };
-		3DB0CE7EA5B94C828BAF5820 /* 68.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 577EE6F4F4154360A4645181 /* 68.mp3 */; };
-		92B1450979D44BDDB33DEA62 /* 69.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 164CFBF9AF7C4653BD434911 /* 69.mp3 */; };
-		46D0888D2475444EBE562B4E /* 7.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = ACAEC3A1865145FBA1FD8C8C /* 7.mp3 */; };
-		35212D55A8B841BC83135CE4 /* 70.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = CB71D17802CB428581014A45 /* 70.mp3 */; };
-		76C8D5790CE346D48F2B1224 /* 71.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 63A70F30CA244CE989C8E606 /* 71.mp3 */; };
-		64981401615749A5AD985BDA /* 72.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 281BAA7CF8924F0984A3CFDB /* 72.mp3 */; };
-		3647766DF67746C8AFDC6F10 /* 73.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 04738B189B2A4B6ABE6618D4 /* 73.mp3 */; };
-		B05533644B0544A09EFD1893 /* 74.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 1C8CAED574414B9C912CB485 /* 74.mp3 */; };
 		EFE213BDA01B4F8AAF3B112E /* 75.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 8632604C89D94479A2303E5E /* 75.mp3 */; };
-		25760494D3234184BA7C20B8 /* 8.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 695C47C640984656BC63528F /* 8.mp3 */; };
+		F6072DCA2E9D42F0AF4E0462 /* 60.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 67AF4115487B49CCA5D77DAE /* 60.mp3 */; };
+		F64D8A5F40204D4198E1CA11 /* 58.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 8FDC079DAA024609A1669805 /* 58.mp3 */; };
 		F847147AB30649CC8A5C4B05 /* 9.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = A89D47E028954EF8BF621BC8 /* 9.mp3 */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		12F5EC7AF096A38F53FB1A25 /* libPods-World_Bingo.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-World_Bingo.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		00BBC8242A234F018293B80F /* 49.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 49.mp3; path = World_Bingo/Audio/49.mp3; sourceTree = "<group>"; };
+		04738B189B2A4B6ABE6618D4 /* 73.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 73.mp3; path = World_Bingo/Audio/73.mp3; sourceTree = "<group>"; };
+		06415DA8BBED4A9F96FE4E84 /* 52.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 52.mp3; path = World_Bingo/Audio/52.mp3; sourceTree = "<group>"; };
+		08BDEC1EB1264F9A8ADFCA2B /* 37.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 37.mp3; path = World_Bingo/Audio/37.mp3; sourceTree = "<group>"; };
+		0FA9228A1E5743CD9E0C54AA /* 38.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 38.mp3; path = World_Bingo/Audio/38.mp3; sourceTree = "<group>"; };
+		103227F4B9E74A4793310EF4 /* 6.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 6.mp3; path = World_Bingo/Audio/6.mp3; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* World_Bingo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = World_Bingo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = World_Bingo/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = World_Bingo/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = World_Bingo/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		5AE6D1B1B52798681AB4E138 /* Pods-World_Bingo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-World_Bingo.debug.xcconfig"; path = "Target Support Files/Pods-World_Bingo/Pods-World_Bingo.debug.xcconfig"; sourceTree = "<group>"; };
+		164CFBF9AF7C4653BD434911 /* 69.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 69.mp3; path = World_Bingo/Audio/69.mp3; sourceTree = "<group>"; };
+		166B151AB999461E9D9E273E /* 23.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 23.mp3; path = World_Bingo/Audio/23.mp3; sourceTree = "<group>"; };
+		1962E56046E349A79497ED18 /* 40.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 40.mp3; path = World_Bingo/Audio/40.mp3; sourceTree = "<group>"; };
+		1A342D9F5E284AA28E1F21AF /* 41.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 41.mp3; path = World_Bingo/Audio/41.mp3; sourceTree = "<group>"; };
+		1A65F5045D5D46E7B7AD02D5 /* 12.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 12.mp3; path = World_Bingo/Audio/12.mp3; sourceTree = "<group>"; };
+		1C8CAED574414B9C912CB485 /* 74.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 74.mp3; path = World_Bingo/Audio/74.mp3; sourceTree = "<group>"; };
+		22A26D5C0D7D43C5AE36170F /* 61.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 61.mp3; path = World_Bingo/Audio/61.mp3; sourceTree = "<group>"; };
+		2637791B899D462C977D0923 /* 48.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 48.mp3; path = World_Bingo/Audio/48.mp3; sourceTree = "<group>"; };
+		27807190BD54453BAEE1E612 /* 19.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 19.mp3; path = World_Bingo/Audio/19.mp3; sourceTree = "<group>"; };
+		281BAA7CF8924F0984A3CFDB /* 72.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 72.mp3; path = World_Bingo/Audio/72.mp3; sourceTree = "<group>"; };
+		301CD76461564AB8B745B0BA /* 10.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 10.mp3; path = World_Bingo/Audio/10.mp3; sourceTree = "<group>"; };
+		37B847BFA58843D3861A2F89 /* 25.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 25.mp3; path = World_Bingo/Audio/25.mp3; sourceTree = "<group>"; };
+		3DD8D18EABA940D68910097D /* 22.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 22.mp3; path = World_Bingo/Audio/22.mp3; sourceTree = "<group>"; };
+		3F6346355DB74848BA7B1D90 /* 36.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 36.mp3; path = World_Bingo/Audio/36.mp3; sourceTree = "<group>"; };
+		4B03C0E73A24423AAE278012 /* 63.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 63.mp3; path = World_Bingo/Audio/63.mp3; sourceTree = "<group>"; };
+		4BCB25C6B2C7485DA1BEA878 /* 16.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 16.mp3; path = World_Bingo/Audio/16.mp3; sourceTree = "<group>"; };
+		4E0AE828A9324B7594FAF066 /* 2.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 2.mp3; path = World_Bingo/Audio/2.mp3; sourceTree = "<group>"; };
+		50D7277DF37D4C898366D3BC /* 62.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 62.mp3; path = World_Bingo/Audio/62.mp3; sourceTree = "<group>"; };
+		51918BA1C0EA4ED39DF9C23F /* 4.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 4.mp3; path = World_Bingo/Audio/4.mp3; sourceTree = "<group>"; };
+		54E01C4710164C37A1EFE234 /* 31.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 31.mp3; path = World_Bingo/Audio/31.mp3; sourceTree = "<group>"; };
+		577EE6F4F4154360A4645181 /* 68.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 68.mp3; path = World_Bingo/Audio/68.mp3; sourceTree = "<group>"; };
+		5C62CB8D4FA64224B1BED7AF /* 1.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 1.mp3; path = World_Bingo/Audio/1.mp3; sourceTree = "<group>"; };
+		5E9A345B5D854E5A927697F2 /* 35.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 35.mp3; path = World_Bingo/Audio/35.mp3; sourceTree = "<group>"; };
+		63A70F30CA244CE989C8E606 /* 71.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 71.mp3; path = World_Bingo/Audio/71.mp3; sourceTree = "<group>"; };
+		644E03A158354837885D8A1E /* 28.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 28.mp3; path = World_Bingo/Audio/28.mp3; sourceTree = "<group>"; };
+		64CDA89D448E496B8A06E401 /* 32.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 32.mp3; path = World_Bingo/Audio/32.mp3; sourceTree = "<group>"; };
+		67AF4115487B49CCA5D77DAE /* 60.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 60.mp3; path = World_Bingo/Audio/60.mp3; sourceTree = "<group>"; };
+		6890BA6879F04427852F505D /* 21.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 21.mp3; path = World_Bingo/Audio/21.mp3; sourceTree = "<group>"; };
+		695C47C640984656BC63528F /* 8.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 8.mp3; path = World_Bingo/Audio/8.mp3; sourceTree = "<group>"; };
+		6BE98C0AA2D44CC39E6443D3 /* 17.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 17.mp3; path = World_Bingo/Audio/17.mp3; sourceTree = "<group>"; };
+		6DCD5988F80B4ACBB3DB30F9 /* 3.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 3.mp3; path = World_Bingo/Audio/3.mp3; sourceTree = "<group>"; };
+		7138933EC7C44E0C9718F554 /* 47.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 47.mp3; path = World_Bingo/Audio/47.mp3; sourceTree = "<group>"; };
+		730F2E39E170466A8397E990 /* 11.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 11.mp3; path = World_Bingo/Audio/11.mp3; sourceTree = "<group>"; };
+		75032ADBA2E547DD9516744D /* 15.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 15.mp3; path = World_Bingo/Audio/15.mp3; sourceTree = "<group>"; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = World_Bingo/AppDelegate.swift; sourceTree = "<group>"; };
-		8118804C8CE1F4EFFF60EFC6 /* Pods-World_Bingo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-World_Bingo.release.xcconfig"; path = "Target Support Files/Pods-World_Bingo/Pods-World_Bingo.release.xcconfig"; sourceTree = "<group>"; };
+		7ACBD90069AA497088863693 /* 64.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 64.mp3; path = World_Bingo/Audio/64.mp3; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = World_Bingo/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		8632604C89D94479A2303E5E /* 75.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 75.mp3; path = World_Bingo/Audio/75.mp3; sourceTree = "<group>"; };
+		89EC6CE69CA94E54BFE42656 /* 18.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 18.mp3; path = World_Bingo/Audio/18.mp3; sourceTree = "<group>"; };
+		8B7773FA02394905B7A050CB /* 20.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 20.mp3; path = World_Bingo/Audio/20.mp3; sourceTree = "<group>"; };
+		8B8AB1F9A32949579213943D /* 13.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 13.mp3; path = World_Bingo/Audio/13.mp3; sourceTree = "<group>"; };
+		8FDC079DAA024609A1669805 /* 58.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 58.mp3; path = World_Bingo/Audio/58.mp3; sourceTree = "<group>"; };
+		8FED3A199D244A91AFC6A80E /* 59.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 59.mp3; path = World_Bingo/Audio/59.mp3; sourceTree = "<group>"; };
+		912F383D7361487EB18AC2F7 /* 54.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 54.mp3; path = World_Bingo/Audio/54.mp3; sourceTree = "<group>"; };
+		96657C7130EC435D9F07578C /* 46.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 46.mp3; path = World_Bingo/Audio/46.mp3; sourceTree = "<group>"; };
+		9BBF573690734028A9FA8462 /* 34.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 34.mp3; path = World_Bingo/Audio/34.mp3; sourceTree = "<group>"; };
+		A6620ECB500D4019A8239519 /* 45.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 45.mp3; path = World_Bingo/Audio/45.mp3; sourceTree = "<group>"; };
+		A89D47E028954EF8BF621BC8 /* 9.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 9.mp3; path = World_Bingo/Audio/9.mp3; sourceTree = "<group>"; };
+		ACAEC3A1865145FBA1FD8C8C /* 7.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 7.mp3; path = World_Bingo/Audio/7.mp3; sourceTree = "<group>"; };
+		B2AF130B17404E94AADBFA02 /* 26.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 26.mp3; path = World_Bingo/Audio/26.mp3; sourceTree = "<group>"; };
+		B53F09ADECF84954B3438547 /* 50.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 50.mp3; path = World_Bingo/Audio/50.mp3; sourceTree = "<group>"; };
+		B74A31E0092E44689D95F240 /* 65.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 65.mp3; path = World_Bingo/Audio/65.mp3; sourceTree = "<group>"; };
+		B90F640599C34C849A9448AC /* 14.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 14.mp3; path = World_Bingo/Audio/14.mp3; sourceTree = "<group>"; };
+		BB20C3B752BC4B78B9F13ECB /* 24.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 24.mp3; path = World_Bingo/Audio/24.mp3; sourceTree = "<group>"; };
+		BC7DF3912DE94AAB9E615FAF /* 53.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 53.mp3; path = World_Bingo/Audio/53.mp3; sourceTree = "<group>"; };
+		C44098EF39DD4287BAB742BC /* 5.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 5.mp3; path = World_Bingo/Audio/5.mp3; sourceTree = "<group>"; };
+		CACB122AADE84CA9A5CED314 /* 55.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 55.mp3; path = World_Bingo/Audio/55.mp3; sourceTree = "<group>"; };
+		CB71D17802CB428581014A45 /* 70.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 70.mp3; path = World_Bingo/Audio/70.mp3; sourceTree = "<group>"; };
+		CE3C24A2BB254783B7C6B730 /* 67.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 67.mp3; path = World_Bingo/Audio/67.mp3; sourceTree = "<group>"; };
+		D1C78D2038B74F5D827B3AB2 /* 56.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 56.mp3; path = World_Bingo/Audio/56.mp3; sourceTree = "<group>"; };
+		D2A2925167B94B3781955A5D /* 44.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 44.mp3; path = World_Bingo/Audio/44.mp3; sourceTree = "<group>"; };
+		D73DD45FEF4D46DEBF2BB0AE /* 66.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 66.mp3; path = World_Bingo/Audio/66.mp3; sourceTree = "<group>"; };
+		D78EBBE8360B452997C609A5 /* 42.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 42.mp3; path = World_Bingo/Audio/42.mp3; sourceTree = "<group>"; };
+		DE64DD9A9CED44EEBF8AF012 /* 30.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 30.mp3; path = World_Bingo/Audio/30.mp3; sourceTree = "<group>"; };
+		DE9A2C34B72747478EE0C1D9 /* 29.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 29.mp3; path = World_Bingo/Audio/29.mp3; sourceTree = "<group>"; };
+		E3670230ACE244AE9B94826F /* 33.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 33.mp3; path = World_Bingo/Audio/33.mp3; sourceTree = "<group>"; };
+		E46893F2C65E4272BB773D6E /* 27.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 27.mp3; path = World_Bingo/Audio/27.mp3; sourceTree = "<group>"; };
+		E5F3037EA7C74E3BBE990517 /* 51.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 51.mp3; path = World_Bingo/Audio/51.mp3; sourceTree = "<group>"; };
+		E6126A5CCEB649CB97FDC590 /* 39.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 39.mp3; path = World_Bingo/Audio/39.mp3; sourceTree = "<group>"; };
+		E70894B41CCE4FAC8228A2EF /* 43.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 43.mp3; path = World_Bingo/Audio/43.mp3; sourceTree = "<group>"; };
 		E9B06EA62E559B1E007DD7F3 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		EA98ADF085704AB79DDE4E44 /* 57.mp3 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = 57.mp3; path = World_Bingo/Audio/57.mp3; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
-		5C62CB8D4FA64224B1BED7AF /* 1.mp3 */ = {isa = PBXFileReference; name = "1.mp3"; path = "World_Bingo/Audio/1.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		301CD76461564AB8B745B0BA /* 10.mp3 */ = {isa = PBXFileReference; name = "10.mp3"; path = "World_Bingo/Audio/10.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		730F2E39E170466A8397E990 /* 11.mp3 */ = {isa = PBXFileReference; name = "11.mp3"; path = "World_Bingo/Audio/11.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		1A65F5045D5D46E7B7AD02D5 /* 12.mp3 */ = {isa = PBXFileReference; name = "12.mp3"; path = "World_Bingo/Audio/12.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		8B8AB1F9A32949579213943D /* 13.mp3 */ = {isa = PBXFileReference; name = "13.mp3"; path = "World_Bingo/Audio/13.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		B90F640599C34C849A9448AC /* 14.mp3 */ = {isa = PBXFileReference; name = "14.mp3"; path = "World_Bingo/Audio/14.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		75032ADBA2E547DD9516744D /* 15.mp3 */ = {isa = PBXFileReference; name = "15.mp3"; path = "World_Bingo/Audio/15.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		4BCB25C6B2C7485DA1BEA878 /* 16.mp3 */ = {isa = PBXFileReference; name = "16.mp3"; path = "World_Bingo/Audio/16.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		6BE98C0AA2D44CC39E6443D3 /* 17.mp3 */ = {isa = PBXFileReference; name = "17.mp3"; path = "World_Bingo/Audio/17.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		89EC6CE69CA94E54BFE42656 /* 18.mp3 */ = {isa = PBXFileReference; name = "18.mp3"; path = "World_Bingo/Audio/18.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		27807190BD54453BAEE1E612 /* 19.mp3 */ = {isa = PBXFileReference; name = "19.mp3"; path = "World_Bingo/Audio/19.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		4E0AE828A9324B7594FAF066 /* 2.mp3 */ = {isa = PBXFileReference; name = "2.mp3"; path = "World_Bingo/Audio/2.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		8B7773FA02394905B7A050CB /* 20.mp3 */ = {isa = PBXFileReference; name = "20.mp3"; path = "World_Bingo/Audio/20.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		6890BA6879F04427852F505D /* 21.mp3 */ = {isa = PBXFileReference; name = "21.mp3"; path = "World_Bingo/Audio/21.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		3DD8D18EABA940D68910097D /* 22.mp3 */ = {isa = PBXFileReference; name = "22.mp3"; path = "World_Bingo/Audio/22.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		166B151AB999461E9D9E273E /* 23.mp3 */ = {isa = PBXFileReference; name = "23.mp3"; path = "World_Bingo/Audio/23.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		BB20C3B752BC4B78B9F13ECB /* 24.mp3 */ = {isa = PBXFileReference; name = "24.mp3"; path = "World_Bingo/Audio/24.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		37B847BFA58843D3861A2F89 /* 25.mp3 */ = {isa = PBXFileReference; name = "25.mp3"; path = "World_Bingo/Audio/25.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		B2AF130B17404E94AADBFA02 /* 26.mp3 */ = {isa = PBXFileReference; name = "26.mp3"; path = "World_Bingo/Audio/26.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		E46893F2C65E4272BB773D6E /* 27.mp3 */ = {isa = PBXFileReference; name = "27.mp3"; path = "World_Bingo/Audio/27.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		644E03A158354837885D8A1E /* 28.mp3 */ = {isa = PBXFileReference; name = "28.mp3"; path = "World_Bingo/Audio/28.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		DE9A2C34B72747478EE0C1D9 /* 29.mp3 */ = {isa = PBXFileReference; name = "29.mp3"; path = "World_Bingo/Audio/29.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		6DCD5988F80B4ACBB3DB30F9 /* 3.mp3 */ = {isa = PBXFileReference; name = "3.mp3"; path = "World_Bingo/Audio/3.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		DE64DD9A9CED44EEBF8AF012 /* 30.mp3 */ = {isa = PBXFileReference; name = "30.mp3"; path = "World_Bingo/Audio/30.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		54E01C4710164C37A1EFE234 /* 31.mp3 */ = {isa = PBXFileReference; name = "31.mp3"; path = "World_Bingo/Audio/31.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		64CDA89D448E496B8A06E401 /* 32.mp3 */ = {isa = PBXFileReference; name = "32.mp3"; path = "World_Bingo/Audio/32.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		E3670230ACE244AE9B94826F /* 33.mp3 */ = {isa = PBXFileReference; name = "33.mp3"; path = "World_Bingo/Audio/33.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		9BBF573690734028A9FA8462 /* 34.mp3 */ = {isa = PBXFileReference; name = "34.mp3"; path = "World_Bingo/Audio/34.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		5E9A345B5D854E5A927697F2 /* 35.mp3 */ = {isa = PBXFileReference; name = "35.mp3"; path = "World_Bingo/Audio/35.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		3F6346355DB74848BA7B1D90 /* 36.mp3 */ = {isa = PBXFileReference; name = "36.mp3"; path = "World_Bingo/Audio/36.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		08BDEC1EB1264F9A8ADFCA2B /* 37.mp3 */ = {isa = PBXFileReference; name = "37.mp3"; path = "World_Bingo/Audio/37.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		0FA9228A1E5743CD9E0C54AA /* 38.mp3 */ = {isa = PBXFileReference; name = "38.mp3"; path = "World_Bingo/Audio/38.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		E6126A5CCEB649CB97FDC590 /* 39.mp3 */ = {isa = PBXFileReference; name = "39.mp3"; path = "World_Bingo/Audio/39.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		51918BA1C0EA4ED39DF9C23F /* 4.mp3 */ = {isa = PBXFileReference; name = "4.mp3"; path = "World_Bingo/Audio/4.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		1962E56046E349A79497ED18 /* 40.mp3 */ = {isa = PBXFileReference; name = "40.mp3"; path = "World_Bingo/Audio/40.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		1A342D9F5E284AA28E1F21AF /* 41.mp3 */ = {isa = PBXFileReference; name = "41.mp3"; path = "World_Bingo/Audio/41.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		D78EBBE8360B452997C609A5 /* 42.mp3 */ = {isa = PBXFileReference; name = "42.mp3"; path = "World_Bingo/Audio/42.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		E70894B41CCE4FAC8228A2EF /* 43.mp3 */ = {isa = PBXFileReference; name = "43.mp3"; path = "World_Bingo/Audio/43.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		D2A2925167B94B3781955A5D /* 44.mp3 */ = {isa = PBXFileReference; name = "44.mp3"; path = "World_Bingo/Audio/44.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		A6620ECB500D4019A8239519 /* 45.mp3 */ = {isa = PBXFileReference; name = "45.mp3"; path = "World_Bingo/Audio/45.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		96657C7130EC435D9F07578C /* 46.mp3 */ = {isa = PBXFileReference; name = "46.mp3"; path = "World_Bingo/Audio/46.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		7138933EC7C44E0C9718F554 /* 47.mp3 */ = {isa = PBXFileReference; name = "47.mp3"; path = "World_Bingo/Audio/47.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		2637791B899D462C977D0923 /* 48.mp3 */ = {isa = PBXFileReference; name = "48.mp3"; path = "World_Bingo/Audio/48.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		00BBC8242A234F018293B80F /* 49.mp3 */ = {isa = PBXFileReference; name = "49.mp3"; path = "World_Bingo/Audio/49.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		C44098EF39DD4287BAB742BC /* 5.mp3 */ = {isa = PBXFileReference; name = "5.mp3"; path = "World_Bingo/Audio/5.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		B53F09ADECF84954B3438547 /* 50.mp3 */ = {isa = PBXFileReference; name = "50.mp3"; path = "World_Bingo/Audio/50.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		E5F3037EA7C74E3BBE990517 /* 51.mp3 */ = {isa = PBXFileReference; name = "51.mp3"; path = "World_Bingo/Audio/51.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		06415DA8BBED4A9F96FE4E84 /* 52.mp3 */ = {isa = PBXFileReference; name = "52.mp3"; path = "World_Bingo/Audio/52.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		BC7DF3912DE94AAB9E615FAF /* 53.mp3 */ = {isa = PBXFileReference; name = "53.mp3"; path = "World_Bingo/Audio/53.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		912F383D7361487EB18AC2F7 /* 54.mp3 */ = {isa = PBXFileReference; name = "54.mp3"; path = "World_Bingo/Audio/54.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		CACB122AADE84CA9A5CED314 /* 55.mp3 */ = {isa = PBXFileReference; name = "55.mp3"; path = "World_Bingo/Audio/55.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		D1C78D2038B74F5D827B3AB2 /* 56.mp3 */ = {isa = PBXFileReference; name = "56.mp3"; path = "World_Bingo/Audio/56.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		EA98ADF085704AB79DDE4E44 /* 57.mp3 */ = {isa = PBXFileReference; name = "57.mp3"; path = "World_Bingo/Audio/57.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		8FDC079DAA024609A1669805 /* 58.mp3 */ = {isa = PBXFileReference; name = "58.mp3"; path = "World_Bingo/Audio/58.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		8FED3A199D244A91AFC6A80E /* 59.mp3 */ = {isa = PBXFileReference; name = "59.mp3"; path = "World_Bingo/Audio/59.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		103227F4B9E74A4793310EF4 /* 6.mp3 */ = {isa = PBXFileReference; name = "6.mp3"; path = "World_Bingo/Audio/6.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		67AF4115487B49CCA5D77DAE /* 60.mp3 */ = {isa = PBXFileReference; name = "60.mp3"; path = "World_Bingo/Audio/60.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		22A26D5C0D7D43C5AE36170F /* 61.mp3 */ = {isa = PBXFileReference; name = "61.mp3"; path = "World_Bingo/Audio/61.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		50D7277DF37D4C898366D3BC /* 62.mp3 */ = {isa = PBXFileReference; name = "62.mp3"; path = "World_Bingo/Audio/62.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		4B03C0E73A24423AAE278012 /* 63.mp3 */ = {isa = PBXFileReference; name = "63.mp3"; path = "World_Bingo/Audio/63.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		7ACBD90069AA497088863693 /* 64.mp3 */ = {isa = PBXFileReference; name = "64.mp3"; path = "World_Bingo/Audio/64.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		B74A31E0092E44689D95F240 /* 65.mp3 */ = {isa = PBXFileReference; name = "65.mp3"; path = "World_Bingo/Audio/65.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		D73DD45FEF4D46DEBF2BB0AE /* 66.mp3 */ = {isa = PBXFileReference; name = "66.mp3"; path = "World_Bingo/Audio/66.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		CE3C24A2BB254783B7C6B730 /* 67.mp3 */ = {isa = PBXFileReference; name = "67.mp3"; path = "World_Bingo/Audio/67.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		577EE6F4F4154360A4645181 /* 68.mp3 */ = {isa = PBXFileReference; name = "68.mp3"; path = "World_Bingo/Audio/68.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		164CFBF9AF7C4653BD434911 /* 69.mp3 */ = {isa = PBXFileReference; name = "69.mp3"; path = "World_Bingo/Audio/69.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		ACAEC3A1865145FBA1FD8C8C /* 7.mp3 */ = {isa = PBXFileReference; name = "7.mp3"; path = "World_Bingo/Audio/7.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		CB71D17802CB428581014A45 /* 70.mp3 */ = {isa = PBXFileReference; name = "70.mp3"; path = "World_Bingo/Audio/70.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		63A70F30CA244CE989C8E606 /* 71.mp3 */ = {isa = PBXFileReference; name = "71.mp3"; path = "World_Bingo/Audio/71.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		281BAA7CF8924F0984A3CFDB /* 72.mp3 */ = {isa = PBXFileReference; name = "72.mp3"; path = "World_Bingo/Audio/72.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		04738B189B2A4B6ABE6618D4 /* 73.mp3 */ = {isa = PBXFileReference; name = "73.mp3"; path = "World_Bingo/Audio/73.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		1C8CAED574414B9C912CB485 /* 74.mp3 */ = {isa = PBXFileReference; name = "74.mp3"; path = "World_Bingo/Audio/74.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		8632604C89D94479A2303E5E /* 75.mp3 */ = {isa = PBXFileReference; name = "75.mp3"; path = "World_Bingo/Audio/75.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		695C47C640984656BC63528F /* 8.mp3 */ = {isa = PBXFileReference; name = "8.mp3"; path = "World_Bingo/Audio/8.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		A89D47E028954EF8BF621BC8 /* 9.mp3 */ = {isa = PBXFileReference; name = "9.mp3"; path = "World_Bingo/Audio/9.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -185,7 +181,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				E9B06EA72E559B1E007DD7F3 /* AVFoundation.framework in Frameworks */,
-				710A46251B66F619E77769B9 /* libPods-World_Bingo.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -209,52 +204,12 @@
 			children = (
 				E9B06EA62E559B1E007DD7F3 /* AVFoundation.framework */,
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				12F5EC7AF096A38F53FB1A25 /* libPods-World_Bingo.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = Libraries;
-			sourceTree = "<group>";
-		};
-		83CBB9F61A601CBA00E9B192 = {
-			isa = PBXGroup;
-			children = (
-				13B07FAE1A68108700A75B9A /* World_Bingo */,
-				832341AE1AAA6A7D00B99B32 /* Libraries */,
-				83CBBA001A601CBA00E9B192 /* Products */,
-				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				BBD78D7AC51CEA395F1C20DB /* Pods */,
-				3F477581ACFA44F3B8320D5E /* Resources */,
-			);
-			indentWidth = 2;
-			sourceTree = "<group>";
-			tabWidth = 2;
-			usesTabs = 0;
-		};
-		83CBBA001A601CBA00E9B192 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				13B07F961A680F5B00A75B9A /* World_Bingo.app */,
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
-		BBD78D7AC51CEA395F1C20DB /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				5AE6D1B1B52798681AB4E138 /* Pods-World_Bingo.debug.xcconfig */,
-				8118804C8CE1F4EFFF60EFC6 /* Pods-World_Bingo.release.xcconfig */,
-			);
-			path = Pods;
-			sourceTree = "<group>";
-		};
 		3F477581ACFA44F3B8320D5E /* Resources */ = {
-			isa = "PBXGroup";
+			isa = PBXGroup;
 			children = (
 				5C62CB8D4FA64224B1BED7AF /* 1.mp3 */,
 				301CD76461564AB8B745B0BA /* 10.mp3 */,
@@ -333,8 +288,45 @@
 				A89D47E028954EF8BF621BC8 /* 9.mp3 */,
 			);
 			name = Resources;
-			sourceTree = "<group>";
 			path = "";
+			sourceTree = "<group>";
+		};
+		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Libraries;
+			sourceTree = "<group>";
+		};
+		83CBB9F61A601CBA00E9B192 = {
+			isa = PBXGroup;
+			children = (
+				13B07FAE1A68108700A75B9A /* World_Bingo */,
+				832341AE1AAA6A7D00B99B32 /* Libraries */,
+				83CBBA001A601CBA00E9B192 /* Products */,
+				2D16E6871FA4F8E400B85C8A /* Frameworks */,
+				BBD78D7AC51CEA395F1C20DB /* Pods */,
+				3F477581ACFA44F3B8320D5E /* Resources */,
+			);
+			indentWidth = 2;
+			sourceTree = "<group>";
+			tabWidth = 2;
+			usesTabs = 0;
+		};
+		83CBBA001A601CBA00E9B192 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				13B07F961A680F5B00A75B9A /* World_Bingo.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		BBD78D7AC51CEA395F1C20DB /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Pods;
+			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
@@ -343,13 +335,10 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "World_Bingo" */;
 			buildPhases = (
-				CEA27125E8C1ECC0BBC72A48 /* [CP] Check Pods Manifest.lock */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
-				D6F60ACA7E029DE2F033D3A6 /* [CP] Embed Pods Frameworks */,
-				106BF1040C1741A268CC3298 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -496,70 +485,6 @@
 			shellPath = /bin/sh;
 			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
 		};
-		106BF1040C1741A268CC3298 /* [CP] Copy Pods Resources */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-World_Bingo/Pods-World_Bingo-resources-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			inputPaths = (
-			);
-			name = "[CP] Copy Pods Resources";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-World_Bingo/Pods-World_Bingo-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-World_Bingo/Pods-World_Bingo-resources.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		CEA27125E8C1ECC0BBC72A48 /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-World_Bingo-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		D6F60ACA7E029DE2F033D3A6 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-World_Bingo/Pods-World_Bingo-frameworks-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			inputPaths = (
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-World_Bingo/Pods-World_Bingo-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-World_Bingo/Pods-World_Bingo-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -576,7 +501,6 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 5AE6D1B1B52798681AB4E138 /* Pods-World_Bingo.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -604,7 +528,6 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 8118804C8CE1F4EFFF60EFC6 /* Pods-World_Bingo.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -697,7 +620,10 @@
 					"-DFOLLY_CFG_NO_COROUTINES=1",
 					"-DFOLLY_HAVE_CLOCK_GETTIME=1",
 				);
-				OTHER_LDFLAGS = "$(inherited)  ";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					" ",
+				);
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
@@ -766,7 +692,10 @@
 					"-DFOLLY_CFG_NO_COROUTINES=1",
 					"-DFOLLY_HAVE_CLOCK_GETTIME=1",
 				);
-				OTHER_LDFLAGS = "$(inherited)  ";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					" ",
+				);
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				USE_HERMES = true;

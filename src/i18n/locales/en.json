@@ -76,6 +76,7 @@
     "full_house": "Full House",
     "t_shape": "T Shape",
     "u_shape": "U Shape",
+    "l_shape": "L Shape",
     "x_shape": "X Shape",
     "plus_sign": "Plus Sign",
     "diamond": "Diamond",
@@ -86,6 +87,7 @@
       "full_house": "Fill the entire bingo card",
       "t_shape": "Complete the top row and middle column",
       "u_shape": "Complete left column, right column, and bottom row",
+      "l_shape": "Complete left column and bottom row",
       "x_shape": "Complete both diagonal lines",
       "plus_sign": "Complete middle row and middle column",
       "diamond": "Complete diamond pattern in the center"

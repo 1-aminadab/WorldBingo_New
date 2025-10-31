@@ -25,6 +25,7 @@ i18n
     lng: 'en', // default language
     fallbackLng: 'en',
     debug: __DEV__,
+    compatibilityJSON: 'v3',
 
     interpolation: {
       escapeValue: false, // React already does escaping

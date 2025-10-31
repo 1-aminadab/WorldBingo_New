@@ -412,6 +412,22 @@ class AudioManager {
     }, 4000);
   }
 
+  stopAllSounds() {
+    // Stop all currently playing sounds
+    this.sounds.forEach(sound => {
+      sound.stop();
+    });
+    
+    // Stop preview sound if playing
+    if (this.previewSound) {
+      this.previewSound.stop();
+      this.previewSound.release();
+      this.previewSound = null;
+    }
+    
+    console.log('All sounds stopped');
+  }
+
   dispose() {
     this.sounds.forEach(sound => {
       sound.release();

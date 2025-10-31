@@ -11,6 +11,23 @@ interface DerashMedebInfoProps {
   showPlayers?: boolean;
 }
 
+// Format large numbers with commas
+const formatNumber = (num: number): string => {
+  if (num >= 1000000) {
+    return num.toLocaleString('en-US');
+  }
+  return num.toLocaleString('en-US');
+};
+
+// Get dynamic font size based on number length
+const getDynamicFontSize = (num: number, baseSize: number): number => {
+  const numString = num.toString();
+  if (numString.length >= 7) return baseSize - 4; // 1,000,000+
+  if (numString.length >= 5) return baseSize - 2; // 10,000+
+  if (numString.length >= 4) return baseSize - 1; // 1,000+
+  return baseSize;
+};
+
 export const DerashMedebInfo: React.FC<DerashMedebInfoProps> = ({
   derashShown,
   gameMedebAmount,
@@ -23,6 +40,8 @@ export const DerashMedebInfo: React.FC<DerashMedebInfoProps> = ({
   const { width } = useWindowDimensions();
 
   const medebValue = gameMedebAmount > 0 ? gameMedebAmount : (medebAmount ?? 0);
+  const derashFontSize = getDynamicFontSize(derashShown, 14);
+  const medebFontSize = getDynamicFontSize(medebValue, 14);
 
   if (isLandscape) {
     return (
@@ -30,26 +49,28 @@ export const DerashMedebInfo: React.FC<DerashMedebInfoProps> = ({
         {/* Derash - Main Prize */}
         <View style={[styles.derashHighlightBoxLandscape, { backgroundColor: theme.colors.primary }]}>
           <Text style={[
-            styles.derashLabelLandscape,
+            styles.derashValueLandscape,
             {
-              fontSize: derashShown > 999 ? 13 : 16
+              fontSize: derashFontSize
             }
           ]}>
-            💰 {derashShown} Birr
+            💰 {formatNumber(derashShown)} Birr
           </Text>
+          <Text style={styles.derashLabelLandscape}>Profit</Text>
         </View>
 
         {/* Medeb Info */}
         <View style={[styles.medebContainerLandscape, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           <Text style={[
-            styles.medebText,
+            styles.medebValueLandscape,
             {
               color: theme.colors.text,
-              fontSize: medebValue > 999 ? 11 : 14
+              fontSize: medebFontSize
             }
           ]}>
-            💵 Entry Fee: {medebValue} Birr
+            💵 {formatNumber(medebValue)} Birr
           </Text>
+          <Text style={[styles.medebLabelLandscape, { color: theme.colors.text }]}>Entry Fee</Text>
         </View>
       </View>
     );
@@ -64,10 +85,10 @@ export const DerashMedebInfo: React.FC<DerashMedebInfoProps> = ({
           <Text style={[
             styles.derashAmount,
             {
-              fontSize: width > 400 ? (derashShown > 999 ? 16 : 20) : (derashShown > 999 ? 14 : 16)
+              fontSize: getDynamicFontSize(derashShown, 12)
             }
           ]}>
-            {derashShown} <Text style={{ fontSize: 10 }}>Birr</Text>
+            {formatNumber(derashShown)} <Text style={{ fontSize: 10 }}>Birr</Text>
           </Text>
           <Text style={[styles.profitLabel, { color: theme.colors.textSecondary }]}>Profit</Text>
         </View>
@@ -83,10 +104,10 @@ export const DerashMedebInfo: React.FC<DerashMedebInfoProps> = ({
               styles.medebValue,
               {
                 color: theme.colors.text,
-                fontSize: medebValue > 999 ? 10 : 12
+                fontSize: getDynamicFontSize(medebValue, 12)
               }
             ]}>
-              {medebValue} Birr
+              {formatNumber(medebValue)} Birr
             </Text>
             <Text style={[styles.medebLabel, { color: theme.colors.textSecondary }]}>Entry Fee</Text>
 
@@ -226,9 +247,16 @@ const styles = StyleSheet.create({
     marginRight: 6,
     minWidth: 120,
   },
-  derashLabelLandscape: {
+  derashValueLandscape: {
     fontSize: 16,
     fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  derashLabelLandscape: {
+    fontSize: 10,
+    fontWeight: '500',
     color: '#fff',
     textAlign: 'center',
   },
@@ -244,9 +272,15 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     minWidth: 120,
   },
-  medebText: {
+  medebValueLandscape: {
     fontSize: 14,
     fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  medebLabelLandscape: {
+    fontSize: 10,
+    fontWeight: '500',
     textAlign: 'center',
   },
 });

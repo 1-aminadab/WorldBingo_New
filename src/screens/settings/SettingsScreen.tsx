@@ -1,5 +1,5 @@
 /* eslint-disable react-native/no-raw-text */
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,13 +10,15 @@ import {
   TextInput,
   Modal,
   Image,
+  Animated,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Easing } from 'react-native';
 import { useTheme } from '../../components/ui/ThemeProvider';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { useSettingsStore } from '../../store/settingsStore';
-import { CLASSIC_PATTERNS, MODERN_PATTERNS } from './patterns';
+import { CLASSIC_PATTERNS, MODERN_PATTERNS } from '../../store/settingsStore';
 import { audioManager } from '../../utils/audioManager';
 import { PatternCard } from '../../components/ui/PatternCard';
 import { Dropdown } from '../../components/ui/Dropdown';
@@ -25,6 +27,7 @@ import Slider from '@react-native-community/slider';
 import { useNavigation } from '@react-navigation/native';
 import { ClassicLineType } from '../../types';
 import VoiceLanguageSelector from '../../components/ui/VoiceLanguageSelector';
+import { ScreenNames } from '../../constants/ScreenNames';
 
 export const SettingsScreen: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -74,6 +77,8 @@ export const SettingsScreen: React.FC = () => {
   } = useSettingsStore();
 
   const [activeTab, setActiveTab] = useState<'classic' | 'modern'>(patternCategory);
+  const tabAnimation = useRef(new Animated.Value(patternCategory === 'classic' ? 0 : 1)).current;
+  const callingModeAnimation = useRef(new Animated.Value(numberCallingMode === 'automatic' ? 0 : 1)).current;
   const [tempRewardAmount, setTempRewardAmount] = useState(rewardAmount?.toString() || '');
   const [tempPlayerBinding, setTempPlayerBinding] = useState(playerBinding || '');
   const [isCardModalOpen, setIsCardModalOpen] = useState(false);
@@ -103,6 +108,14 @@ export const SettingsScreen: React.FC = () => {
     clearPattern();
     clearClassicLineTypes();
     setClassicLinesTarget(1);
+    
+    // Animate tab transition with curve
+    Animated.timing(tabAnimation, {
+      toValue: category === 'classic' ? 0 : 1,
+      duration: 300,
+      easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
+      useNativeDriver: false,
+    }).start();
   };
 
   const handlePatternSelect = (patternKey: string) => {
@@ -153,55 +166,90 @@ export const SettingsScreen: React.FC = () => {
 
 
   const renderPatternSection = () => (
-    <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+    <View style={getSectionStyle(theme)}>
       <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
         {t('Pattern Selection Options')}
       </Text>
       
 
-      {/* Tabs */}
-      <View style={[styles.tabContainer, { backgroundColor: theme.colors.surface }]}>
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === 'classic' && { backgroundColor: theme.colors.primary },
-          ]}
-          onPress={() => handlePatternCategoryChange('classic')}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              {
-                color: activeTab === 'classic' ? '#FFFFFF' : theme.colors.text,
-              },
-            ]}
+      {/* Animated Tabs */}
+      <View style={[styles.animatedTabContainer ]}>
+        <Animated.View style={[
+          styles.animatedTab,
+          styles.classicTab,
+          {
+            width: tabAnimation.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['60%', '40%'],
+            }),
+            backgroundColor: tabAnimation.interpolate({
+              inputRange: [0, 1],
+              outputRange: [theme.colors.primary, 'transparent'],
+            }),
+          }
+        ]}>
+          <TouchableOpacity 
+            style={styles.animatedTabInner}
+            onPress={() => handlePatternCategoryChange('classic')}
           >
-            {t('Classic Patterns')}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === 'modern' && { backgroundColor: theme.colors.primary },
-          ]}
-          onPress={() => handlePatternCategoryChange('modern')}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              {
-                color: activeTab === 'modern' ? '#FFFFFF' : theme.colors.text,
-              },
-            ]}
+            <Animated.Text 
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              style={[
+                styles.animatedTabText,
+                {
+                  color: tabAnimation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['#FFFFFF', theme.colors.text],
+                  }),
+                }
+              ]}
+            >
+              {t('Classic')}
+            </Animated.Text>
+          </TouchableOpacity>
+        </Animated.View>
+        
+        <Animated.View style={[
+          styles.animatedTab,
+          styles.modernTab,
+          {
+            width: tabAnimation.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['40%', '60%'],
+            }),
+            backgroundColor: tabAnimation.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['transparent', theme.colors.primary],
+            }),
+          }
+        ]}>
+          <TouchableOpacity 
+            style={styles.animatedTabInner}
+            onPress={() => handlePatternCategoryChange('modern')}
           >
-            {t('Modern')}
-          </Text>
-        </TouchableOpacity>
+            <Animated.Text 
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              style={[
+                styles.animatedTabText,
+                {
+                  color: tabAnimation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [theme.colors.text, '#FFFFFF'],
+                  }),
+                }
+              ]}
+            >
+              {t('Modern')}
+            </Animated.Text>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
       {isClassicTab ? (
         <View>
           {/* Classic lines stepper */}
-          <View style={[styles.classicStepperRow, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}> 
+          <View style={[styles.classicStepperRow, { backgroundColor: 'rgb(0, 6, 62)', borderColor: theme.colors.border }]}> 
             <Text style={[styles.classicStepperTitle, { color: theme.colors.textSecondary }]}>Pattern required</Text>
             <View style={styles.stepperControls}>
               <TouchableOpacity
@@ -249,64 +297,140 @@ export const SettingsScreen: React.FC = () => {
         <View style={{ marginTop: 8 }}>
           {MODERN_PATTERNS.map((pattern) => {
             const sel = selectedPattern === pattern.key;
+            const disabled = selectedPattern === 'full_house';
             return (
-              <TouchableOpacity key={pattern.key} onPress={() => handlePatternSelect(pattern.key)} style={styles.listRow}>
+              <TouchableOpacity 
+                key={pattern.key} 
+                onPress={() => {
+                  if (!disabled) handlePatternSelect(pattern.key);
+                }} 
+                style={[styles.listRow, { opacity: disabled ? 0.5 : 1 }]}
+                disabled={disabled}
+              >
                 <View style={[styles.checkIcon, { borderColor: theme.colors.border, backgroundColor: sel ? theme.colors.primary : 'transparent' }]}>
                   {sel && <Check size={16} color="#fff" />}
                 </View>
-                <Text style={[styles.listLabel, { color: theme.colors.text }]}>{t(`patterns.${pattern.key}`)}</Text>
+                <Text style={[styles.listLabel, { color: theme.colors.text }]}>{pattern.name}</Text>
               </TouchableOpacity>
             );
           })}
+          
+          {/* Full House toggle for modern mode */}
+          <TouchableOpacity
+            onPress={() => {
+              if ((selectedPattern as any) === FULL_HOUSE) { clearPattern(); } else { setPattern(FULL_HOUSE as any); }
+            }}
+            style={[styles.checkboxRow, { opacity: 1, marginTop: 8 }]}
+          >
+            <View style={[styles.checkIcon, { borderColor: theme.colors.border, backgroundColor: (selectedPattern as any) === FULL_HOUSE ? theme.colors.primary : 'transparent' }]}>
+              {(selectedPattern as any) === FULL_HOUSE && <Check size={16} color="#fff" />}
+            </View>
+            <Text style={[styles.checkboxLabel, { color: theme.colors.text }]}>Full House (All cells)</Text>
+          </TouchableOpacity>
+          
+          {selectedPattern === 'full_house' && (
+            <Text style={[styles.helperNote, { color: theme.colors.textSecondary }]}>Full House requires all cells to be filled to win.</Text>
+          )}
         </View>
       )}
     </View>
   );
 
   const renderNumberCallingSection = () => (
-    <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+    <View style={getSectionStyle(theme)}>
       <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Number Calling Mode</Text>
       <Text style={[styles.sectionDescription, { color: theme.colors.textSecondary, marginBottom: 12 }]}>
         Choose how numbers are called during the game
       </Text>
       
-      <View style={[styles.tabContainer, { backgroundColor: theme.colors.surface }]}>
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            numberCallingMode === 'automatic' && { backgroundColor: theme.colors.primary },
-          ]}
-          onPress={() => setNumberCallingMode('automatic')}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              {
-                color: numberCallingMode === 'automatic' ? '#FFFFFF' : theme.colors.text,
-              },
-            ]}
+      <View style={[styles.animatedTabContainer]}>
+        <Animated.View style={[
+          styles.animatedTab,
+          styles.automaticTab,
+          {
+            width: callingModeAnimation.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['60%', '40%'],
+            }),
+            backgroundColor: callingModeAnimation.interpolate({
+              inputRange: [0, 1],
+              outputRange: [theme.colors.primary, 'transparent'],
+            }),
+          }
+        ]}>
+          <TouchableOpacity 
+            style={styles.animatedTabInner}
+            onPress={() => {
+              setNumberCallingMode('automatic');
+              Animated.timing(callingModeAnimation, {
+                toValue: 0,
+                duration: 300,
+                easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
+                useNativeDriver: false,
+              }).start();
+            }}
           >
-            Automatic
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            numberCallingMode === 'manual' && { backgroundColor: theme.colors.primary },
-          ]}
-          onPress={() => setNumberCallingMode('manual')}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              {
-                color: numberCallingMode === 'manual' ? '#FFFFFF' : theme.colors.text,
-              },
-            ]}
+            <Animated.Text 
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              style={[
+                styles.animatedTabText,
+                {
+                  color: callingModeAnimation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['#FFFFFF', theme.colors.text],
+                  }),
+                }
+              ]}
+            >
+              Automatic
+            </Animated.Text>
+          </TouchableOpacity>
+        </Animated.View>
+        
+        <Animated.View style={[
+          styles.animatedTab,
+          styles.manualTab,
+          {
+            width: callingModeAnimation.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['40%', '60%'],
+            }),
+            backgroundColor: callingModeAnimation.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['transparent', theme.colors.primary],
+            }),
+          }
+        ]}>
+          <TouchableOpacity 
+            style={styles.animatedTabInner}
+            onPress={() => {
+              setNumberCallingMode('manual');
+              Animated.timing(callingModeAnimation, {
+                toValue: 1,
+                duration: 300,
+                easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
+                useNativeDriver: false,
+              }).start();
+            }}
           >
-            Manual
-          </Text>
-        </TouchableOpacity>
+            <Animated.Text 
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              style={[
+                styles.animatedTabText,
+                {
+                  color: callingModeAnimation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [theme.colors.text, '#FFFFFF'],
+                  }),
+                }
+              ]}
+            >
+              Manual
+            </Animated.Text>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
       
       <Text style={[styles.helpText, { color: theme.colors.textSecondary }]}>
@@ -367,7 +491,7 @@ export const SettingsScreen: React.FC = () => {
   );
 
   const renderVoiceSection = () => (
-    <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+    <View style={getSectionStyle(theme)}>
       <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Bingo Caller Voice & Language</Text>
       
       {/* Embedded Voice Language Selector */}
@@ -378,7 +502,7 @@ export const SettingsScreen: React.FC = () => {
   );
 
   const renderAppSettingsSection = () => (
-    <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+    <View style={getSectionStyle(theme)}>
       <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
         App Settings
       </Text>
@@ -386,7 +510,7 @@ export const SettingsScreen: React.FC = () => {
   );
 
   const renderRTPSection = () => (
-    <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+    <View style={getSectionStyle(theme)}>
       <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('settings.rtp')}</Text>
       <Text style={[styles.sectionDescription, { color: theme.colors.textSecondary, marginBottom: 12 }]}>{t('settings.rtpInfo')}</Text>
       
@@ -427,6 +551,12 @@ export const SettingsScreen: React.FC = () => {
           <Text style={[styles.sliderEndLabel, { color: theme.colors.textSecondary }]}>100%</Text>
         </View>
       </View>
+      
+      <View style={[styles.warningContainer, { backgroundColor: '#FFF3CD', borderColor: '#FFEAA7' }]}>
+        <Text style={[styles.warningText, { color: '#856404' }]}>
+          ℹ️ Note: If 4 or fewer players are playing, RTP is automatically set to 100% (RTP settings are not applied).
+        </Text>
+      </View>
     </View>
   );
 
@@ -447,7 +577,7 @@ export const SettingsScreen: React.FC = () => {
     };
 
     return (
-      <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+      <View style={getSectionStyle(theme)}>
         <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Bingo Call Timing</Text>
         <Text style={[styles.sectionDescription, { color: theme.colors.textSecondary, marginBottom: 12 }]}>
           Set how many balls after the winning number a player can still call "Bingo!" and be accepted. This prevents delayed calls to see better patterns.
@@ -482,7 +612,7 @@ export const SettingsScreen: React.FC = () => {
   };
 
   const renderHostSettingsSection = () => (
-    <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+    <View style={getSectionStyle(theme)}>
       <Text style={[styles.sectionTitle, { color: theme.colors.text }]}> 
         🎯 {t('settings.title')}
       </Text>
@@ -583,7 +713,7 @@ export const SettingsScreen: React.FC = () => {
 
 
   const renderGameThemeSection = () => (
-    <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+    <View style={getSectionStyle(theme)}>
       <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Game Theme</Text>
       {/* Toggle between Default (Dark) vs Black & White */}
       <View style={styles.radioHorizontal}>
@@ -625,8 +755,8 @@ export const SettingsScreen: React.FC = () => {
       if (selectedCardTypeName === 'default') {
         return {
           title: 'Show World Bingo Cards',
-          variant: 'outline' as const,
-          onPress: () => (navigation as any).navigate('CardTypeEditor', { mode: 'manage', name: 'default' })
+          variant: undefined,
+          onPress: () => (navigation as any).navigate(ScreenNames.CARD_TYPE_EDITOR, { mode: 'manage', name: 'default' })
         };
       } else {
         // Custom is selected
@@ -634,13 +764,13 @@ export const SettingsScreen: React.FC = () => {
           return {
             title: 'Show Custom Cards',
             variant: 'outline' as const,
-            onPress: () => (navigation as any).navigate('CardTypeEditor', { mode: 'manage', name: 'custom' })
+            onPress: () => (navigation as any).navigate(ScreenNames.CARD_TYPE_EDITOR, { mode: 'manage', name: 'custom' })
           };
         } else {
           return {
             title: 'Create Custom Cards',
             variant: undefined,
-            onPress: () => (navigation as any).navigate('CardTypeEditor', { mode: 'create', name: 'custom' })
+            onPress: () => (navigation as any).navigate(ScreenNames.CARD_TYPE_EDITOR, { mode: 'create', name: 'custom' })
           };
         }
       }
@@ -649,7 +779,7 @@ export const SettingsScreen: React.FC = () => {
     const buttonConfig = getButtonConfig();
     
     return (
-      <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+      <View style={getSectionStyle(theme)}>
         <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Bingo Card Type</Text>
         
         {/* World Bingo Cards Option */}
@@ -708,12 +838,15 @@ export const SettingsScreen: React.FC = () => {
         <View style={styles.groupSeparator} />
         
         {/* Game Rules Group */}
-        {renderRTPSection()}
         {renderBingoCallTimingSection()}
         <View style={styles.groupSeparator} />
         
         {/* Appearance Group */}
         {renderGameThemeSection()}
+        <View style={styles.groupSeparator} />
+        
+        {/* RTP Group */}
+        {renderRTPSection()}
         <View style={styles.groupSeparator} />
         
         {/* Card Management Group */}
@@ -723,6 +856,12 @@ export const SettingsScreen: React.FC = () => {
     </View>
   );
 };
+
+// Helper function to get section style with theme
+const getSectionStyle = (theme: any) => ({
+  ...styles.section,
+  backgroundColor: 'rgb(28, 42, 89)',
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -779,6 +918,43 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  animatedTabContainer: {
+    flexDirection: 'row',
+    borderRadius: 50,
+    padding: 4,
+    marginBottom: 16,
+    gap: 4,
+    backgroundColor: 'rgb(0, 6, 62)'
+
+  },
+  animatedTab: {
+    borderRadius: 25,
+    overflow: 'hidden',
+  },
+  classicTab: {
+    // Additional styling for classic tab if needed
+  },
+  modernTab: {
+    // Additional styling for modern tab if needed
+  },
+  automaticTab: {
+    // Additional styling for automatic tab if needed
+  },
+  manualTab: {
+    // Additional styling for manual tab if needed
+  },
+  animatedTabInner: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  animatedTabText: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   classicStepperRow: {
     borderRadius: 12,

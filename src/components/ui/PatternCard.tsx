@@ -75,6 +75,13 @@ export const PatternCard: React.FC<PatternCardProps> = ({
           grid[4][i] = true;
         }
         break;
+      case 'l_shape':
+        // Left column and bottom row
+        for (let i = 0; i < 5; i++) {
+          grid[i][0] = true;
+          grid[4][i] = true;
+        }
+        break;
       case 'x_shape':
         // Both diagonals
         for (let i = 0; i < 5; i++) {

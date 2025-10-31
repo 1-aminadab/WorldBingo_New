@@ -12,8 +12,9 @@ import {
   StatusBar,
   SafeAreaView,
   Image,
+  Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import Animated, {
   useSharedValue,
@@ -22,140 +23,43 @@ import Animated, {
   withSequence,
 } from 'react-native-reanimated';
 import LinearGradient from 'react-native-linear-gradient';
+import { ChevronDown, Edit3, LogOut, X } from 'lucide-react-native';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Dropdown } from '../components/ui/Dropdown';
+import AuthField from '../components/ui/AuthField';
+import PhoneField from '../components/ui/PhoneField';
+import BlueButton from '../components/ui/BlueButton';
+import { LoadingOverlay } from '../components/ui/LoadingOverlay';
+import StatusModal from '../components/ui/StatusModal';
 
 import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { formatTime } from '../utils/gameHelpers';
 import { ReportStorageManager } from '../utils/reportStorage';
+import { apiClient } from '../api/client/base';
+import { API_ENDPOINTS } from '../api/config';
+import { ScreenNames } from '../constants/ScreenNames';
+import { restoreTabBar } from '../utils/tabBarStyles';
 
 const { width } = Dimensions.get('window');
 
-interface CustomModalProps {
-  visible: boolean;
-  onClose: () => void;
-  title: string;
-  message: string;
-  type: 'success' | 'error' | 'info' | 'warning' | 'confirm';
-  confirmText?: string;
-  cancelText?: string;
-  onConfirm?: () => void;
-  onCancel?: () => void;
-}
-
-const CustomModal: React.FC<CustomModalProps> = ({
-  visible,
-  onClose,
-  title,
-  message,
-  type,
-  confirmText = 'OK',
-  cancelText = 'Cancel',
-  onConfirm,
-  onCancel,
-}) => {
-  const { theme } = useTheme();
-
-  const getGradientColors = () => {
-    switch (type) {
-      case 'success': return ['#10B981', '#059669'];
-      case 'error': return ['#EF4444', '#DC2626'];
-      case 'warning': return ['#F59E0B', '#D97706'];
-      case 'confirm': return ['#8B5CF6', '#7C3AED'];
-      default: return ['#3B82F6', '#2563EB'];
-    }
+type ProfileScreenRouteProp = RouteProp<{
+  ProfileMain: {
+    paymentStatus?: 'success' | 'cancelled' | 'failed';
+    paymentMessage?: string;
+    amount?: string;
+    transactionId?: string;
   };
-
-  const getIcon = () => {
-    switch (type) {
-      case 'success': return '✅';
-      case 'error': return '❌';
-      case 'warning': return '⚠️';
-      case 'confirm': return '❓';
-      default: return 'ℹ️';
-    }
-  };
-
-  const safeVibrate = () => {
-    if (Platform.OS === 'android') {
-      try {
-        setTimeout(() => {}, 50);
-      } catch (error) {
-        console.log('Vibration not supported');
-      }
-    }
-  };
-
-  const handleAction = (action: string) => {
-    safeVibrate();
-    if (action === 'confirm' && onConfirm) {
-      onConfirm();
-    } else if (action === 'cancel' && onCancel) {
-      onCancel();
-    }
-    onClose();
-  };
-
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={[styles.customModalContainer, { backgroundColor: theme.colors.card }]}>
-          <LinearGradient
-            colors={getGradientColors()}
-            style={styles.customModalHeader}
-          >
-            <Text style={styles.customModalIcon}>{getIcon()}</Text>
-            <Text style={styles.customModalTitle}>{title}</Text>
-          </LinearGradient>
-          
-          <View style={[styles.customModalContent, { backgroundColor: theme.colors.card }]}>
-            <Text style={[styles.customModalMessage, { color: theme.colors.text }]}>
-              {message}
-            </Text>
-          </View>
-
-          {type === 'confirm' ? (
-            <View style={[styles.customModalActions, { backgroundColor: theme.colors.card }]}>
-              <TouchableOpacity
-                onPress={() => handleAction('cancel')}
-                style={[styles.customModalActionButton, { backgroundColor: theme.colors.textSecondary }]}
-              >
-                <Text style={styles.customModalButtonText}>{cancelText}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => handleAction('confirm')}
-                style={[styles.customModalActionButton, { backgroundColor: getGradientColors()[0] }]}
-              >
-                <Text style={styles.customModalButtonText}>{confirmText}</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity
-              onPress={() => handleAction('close')}
-              style={[styles.customModalButton, { backgroundColor: getGradientColors()[0] }]}
-            >
-              <Text style={styles.customModalButtonText}>{confirmText}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-    </Modal>
-  );
-};
+}, 'ProfileMain'>;
 
 export const ProfileScreen: React.FC = () => {
   const navigation = useNavigation();
+  const route = useRoute<ProfileScreenRouteProp>();
   const { t, i18n } = useTranslation();
-  const { theme } = useTheme();
-  const { user, isAuthenticated, isGuest, logout, convertGuestToUser, isLoading } = useAuthStore();
+  const { theme, isDark } = useTheme();
+  const { user, isAuthenticated, isGuest, logout, logoutSilent, convertGuestToUser, isLoading, userCoins, setPendingAuthScreen } = useAuthStore();
   const { appLanguage, setAppLanguage } = useSettingsStore();
 
   // Form states
@@ -167,47 +71,102 @@ export const ProfileScreen: React.FC = () => {
     confirmPassword: '',
   });
   const [errors, setErrors] = useState<{[key: string]: string}>({});
-
-  // Data states
-  const [userCoins] = useState(1000); // Default coin balance from transaction system
-  const [referralCode] = useState('WB' + (user?.id || 'GUEST').slice(-6).toUpperCase());
   const [todaysGameStats, setTodaysGameStats] = useState({
     totalGames: 0,
     totalCards: 0,
     averageRTP: 0,
     totalTime: 0,
   });
-
-  // Modal states
-  const [modalConfig, setModalConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type: 'success' | 'error' | 'info' | 'warning' | 'confirm';
-    confirmText?: string;
-    cancelText?: string;
-    onConfirm?: () => void;
-    onCancel?: () => void;
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'info',
+  const [todaysReportStats, setTodaysReportStats] = useState({
+    totalPayin: 0,
+    totalPayout: 0,
+    totalProfit: 0,
   });
 
-  const showModal = (config: Omit<typeof modalConfig, 'visible'>) => {
-    setModalConfig({ ...config, visible: true });
+  // Modal states
+  const [statusModal, setStatusModal] = useState<{
+    visible: boolean;
+    variant: 'success' | 'error';
+    title?: string;
+    message?: string;
+  }>({
+    visible: false,
+    variant: 'success',
+  });
+
+  const [showOptionsModal, setShowOptionsModal] = useState(false);
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [editProfileForm, setEditProfileForm] = useState({
+    firstName: '',
+    lastName: '',
+    phoneNumber: '',
+  });
+  const [countryCode, setCountryCode] = useState('+251');
+  const [editProfileErrors, setEditProfileErrors] = useState<{[key: string]: string}>({});
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+
+  const showStatusModal = (variant: 'success' | 'error', title?: string, message?: string) => {
+    setStatusModal({ visible: true, variant, title, message });
   };
 
-  const hideModal = () => {
-    setModalConfig(prev => ({ ...prev, visible: false }));
+  const hideStatusModal = () => {
+    setStatusModal(prev => ({ ...prev, visible: false }));
   };
+
+  // Handle payment deep link result
+  useFocusEffect(
+    React.useCallback(() => {
+      const { paymentStatus, paymentMessage, amount, transactionId } = route.params || {};
+      
+      if (paymentStatus) {
+        console.log('💳 Payment Result Received:', { paymentStatus, paymentMessage, amount, transactionId });
+        
+        setTimeout(() => {
+          if (paymentStatus === 'success') {
+            showStatusModal(
+              'success',
+              'Payment Successful! 🎉',
+              paymentMessage || `Your payment has been processed successfully.${amount ? `\n\nAmount: ${amount} coins` : ''}${transactionId ? `\nTransaction ID: ${transactionId}` : ''}`
+            );
+          } else if (paymentStatus === 'cancelled') {
+            showStatusModal(
+              'error',
+              'Payment Cancelled',
+              paymentMessage || 'You have cancelled the payment. No charges were made.'
+            );
+          } else if (paymentStatus === 'failed') {
+            showStatusModal(
+              'error',
+              'Payment Failed',
+              paymentMessage || 'Payment could not be processed. Please try again.'
+            );
+          }
+        }, 300);
+
+        // Clear the params to prevent showing the modal again
+        navigation.setParams({
+          paymentStatus: undefined,
+          paymentMessage: undefined,
+          amount: undefined,
+          transactionId: undefined,
+        } as any);
+      }
+    }, [route.params])
+  );
+
+  // Ensure tab bar is visible when this screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      restoreTabBar(navigation);
+    }, [navigation])
+  );
 
   // Load today's game statistics
   const loadTodaysGameStats = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const todaysReport = await ReportStorageManager.getGameReportByDate(today);
+      const userId = user?.userId; // Get userId from auth store
+      const todaysReport = await ReportStorageManager.getGameReportByDate(today, userId);
       
       if (todaysReport) {
         const totalTime = todaysReport.games.reduce((sum, game) => sum + game.gameDurationMinutes, 0);
@@ -226,19 +185,46 @@ export const ProfileScreen: React.FC = () => {
     }
   };
 
+  // Load today's report statistics
+  const loadTodaysReportStats = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const userId = user?.userId;
+      const todaysReport = await ReportStorageManager.getGameReportByDate(today, userId);
+      
+      if (todaysReport) {
+        // Payin is the total collected amount from players
+        const totalPayin = todaysReport.totalCollectedAmount;
+        // Payout is calculated as total collected amount minus profit
+        const totalPayout = todaysReport.totalCollectedAmount - todaysReport.totalProfit;
+        // Profit is the house profit from the games
+        const totalProfit = todaysReport.totalProfit;
+        
+        setTodaysReportStats({
+          totalPayin: totalPayin,
+          totalPayout: totalPayout,
+          totalProfit: totalProfit,
+        });
+      }
+    } catch (error) {
+      console.error('Error loading today\'s report stats:', error);
+    }
+  };
+
   useEffect(() => {
     loadTodaysGameStats();
+    loadTodaysReportStats();
   }, []);
 
   const handleLogout = () => {
-    showModal({
-      title: 'Logout',
-      message: isGuest ? 'Exit guest session?' : 'Are you sure you want to logout?',
-      type: 'confirm',
-      confirmText: isGuest ? 'Exit' : 'Logout',
-      cancelText: 'Cancel',
-      onConfirm: logout,
-    });
+    Alert.alert(
+      'Logout',
+      isGuest ? 'Exit guest session?' : 'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: isGuest ? 'Exit' : 'Logout', style: 'destructive', onPress: logout },
+      ]
+    );
   };
 
   const validateAccountForm = (): boolean => {
@@ -268,31 +254,20 @@ export const ProfileScreen: React.FC = () => {
 
     try {
       const success = await convertGuestToUser(
+        accountForm.name,
         accountForm.email,
         accountForm.password,
-        accountForm.name
+        accountForm.confirmPassword
       );
       
       if (success) {
-        showModal({
-          title: 'Success',
-          message: 'Account created successfully! Your game progress has been saved.',
-          type: 'success',
-        });
+        showStatusModal('success', 'Success', 'Account created successfully! Your game progress has been saved.');
         setShowCreateAccount(false);
       } else {
-        showModal({
-          title: 'Error',
-          message: 'Failed to create account',
-          type: 'error',
-        });
+        showStatusModal('error', 'Error', 'Failed to create account');
       }
     } catch (error) {
-      showModal({
-        title: 'Error',
-        message: 'An error occurred while creating account',
-        type: 'error',
-      });
+      showStatusModal('error', 'Error', 'An error occurred while creating account');
     }
   };
 
@@ -304,26 +279,45 @@ export const ProfileScreen: React.FC = () => {
   };
 
   const handleViewCoins = () => {
-    navigation.navigate('TransactionReport' as never);
+    navigation.navigate(ScreenNames.TRANSACTION_REPORT as never);
   };
 
   const handleCoinPurchase = () => {
-    navigation.navigate('TransactionReport' as never);
+    const userId = useAuthStore.getState().getUserId();
+    console.log('💳 Navigating to payment page with user ID:', userId);
+    navigation.navigate(ScreenNames.PAYMENT_WEBVIEW as never);
   };
 
   const handleInviteFriends = async () => {
+    // If user is guest, exit guest mode to allow login/signup
+    if (isGuest) {
+      Alert.alert(
+        'Sign Up Required',
+        'To share your invitation code and earn rewards, please create an account or sign in.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Sign Up', 
+            onPress: async () => {
+              setPendingAuthScreen('SignUp');
+              await logoutSilent();
+            }
+          },
+        ]
+      );
+      return;
+    }
+    
     try {
-      const inviteLink = 'https://worldbingo.app/invite?ref=' + (user?.id || 'guest');
+      const userId = user?.userId || user?.id;
+      const shareMessage = `I'm using World Bingo App! 🎯\nThis Bingo app is awesome — you should try it!\nUse my invite code ${userId} for 5% cashback on your first coin purchase.\n\nDownload now 👉\n\nhttps://myworldbingo.com/app`;
+      
       await Share.share({
-        message: `Join me on Bingo Caller! 🎯\n\nI'm hosting epic bingo games with voice calling and amazing prizes!\n\n🎰 Professional hosting\n🎙️ Voice announcements\n💰 Real prizes\n\nDownload now: ${inviteLink}`,
-        title: 'Join me on Bingo Caller!',
+        message: shareMessage,
+        title: 'Join me on World Bingo!',
       });
     } catch (error) {
-      showModal({
-        title: 'Error',
-        message: 'Failed to share invite link.',
-        type: 'error',
-      });
+      showStatusModal('error', 'Error', 'Failed to share invite link.');
     }
   };
 
@@ -333,83 +327,266 @@ export const ProfileScreen: React.FC = () => {
     i18n.changeLanguage(newLang);
   };
 
-  const handleCopyInviteLink = () => {
-    const inviteLink = 'https://worldbingo.app/invite?ref=' + (user?.id || 'guest');
-    // In a real app, you'd use Clipboard API
-    showModal({
-      title: '🔗 Invitation Link',
-      message: `Your personal invite link:\n\n${inviteLink}\n\n✅ Link copied to clipboard!\n\nShare this link to earn rewards!`,
-      type: 'success',
+  const handleEditProfile = () => {
+    // Split user's name into firstName and lastName
+    const nameParts = (user?.name || '').split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+    
+    // Remove country code from phone number if present
+    const phoneNumber = user?.phoneNumber || '';
+    const cleanPhone = phoneNumber.startsWith('+251') 
+      ? phoneNumber.substring(4) 
+      : phoneNumber.startsWith('251')
+      ? phoneNumber.substring(3)
+      : phoneNumber;
+    
+    setEditProfileForm({
+      firstName,
+      lastName,
+      phoneNumber: cleanPhone,
     });
+    setCountryCode('+251');
+    setEditProfileErrors({});
+    setShowEditProfileModal(true);
   };
 
+  const validateEditProfileForm = (): boolean => {
+    const errors: {[key: string]: string} = {};
+    
+    if (!editProfileForm.firstName.trim()) {
+      errors.firstName = 'First name is required';
+    } else if (editProfileForm.firstName.trim().length < 2) {
+      errors.firstName = 'First name must be at least 2 characters';
+    }
+    
+    if (!editProfileForm.lastName.trim()) {
+      errors.lastName = 'Last name is required';
+    } else if (editProfileForm.lastName.trim().length < 2) {
+      errors.lastName = 'Last name must be at least 2 characters';
+    }
+    
+    if (!editProfileForm.phoneNumber.trim()) {
+      errors.phoneNumber = 'Phone number is required';
+    }
+    
+    setEditProfileErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSaveProfile = async () => {
+    if (!validateEditProfileForm()) return;
+
+    setIsUpdatingProfile(true);
+    try {
+      const fullName = `${editProfileForm.firstName.trim()} ${editProfileForm.lastName.trim()}`.trim();
+      const fullPhoneNumber = `${countryCode}${editProfileForm.phoneNumber}`;
+      
+      // Get userId from user object
+      const userId = user?.userId || user?.id;
+      
+      if (!userId) {
+        showStatusModal('error', 'Error', 'User ID not found');
+        setIsUpdatingProfile(false);
+        return;
+      }
+
+      console.log('Updating user profile:', { userId, fullName, phoneNumber: fullPhoneNumber });
+      
+      // Use the correct endpoint: PUT /api/v1/users/:userId
+      const response = await apiClient.put(`/api/v1/users/${userId}`, {
+        fullName,
+        phoneNumber: fullPhoneNumber,
+      });
+
+      console.log('Update profile response:', response);
+
+      if (response.success) {
+        // Update local user state
+        const updatedUser = {
+          ...user,
+          name: fullName,
+          phoneNumber: fullPhoneNumber,
+        };
+        useAuthStore.getState().setUser(updatedUser as any);
+        
+        showStatusModal('success', 'Success', 'Profile updated successfully!');
+        setShowEditProfileModal(false);
+      } else {
+        showStatusModal('error', 'Error', response.message || 'Failed to update profile');
+      }
+    } catch (error: any) {
+      console.error('Failed to update profile:', error);
+      showStatusModal('error', 'Error', error.message || 'An error occurred while updating profile');
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
+
+  const updateEditProfileForm = (key: string, value: string) => {
+    setEditProfileForm(prev => ({ ...prev, [key]: value }));
+    if (editProfileErrors[key]) {
+      setEditProfileErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[key];
+        return newErrors;
+      });
+    }
+  };
+
+
   const handleGetFreeCoins = () => {
-    showModal({
-      title: '🎁 Free Coins Available',
-      message: 'Choose how to earn free coins:',
-      type: 'confirm',
-      confirmText: '📺 Watch Ad (+50 coins)',
-      cancelText: 'Cancel',
-      onConfirm: () => {
-        showModal({
-          title: '🎉 Ad Complete!',
-          message: 'You earned 50 coins!\n\nKeep earning more with daily activities!',
-          type: 'success',
-        });
-      },
-    });
+    Alert.alert(
+      '🎁 Free Coins Available',
+      'Choose how to earn free coins:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: '📺 Watch Ad (+50 coins)', 
+          onPress: () => {
+            showStatusModal('success', '🎉 Ad Complete!', 'You earned 50 coins!\n\nKeep earning more with daily activities!');
+          }
+        },
+      ]
+    );
   };
 
   const showTransactionHistory = () => {
-    navigation.navigate('TransactionReport' as never);
+    navigation.navigate(ScreenNames.TRANSACTION_REPORT as never);
   };
 
   const showGameHistory = () => {
-    navigation.navigate('GameReport' as never);
+    navigation.navigate(ScreenNames.GAME_REPORT as never);
   };
-
 
   const getWinRate = (): string => {
     if (!user?.gamesPlayed || user.gamesPlayed === 0) return '0';
     return Math.round((user.gamesWon || 0) / user.gamesPlayed * 100).toString();
   };
 
-  const renderProfileHeader = () => (
-    <View style={[{ backgroundColor: theme.colors.surface, borderRadius: 8, padding: 16 }]}>
-      <View style={styles.newProfileHeader}>
-        <View style={styles.newAvatarContainer}>
-          <View style={[styles.newAvatar, { backgroundColor: theme.colors.primary }]}>
-            <Text style={[styles.newAvatarText, { color: '#fff' }]}>
-              {user?.name?.charAt(0).toUpperCase() || 'D'}
-            </Text>
+  const renderProfileHeader = () => {
+    // For guest users, show simplified header with signup/signin buttons and coin display
+    if (isGuest) {
+      return (
+        <View style={[{ backgroundColor: 'rgb(28, 42, 89)', borderRadius: 8, padding: 16 }]}>
+          <View style={styles.guestHeader}>
+            <View style={styles.guestButtons}>
+              <TouchableOpacity 
+                style={[styles.guestButton, { backgroundColor: theme.colors.primary }]}
+                onPress={async () => {
+                  setPendingAuthScreen('SignUp'); // Set desired screen for signup
+                  await logoutSilent(); // Exit guest mode silently
+                }}
+              >
+                <Text style={[styles.guestButtonText, { color: '#fff' }]}>Sign Up</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.guestButton, styles.guestButtonSecondary, { borderColor: theme.colors.primary, borderWidth: 1 }]}
+                onPress={async () => {
+                  setPendingAuthScreen('Login'); // Set desired screen  
+                  await logoutSilent(); // Exit guest mode silently
+                }}
+              >
+                <Text style={[styles.guestButtonText, { color: theme.colors.primary }]}>Sign In</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          {/* 2px border separator */}
+          <View style={[styles.borderSeparator, { backgroundColor: theme.colors.border }]} />
+          
+          {/* Coin section for guest */}
+          <View style={styles.coinRow}>
+            <View style={styles.coinDisplay}>
+              <Image 
+                source={require('../assets/images/coin-2159.svg')}
+                style={styles.coinIcon}
+              />
+              <Text style={[styles.coinText, { color: theme.colors.text }]}>0 coins</Text>
+            </View>
+            <TouchableOpacity 
+              style={[styles.buyCoinBtn, { backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: theme.colors.border }]} 
+              onPress={async () => {
+                Alert.alert(
+                  'Sign Up Required',
+                  'To purchase coins and manage your balance, please create an account or sign in.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { 
+                      text: 'Sign Up', 
+                      onPress: async () => {
+                        setPendingAuthScreen('SignUp');
+                        await logoutSilent();
+                      }
+                    },
+                  ]
+                );
+              }}
+            >
+              <Text style={[styles.buyCoinBtnText, { color: '#fff' }]}>Buy coin</Text>
+            </TouchableOpacity>
           </View>
         </View>
-        
-        <View style={styles.newUserInfo}>
-          <Text style={[styles.newUserName, { color: theme.colors.text }]}>{user?.name || 'Dage Tadese'}</Text>
-          <Text style={[styles.newUserPhone, { color: theme.colors.textSecondary }]}>{user?.phone || '09 12 34 56 78'}</Text>
+      );
+    }
+
+    // For authenticated users, show full profile header
+    const firstName = user?.name?.split(' ')[0] || 'Dage';
+    const lastName = user?.name?.split(' ').slice(1).join(' ') || 'Tadese';
+    const fullName = `${firstName} ${lastName}`;
+    const phoneNumber = user?.phoneNumber || '09 12 34 56 78';
+    const userId = user?.userId || 'GUEST123';
+
+    return (
+      <View style={[{ backgroundColor: 'rgb(28, 42, 89)', borderRadius: 8, padding: 16 }]}>
+        <View style={styles.newProfileHeader}>
+          <View style={styles.newAvatarContainer}>
+            <View style={[styles.newAvatar, { backgroundColor: theme.colors.primary }]}>
+              <Text style={[styles.newAvatarText, { color: '#fff' }]}>
+                {firstName?.charAt(0).toUpperCase() || 'D'}
+              </Text>
+            </View>
+          </View>
+          
+          <View style={styles.newUserInfo}>
+            <Text style={[styles.newUserNameSmall, { color: theme.colors.text }]}>{fullName}</Text>
+            <Text style={[styles.newUserPhoneSmall, { color: theme.colors.textSecondary }]}>{phoneNumber}</Text>
+            <Text style={[styles.newUserPhoneSmall, { color: theme.colors.textSecondary }]}>ID: {userId}</Text>
+          </View>
+          
+          <TouchableOpacity 
+            style={[styles.optionsButton, { borderColor: theme.colors.border }]}
+            onPress={() => setShowOptionsModal(true)}
+          >
+            <ChevronDown size={20} color={theme.colors.textSecondary} />
+          </TouchableOpacity>
         </View>
         
-        <TouchableOpacity style={[styles.editButton, { borderColor: theme.colors.border }]}>
-          <Text style={[styles.editButtonText, { color: theme.colors.textSecondary }]}>Edit</Text>
-        </TouchableOpacity>
+        {/* 2px border separator */}
+        <View style={[styles.borderSeparator, { backgroundColor: theme.colors.border }]} />
+        
+        {/* Coin section merged */}
+        <View style={styles.coinRow}>
+          <View style={styles.coinDisplay}>
+            <Image 
+              source={require('../assets/images/coin-2159.svg')}
+              style={styles.coinIcon}
+            />
+            <Text style={[styles.coinText, { color: theme.colors.text }]}>{userCoins.toFixed(0)} coins</Text>
+          </View>
+          <TouchableOpacity style={[styles.buyCoinBtn, { backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: theme.colors.border }]} onPress={handleCoinPurchase}>
+            <Text style={[styles.buyCoinBtnText, { color: '#fff' }]}>Buy coin</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
-  const renderCoinSection = () => (
-    <View style={[{ backgroundColor: theme.colors.surface, borderRadius: 8, padding: 16 }]}>
-      <View style={styles.coinRow}>
-        <Text style={[styles.coinText, { color: theme.colors.text }]}>120 coine</Text>
-        <TouchableOpacity style={[styles.buyCoinBtn, { backgroundColor: theme.colors.surface }]} onPress={handleCoinPurchase}>
-          <Text style={[styles.buyCoinBtnText, { color: theme.colors.text }]}>Buy coin</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+  // Coin section is now merged with profile header
 
   const renderInvitationCard = () => (
-    <View style={[{ backgroundColor: theme.colors.surface, borderRadius: 8, padding: 16 }]}>
+    <View style={[{ backgroundColor: 'rgb(28, 42, 89)', borderRadius: 8, padding: 16 }]}>
       <View style={styles.invitationHeader}>
         <Text style={[styles.invitationTitle, { color: theme.colors.text }]}>Invite friend and get up</Text>
         <Text style={[styles.invitationTitle, { color: theme.colors.text }]}>
@@ -417,15 +594,19 @@ export const ProfileScreen: React.FC = () => {
         </Text>
         <Text style={[styles.invitationTitle, { color: theme.colors.text }]}>there coin purchases.</Text>
         <View style={styles.invitationIcon}>
-          <Text style={styles.iconText}>🤝💰</Text>
+          <Image 
+            source={require('../assets/images/werer.png')}
+            style={styles.invitationImage}
+            resizeMode="contain"
+          />
         </View>
       </View>
       
       <View style={styles.invitationCodeSection}>
         <Text style={[styles.codeLabel, { color: theme.colors.textSecondary }]}>Your invitation code</Text>
-        <View style={[styles.codeRow, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
-          <Text style={styles.invitationCode}>123424</Text>
-          <TouchableOpacity style={[styles.shareButton, { backgroundColor: theme.colors.surface }]} onPress={handleCopyInviteLink}>
+        <View style={[styles.codeRow, { backgroundColor: 'rgb(0, 12, 53)', borderColor: theme.colors.border }]}>
+          <Text style={styles.invitationCode}>{isGuest ? 'Login Required' : (user?.userId || user?.id || 'N/A')}</Text>
+          <TouchableOpacity style={[styles.shareButton, { backgroundColor: 'rgb(28, 42, 89)' }]} onPress={handleInviteFriends}>
             <Text style={[styles.shareButtonText, { color: theme.colors.text }]}>Share</Text>
           </TouchableOpacity>
         </View>
@@ -436,7 +617,7 @@ export const ProfileScreen: React.FC = () => {
   );
 
   const renderCoinsCard = () => (
-    <View style={[{ backgroundColor: theme.colors.surface, borderRadius: 8, padding: 16 }]}>
+    <View style={[{ backgroundColor: 'rgb(28, 42, 89)', borderRadius: 8, padding: 16 }]}>
       <View style={styles.cardHeader}>
         <Text style={[styles.cardTitle, { color: theme.colors.text }]}>💰 Coin Management</Text>
         <Text style={[styles.coinBalance, { color: theme.colors.primary }]}>
@@ -473,40 +654,70 @@ export const ProfileScreen: React.FC = () => {
   const renderReportSections = () => (
     <View style={styles.reportsContainer}>
       <View style={styles.reportsRow}>
-        <View style={[styles.reportCardHalf, { backgroundColor: theme.colors.surface }]}>
+        <View style={[styles.reportCardHalfSmall, { backgroundColor: 'rgb(28, 42, 89)' }]}>
           <TouchableOpacity 
-            style={styles.reportCardContent}
+            style={styles.reportCardContentSmall}
             onPress={showTransactionHistory}
           >
-            <View style={styles.reportIcon}>
-              <Text style={styles.reportIconText}>💰</Text>
+            <View style={styles.reportIconSmall}>
+              <Text style={styles.reportIconTextSmall}>💰</Text>
             </View>
-            <Text style={[styles.reportTitle, { color: theme.colors.text }]}>Transaction Report</Text>
+            <Text style={[styles.reportTitleSmall, { color: theme.colors.text }]}>Transaction Report</Text>
           </TouchableOpacity>
         </View>
         
-        <View style={[styles.reportCardHalf, { backgroundColor: theme.colors.surface }]}>
+        <View style={[styles.reportCardHalfSmall, { backgroundColor: 'rgb(28, 42, 89)' }]}>
           <TouchableOpacity 
-            style={styles.reportCardContent}
+            style={styles.reportCardContentSmall}
             onPress={showGameHistory}
           >
-            <View style={styles.reportIcon}>
-              <Text style={styles.reportIconText}>🎮</Text>
+            <View style={styles.reportIconSmall}>
+              <Text style={styles.reportIconTextSmall}>🎮</Text>
             </View>
-            <Text style={[styles.reportTitle, { color: theme.colors.text }]}>Game Report</Text>
-            <View style={styles.reportSubRow}>
-              <Text style={[styles.reportSubTitle, { color: theme.colors.textSecondary }]}>Date</Text>
-              <Text style={[styles.reportSubTitle, { color: theme.colors.textSecondary }]}>Coins you make</Text>
-            </View>
+            <Text style={[styles.reportTitleSmall, { color: theme.colors.text }]}>Game Report</Text>
           </TouchableOpacity>
         </View>
       </View>
       
+      {/* Today's Statistics */}
+      <View style={[styles.todayStatsCard, { backgroundColor: 'rgb(28, 42, 89)' }]}>
+        <Text style={[styles.todayStatsTitle, { color: theme.colors.text }]}>Daily Statistics</Text>
+        
+        {/* First Row - 3 Items */}
+        <View style={styles.statsRowThree}>
+          <View style={[styles.statCardSmall, { backgroundColor: theme.colors.primary + '15' }]}>
+            <Text style={[styles.statNumberSmall, { color: theme.colors.primary }]}>{todaysGameStats.totalGames}</Text>
+            <Text style={[styles.statLabelSmall, { color: theme.colors.text }]}>Games</Text>
+          </View>
+          <View style={[styles.statCardSmall, { backgroundColor: '#4299E1' + '15' }]}>
+            <Text style={[styles.statNumberSmall, { color: '#4299E1' }]}>{todaysGameStats.totalCards}</Text>
+            <Text style={[styles.statLabelSmall, { color: theme.colors.text }]}>Cards</Text>
+          </View>
+          <View style={[styles.statCardSmall, { backgroundColor: '#48BB78' + '15' }]}>
+            <Text style={[styles.statNumberSmall, { color: '#48BB78' }]}>{todaysReportStats.totalPayin.toFixed(2)}</Text>
+            <Text style={[styles.statLabelSmall, { color: theme.colors.text }]}>Pay-in</Text>
+          </View>
+        </View>
+
+        {/* Second Row - 2 Items */}
+        <View style={styles.statsRowTwo}>
+          <View style={[styles.statCardMedium, { backgroundColor: '#E53E3E' + '15' }]}>
+            <Text style={[styles.statNumberMedium, { color: '#E53E3E' }]}>{todaysReportStats.totalPayout.toFixed(2)}</Text>
+            <Text style={[styles.statLabelMedium, { color: theme.colors.text }]}>Pay-out (Birr)</Text>
+          </View>
+          <View style={[styles.statCardMedium, { backgroundColor: todaysReportStats.totalProfit >= 0 ? '#48BB78' + '15' : '#E53E3E' + '15' }]}>
+            <Text style={[styles.statNumberMedium, { color: todaysReportStats.totalProfit >= 0 ? '#48BB78' : '#E53E3E' }]}>
+              {todaysReportStats.totalProfit >= 0 ? '+' : ''}{todaysReportStats.totalProfit.toFixed(2)}
+            </Text>
+            <Text style={[styles.statLabelMedium, { color: theme.colors.text }]}>Profit (Birr)</Text>
+          </View>
+        </View>
+      </View>
     </View>
   );
 
   const renderLanguageCard = () => (
-    <View style={[{ backgroundColor: theme.colors.surface, borderRadius: 8, padding: 16 }]}>
+    <View style={[{ backgroundColor: 'rgb(28, 42, 89)', borderRadius: 8, padding: 16 }]}>
       <View style={styles.cardHeader}>
         <Text style={[styles.cardTitle, { color: theme.colors.text }]}>🌐 Language</Text>
       </View>
@@ -618,40 +829,172 @@ export const ProfileScreen: React.FC = () => {
     </Modal>
   );
 
-  return (
-    <SafeAreaView style={[styles.newContainer, { backgroundColor: theme.colors.background }]}>
-      <StatusBar 
-        backgroundColor={theme.colors.background} 
-        barStyle={theme.theme === 'dark' ? 'light-content' : 'dark-content'} 
-      />
-      
-      <ScrollView style={[styles.newScrollView, { backgroundColor: theme.colors.background }]} showsVerticalScrollIndicator={false}>
-        <View style={styles.newContent}>
-          {renderProfileHeader()}
-          {renderCoinSection()}
-          {renderInvitationCard()}
-          {renderReportSections()}
+  const renderOptionsModal = () => (
+    <Modal
+      visible={showOptionsModal}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setShowOptionsModal(false)}
+    >
+      <View style={styles.bottomModalOverlay}>
+        <TouchableOpacity 
+          style={styles.bottomModalBackdrop}
+          onPress={() => setShowOptionsModal(false)}
+        />
+        <View style={[styles.bottomModalContainer, { backgroundColor: theme.colors.card }]}>
+          <View style={styles.bottomModalHandle} />
+          
+          <View style={styles.bottomModalContent}>
+            <TouchableOpacity 
+              style={[styles.modernModalButton, { backgroundColor: '#FFFFFF' }]}
+              onPress={() => {
+                setShowOptionsModal(false);
+                handleEditProfile();
+              }}
+            >
+              <View style={styles.buttonContent}>
+                <Edit3 size={20} color="#000000" />
+                <Text style={[styles.modalButtonText, { color: '#000000' }]}>Edit Profile</Text>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.modernModalButton, { backgroundColor: '#EF4444' }]}
+              onPress={() => {
+                setShowOptionsModal(false);
+                handleLogout();
+              }}
+            >
+              <View style={styles.buttonContent}>
+                <LogOut size={20} color="#FFFFFF" />
+                <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>Logout</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
-      </ScrollView>
+      </View>
+    </Modal>
+  );
+
+  const renderEditProfileModal = () => (
+    <Modal
+      visible={showEditProfileModal}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setShowEditProfileModal(false)}
+    >
+      <View style={styles.editProfileModalOverlay}>
+        <TouchableOpacity 
+          style={styles.editProfileModalBackdrop}
+          onPress={() => setShowEditProfileModal(false)}
+          activeOpacity={1}
+        />
+        <View style={[styles.editProfileModalContainer, { backgroundColor: theme.colors.card }]}>
+          <View style={styles.editProfileModalHandle} />
+          
+          <View style={styles.editProfileModalHeader}>
+            <Text style={[styles.editProfileModalTitle, { color: theme.colors.text }]}>
+              Edit Profile
+            </Text>
+            <TouchableOpacity onPress={() => setShowEditProfileModal(false)}>
+              <X size={24} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.editProfileModalContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.editProfileRow}>
+              <AuthField
+                label="First Name*"
+                placeholder="First name"
+                value={editProfileForm.firstName}
+                onChangeText={(value) => updateEditProfileForm('firstName', value)}
+                containerStyle={{ flex: 1, marginRight: 8 }}
+                error={editProfileErrors.firstName}
+              />
+              <AuthField
+                label="Last Name*"
+                placeholder="Last name"
+                value={editProfileForm.lastName}
+                onChangeText={(value) => updateEditProfileForm('lastName', value)}
+                containerStyle={{ flex: 1, marginLeft: 8 }}
+                error={editProfileErrors.lastName}
+              />
+            </View>
+
+            <PhoneField
+              label="Phone Number*"
+              placeholder="Enter your phone number"
+              value={editProfileForm.phoneNumber}
+              onChangeText={(value) => updateEditProfileForm('phoneNumber', value)}
+              onChangeCountryCode={setCountryCode}
+              error={editProfileErrors.phoneNumber}
+            />
+
+            <BlueButton
+              title={isUpdatingProfile ? 'Updating...' : 'Save Changes'}
+              onPress={handleSaveProfile}
+              disabled={isUpdatingProfile}
+              style={styles.saveProfileButton}
+            />
+          </ScrollView>
+        </View>
+      </View>
+      {isUpdatingProfile && (
+        <LoadingOverlay
+          visible={true}
+          message="Updating profile..."
+        />
+      )}
+    </Modal>
+  );
+
+  return (
+    <View style={styles.container}>
+      <Image 
+        source={require('../assets/images/app-bgaround.png')}
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      />
+      <SafeAreaView style={[styles.newContainer, { backgroundColor: 'transparent' }]}>
+        <StatusBar 
+          backgroundColor={theme.colors.background} 
+          barStyle={isDark ? 'light-content' : 'dark-content'} 
+        />
+        
+        <ScrollView style={[styles.newScrollView, { backgroundColor: 'transparent' }]} showsVerticalScrollIndicator={false}>
+          <View style={styles.newContent}>
+            {renderProfileHeader()}
+            {renderInvitationCard()}
+            {renderReportSections()}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
 
       {renderCreateAccountModal()}
+      {renderOptionsModal()}
+      {renderEditProfileModal()}
       
-      <CustomModal
-        visible={modalConfig.visible}
-        onClose={hideModal}
-        title={modalConfig.title}
-        message={modalConfig.message}
-        type={modalConfig.type}
-        confirmText={modalConfig.confirmText}
-        cancelText={modalConfig.cancelText}
-        onConfirm={modalConfig.onConfirm}
-        onCancel={modalConfig.onCancel}
+      <StatusModal
+        visible={statusModal.visible}
+        variant={statusModal.variant}
+        title={statusModal.title}
+        message={statusModal.message}
+        onDismiss={hideStatusModal}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  // Container and background styles
+  container: {
+    flex: 1,
+  },
+  backgroundImage: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
   // New clean UI styles
   newContainer: {
     flex: 1,
@@ -661,6 +1004,7 @@ const styles = StyleSheet.create({
   },
   newContent: {
     padding: 16,
+    paddingBottom: 16,
     gap: 12,
   },
   
@@ -704,6 +1048,15 @@ const styles = StyleSheet.create({
   newUserPhone: {
     fontSize: 16,
   },
+  newUserNameSmall: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  newUserPhoneSmall: {
+    fontSize: 14,
+    marginBottom: 1,
+  },
   editButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -712,6 +1065,19 @@ const styles = StyleSheet.create({
   },
   editButtonText: {
     fontSize: 14,
+  },
+  optionsButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  borderSeparator: {
+    height: 2,
+    marginVertical: 16,
+    borderRadius: 1,
   },
   
   // Coin Section Card
@@ -730,17 +1096,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  coinDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  coinIcon: {
+    width: 20,
+    height: 20,
+  },
   coinText: {
     fontSize: 20,
     fontWeight: 'bold',
   },
   buyCoinBtn: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 25,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   buyCoinBtnText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
   
@@ -771,9 +1151,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
     top: 0,
+    bottom: 0,
+    width: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  iconText: {
-    fontSize: 24,
+  invitationImage: {
+    width: 130,
+    height: 130,
   },
   invitationCodeSection: {
     marginBottom: 16,
@@ -827,6 +1212,106 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
   },
+  reportCardHalfSmall: {
+    flex: 1,
+    borderRadius: 12,
+    padding: 8,
+    minHeight: 70,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  reportCardContentSmall: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    paddingVertical: 4,
+  },
+  reportIconSmall: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginBottom: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  reportIconTextSmall: {
+    fontSize: 16,
+  },
+  reportTitleSmall: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    lineHeight: 13,
+  },
+  todayStatsCard: {
+    borderRadius: 12,
+    padding: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    marginTop: 12,
+  },
+  todayStatsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  statsRowThree: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    gap: 8,
+  },
+  statsRowTwo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  statCardSmall: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  statCardMedium: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  statNumberSmall: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  statNumberMedium: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  statLabelSmall: {
+    fontSize: 10,
+    fontWeight: '500',
+    textAlign: 'center',
+    opacity: 0.8,
+  },
+  statLabelMedium: {
+    fontSize: 12,
+    fontWeight: '500',
+    textAlign: 'center',
+    opacity: 0.8,
+  },
   reportCardFull: {
     borderRadius: 12,
     padding: 16,
@@ -869,14 +1354,6 @@ const styles = StyleSheet.create({
   },
   
   // Legacy styles (keeping for compatibility)
-  container: {
-    flex: 1,
-  },
-  backgroundImage: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-  },
   scrollView: {
     flex: 1,
   },
@@ -962,7 +1439,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: 'rgba(0,0,0,0.1)',
   },
-  coinBalance: {
+  coinBalanceContainer: {
     flex: 1,
   },
   coinLabel: {
@@ -1145,67 +1622,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  customModalContainer: {
-    borderRadius: 28,
-    overflow: 'hidden',
-    minWidth: width * 0.8,
-    maxWidth: width * 0.9,
-    backgroundColor: 'white',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.3,
-    shadowRadius: 32,
-    elevation: 20,
-  },
-  customModalHeader: {
-    paddingVertical: 24,
-    paddingHorizontal: 28,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  customModalIcon: {
-    fontSize: 24,
-    marginHorizontal: 8,
-  },
-  customModalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
-    textAlign: 'center',
-  },
-  customModalContent: {
-    padding: 32,
-    backgroundColor: 'white',
-  },
-  customModalMessage: {
-    fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 26,
-    color: '#374151',
-  },
-  customModalButton: {
-    paddingVertical: 18,
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  customModalButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  customModalActions: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  customModalActionButton: {
-    flex: 1,
-    paddingVertical: 18,
-    alignItems: 'center',
-  },
   // Account Modal Styles
   accountModalContainer: {
     borderRadius: 24,
@@ -1243,6 +1659,114 @@ const styles = StyleSheet.create({
   createAccountButton: {
     marginTop: 20,
     marginBottom: 20,
+  },
+  // Bottom Modal Styles
+  bottomModalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  bottomModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  bottomModalContainer: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 34,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 20,
+  },
+  bottomModalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#D1D5DB',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  bottomModalContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+    gap: 12,
+  },
+  modernModalButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  // Edit Profile Modal Styles
+  editProfileModalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  editProfileModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  editProfileModalContainer: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingBottom: 34,
+    maxHeight: '85%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 20,
+  },
+  editProfileModalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#D1D5DB',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 16,
+  },
+  editProfileModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
+  },
+  editProfileModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  editProfileModalContent: {
+    maxHeight: '100%',
+  },
+  editProfileRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  saveProfileButton: {
+    marginTop: 20,
+    marginBottom: 10,
   },
   // Card Type Styles
   statsCard: {
@@ -1353,5 +1877,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  
+  // Guest Profile Styles
+  guestHeader: {
+    alignItems: 'center',
+  },
+  guestButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  guestButton: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  guestButtonSecondary: {
+    backgroundColor: 'transparent',
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+  guestButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

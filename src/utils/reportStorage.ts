@@ -1,9 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GameReport, CashReport, GameReportEntry, CashTransaction, CashTransactionReason } from '../types';
 
-const GAME_REPORTS_KEY = 'game_reports';
-const CASH_REPORTS_KEY = 'cash_reports';
-
 export class ReportStorageManager {
   private static generateId(): string {
     return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -13,34 +10,54 @@ export class ReportStorageManager {
     return new Date().toISOString().split('T')[0];
   }
 
+  // Generate user-specific storage keys
+  private static getGameReportsKey(userId?: string): string {
+    return userId ? `game_reports_${userId}` : 'game_reports_GUEST';
+  }
+
+  private static getCashReportsKey(userId?: string): string {
+    return userId ? `cash_reports_${userId}` : 'cash_reports_GUEST';
+  }
+
   // Game Reports
-  static async getGameReports(): Promise<GameReport[]> {
+  static async getGameReports(userId?: string): Promise<GameReport[]> {
     try {
-      const data = await AsyncStorage.getItem(GAME_REPORTS_KEY);
-      if (!data) return [];
-      return JSON.parse(data).map((report: any) => ({
+      const key = this.getGameReportsKey(userId);
+      console.log('📊 Loading game reports with key:', key, 'for userId:', userId);
+      const data = await AsyncStorage.getItem(key);
+      if (!data) {
+        console.log('📊 No game reports found in storage for user:', userId);
+        return [];
+      }
+      const reports = JSON.parse(data).map((report: any) => ({
         ...report,
+        userId: userId || 'GUEST', // Add userId to the report
         games: report.games.map((game: any) => ({
           ...game,
           timestamp: new Date(game.timestamp)
         }))
       }));
+      console.log('📊 Successfully loaded', reports.length, 'game reports for user:', userId);
+      return reports;
     } catch (error) {
-      console.error('Error loading game reports:', error);
+      console.error('❌ Error loading game reports for user:', userId, error);
       return [];
     }
   }
 
-  static async saveGameReports(reports: GameReport[]): Promise<void> {
+  static async saveGameReports(reports: GameReport[], userId?: string): Promise<void> {
     try {
-      await AsyncStorage.setItem(GAME_REPORTS_KEY, JSON.stringify(reports));
+      const key = this.getGameReportsKey(userId);
+      console.log('💾 Saving', reports.length, 'game reports for user:', userId);
+      await AsyncStorage.setItem(key, JSON.stringify(reports));
+      console.log('✅ Game reports saved successfully for user:', userId);
     } catch (error) {
-      console.error('Error saving game reports:', error);
+      console.error('❌ Error saving game reports for user:', userId, error);
     }
   }
 
-  static async getTodaysGameReport(): Promise<GameReport | null> {
-    const reports = await this.getGameReports();
+  static async getTodaysGameReport(userId?: string): Promise<GameReport | null> {
+    const reports = await this.getGameReports(userId);
     const todayDate = this.getTodayDateString();
     return reports.find(report => report.date === todayDate) || null;
   }
@@ -53,8 +70,10 @@ export class ReportStorageManager {
     totalNumbersCalled: number;
     pattern: string;
     winnerFound: boolean;
+    userId?: string; // Add userId to game data
   }): Promise<void> {
-    const reports = await this.getGameReports();
+    const userId = gameData.userId;
+    const reports = await this.getGameReports(userId);
     const todayDate = this.getTodayDateString();
     
     let todaysReport = reports.find(report => report.date === todayDate);
@@ -68,7 +87,8 @@ export class ReportStorageManager {
         totalCollectedAmount: 0,
         totalProfit: 0,
         rtpPercentage: gameData.rtpPercentage,
-        games: []
+        games: [],
+        userId: userId || 'GUEST' // Add userId to report
       };
       reports.push(todaysReport);
     }
@@ -95,55 +115,62 @@ export class ReportStorageManager {
     todaysReport.totalCollectedAmount += gameData.collectedAmount;
     todaysReport.totalProfit += profitAmount;
 
-    await this.saveGameReports(reports);
+    await this.saveGameReports(reports, userId);
     
-    // Auto-add profit to cash report
-    await this.addCashTransaction({
-      type: 'credit',
-      amount: profitAmount,
-      reason: 'game_profit',
-      description: `Profit from Game #${gameEntry.gameNumber}`
-    });
+    // Note: Profit is calculated and stored in the game report
+    // but we don't create a profit transaction here since that would
+    // represent house profit, not player transactions
   }
 
-  static async getGameReportByDate(date: string): Promise<GameReport | null> {
-    const reports = await this.getGameReports();
+  static async getGameReportByDate(date: string, userId?: string): Promise<GameReport | null> {
+    const reports = await this.getGameReports(userId);
     return reports.find(report => report.date === date) || null;
   }
 
-  static async getGameReportsInDateRange(startDate: string, endDate: string): Promise<GameReport[]> {
-    const reports = await this.getGameReports();
+  static async getGameReportsInDateRange(startDate: string, endDate: string, userId?: string): Promise<GameReport[]> {
+    const reports = await this.getGameReports(userId);
     return reports.filter(report => report.date >= startDate && report.date <= endDate);
   }
 
   // Cash Reports
-  static async getCashReports(): Promise<CashReport[]> {
+  static async getCashReports(userId?: string): Promise<CashReport[]> {
     try {
-      const data = await AsyncStorage.getItem(CASH_REPORTS_KEY);
-      if (!data) return [];
-      return JSON.parse(data).map((report: any) => ({
+      const key = this.getCashReportsKey(userId);
+      console.log('💳 Loading cash reports with key:', key, 'for userId:', userId);
+      const data = await AsyncStorage.getItem(key);
+      if (!data) {
+        console.log('💳 No cash reports found in storage for user:', userId);
+        return [];
+      }
+      const reports = JSON.parse(data).map((report: any) => ({
         ...report,
+        userId: userId || 'GUEST', // Add userId to the report
         transactions: report.transactions.map((transaction: any) => ({
           ...transaction,
           timestamp: new Date(transaction.timestamp)
         }))
       }));
+      console.log('💳 Successfully loaded', reports.length, 'cash reports for user:', userId);
+      return reports;
     } catch (error) {
-      console.error('Error loading cash reports:', error);
+      console.error('❌ Error loading cash reports for user:', userId, error);
       return [];
     }
   }
 
-  static async saveCashReports(reports: CashReport[]): Promise<void> {
+  static async saveCashReports(reports: CashReport[], userId?: string): Promise<void> {
     try {
-      await AsyncStorage.setItem(CASH_REPORTS_KEY, JSON.stringify(reports));
+      const key = this.getCashReportsKey(userId);
+      console.log('💾 Saving', reports.length, 'cash reports for user:', userId);
+      await AsyncStorage.setItem(key, JSON.stringify(reports));
+      console.log('✅ Cash reports saved successfully for user:', userId);
     } catch (error) {
-      console.error('Error saving cash reports:', error);
+      console.error('❌ Error saving cash reports for user:', userId, error);
     }
   }
 
-  static async getTodaysCashReport(): Promise<CashReport | null> {
-    const reports = await this.getCashReports();
+  static async getTodaysCashReport(userId?: string): Promise<CashReport | null> {
+    const reports = await this.getCashReports(userId);
     const todayDate = this.getTodayDateString();
     return reports.find(report => report.date === todayDate) || null;
   }
@@ -153,8 +180,13 @@ export class ReportStorageManager {
     amount: number;
     reason: string;
     description?: string;
+    userId?: string; // Add userId to transaction data
   }): Promise<void> {
-    const reports = await this.getCashReports();
+    const userId = transactionData.userId;
+    console.log('💾 Adding cash transaction for userId:', userId);
+    console.log('💾 Transaction data:', JSON.stringify(transactionData, null, 2));
+    const reports = await this.getCashReports(userId);
+    console.log('💾 Existing reports for this user:', reports.length);
     const todayDate = this.getTodayDateString();
     
     let todaysReport = reports.find(report => report.date === todayDate);
@@ -166,7 +198,8 @@ export class ReportStorageManager {
         transactions: [],
         totalDebit: 0,
         totalCredit: 0,
-        netBalance: 0
+        netBalance: 0,
+        userId: userId || 'GUEST' // Add userId to report
       };
       reports.push(todaysReport);
     }
@@ -177,7 +210,8 @@ export class ReportStorageManager {
       type: transactionData.type,
       amount: transactionData.amount,
       reason: transactionData.reason,
-      description: transactionData.description
+      description: transactionData.description,
+      userId: userId || 'GUEST' // Add userId to each transaction
     };
 
     todaysReport.transactions.push(transaction);
@@ -190,21 +224,21 @@ export class ReportStorageManager {
     
     todaysReport.netBalance = todaysReport.totalCredit - todaysReport.totalDebit;
 
-    await this.saveCashReports(reports);
+    await this.saveCashReports(reports, userId);
   }
 
-  static async getCashReportByDate(date: string): Promise<CashReport | null> {
-    const reports = await this.getCashReports();
+  static async getCashReportByDate(date: string, userId?: string): Promise<CashReport | null> {
+    const reports = await this.getCashReports(userId);
     return reports.find(report => report.date === date) || null;
   }
 
-  static async getCashReportsInDateRange(startDate: string, endDate: string): Promise<CashReport[]> {
-    const reports = await this.getCashReports();
+  static async getCashReportsInDateRange(startDate: string, endDate: string, userId?: string): Promise<CashReport[]> {
+    const reports = await this.getCashReports(userId);
     return reports.filter(report => report.date >= startDate && report.date <= endDate);
   }
 
-  static async updateCashTransaction(transactionId: string, updates: Partial<CashTransaction>): Promise<void> {
-    const reports = await this.getCashReports();
+  static async updateCashTransaction(transactionId: string, updates: Partial<CashTransaction>, userId?: string): Promise<void> {
+    const reports = await this.getCashReports(userId);
     
     for (const report of reports) {
       const transactionIndex = report.transactions.findIndex(t => t.id === transactionId);
@@ -228,14 +262,14 @@ export class ReportStorageManager {
         report.netBalance = report.totalCredit - report.totalDebit;
         report.transactions[transactionIndex] = newTransaction;
         
-        await this.saveCashReports(reports);
+        await this.saveCashReports(reports, userId);
         break;
       }
     }
   }
 
-  static async deleteCashTransaction(transactionId: string): Promise<void> {
-    const reports = await this.getCashReports();
+  static async deleteCashTransaction(transactionId: string, userId?: string): Promise<void> {
+    const reports = await this.getCashReports(userId);
     
     for (const report of reports) {
       const transactionIndex = report.transactions.findIndex(t => t.id === transactionId);
@@ -252,39 +286,41 @@ export class ReportStorageManager {
         report.netBalance = report.totalCredit - report.totalDebit;
         report.transactions.splice(transactionIndex, 1);
         
-        await this.saveCashReports(reports);
+        await this.saveCashReports(reports, userId);
         break;
       }
     }
   }
 
   // Utility methods
-  static async clearAllReports(): Promise<void> {
+  static async clearAllReports(userId?: string): Promise<void> {
     try {
-      await AsyncStorage.multiRemove([GAME_REPORTS_KEY, CASH_REPORTS_KEY]);
+      const gameKey = this.getGameReportsKey(userId);
+      const cashKey = this.getCashReportsKey(userId);
+      await AsyncStorage.multiRemove([gameKey, cashKey]);
     } catch (error) {
       console.error('Error clearing reports:', error);
     }
   }
 
-  static async exportReportsData(): Promise<{ gameReports: GameReport[], cashReports: CashReport[] }> {
+  static async exportReportsData(userId?: string): Promise<{ gameReports: GameReport[], cashReports: CashReport[] }> {
     const [gameReports, cashReports] = await Promise.all([
-      this.getGameReports(),
-      this.getCashReports()
+      this.getGameReports(userId),
+      this.getCashReports(userId)
     ]);
     
     return { gameReports, cashReports };
   }
 
-  static async importReportsData(data: { gameReports: GameReport[], cashReports: CashReport[] }): Promise<void> {
+  static async importReportsData(data: { gameReports: GameReport[], cashReports: CashReport[] }, userId?: string): Promise<void> {
     await Promise.all([
-      this.saveGameReports(data.gameReports),
-      this.saveCashReports(data.cashReports)
+      this.saveGameReports(data.gameReports, userId),
+      this.saveCashReports(data.cashReports, userId)
     ]);
   }
 
   // Summary statistics
-  static async getGameSummaryStats(startDate?: string, endDate?: string): Promise<{
+  static async getGameSummaryStats(startDate?: string, endDate?: string, userId?: string): Promise<{
     totalGames: number;
     totalCardsSold: number;
     totalRevenue: number;
@@ -296,9 +332,9 @@ export class ReportStorageManager {
     let reports: GameReport[];
     
     if (startDate && endDate) {
-      reports = await this.getGameReportsInDateRange(startDate, endDate);
+      reports = await this.getGameReportsInDateRange(startDate, endDate, userId);
     } else {
-      reports = await this.getGameReports();
+      reports = await this.getGameReports(userId);
     }
 
     const totals = reports.reduce((acc, report) => ({
@@ -330,7 +366,7 @@ export class ReportStorageManager {
     };
   }
 
-  static async getCashSummaryStats(startDate?: string, endDate?: string): Promise<{
+  static async getCashSummaryStats(startDate?: string, endDate?: string, userId?: string): Promise<{
     totalCredit: number;
     totalDebit: number;
     netBalance: number;
@@ -339,9 +375,9 @@ export class ReportStorageManager {
     let reports: CashReport[];
     
     if (startDate && endDate) {
-      reports = await this.getCashReportsInDateRange(startDate, endDate);
+      reports = await this.getCashReportsInDateRange(startDate, endDate, userId);
     } else {
-      reports = await this.getCashReports();
+      reports = await this.getCashReports(userId);
     }
 
     return reports.reduce((acc, report) => ({

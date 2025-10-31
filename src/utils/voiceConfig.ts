@@ -74,13 +74,18 @@ export const getVoiceById = (id: string): VoiceOption | undefined => {
 export const getDefaultVoiceForLanguage = (language: VoiceLanguage): VoiceOption => {
   const voices = getVoicesByLanguage(language);
   
-  // Prefer male voice for Amharic (since you have 4 male options)
+  // Default to Aradaw for Amharic
   if (language === 'amharic') {
-    return voices.find(v => v.gender === 'male') || voices[0];
+    return voices.find(v => v.id === 'amharic_men_aradaw') || voices[0];
   }
   
   // Default to first available voice for other languages
   return voices[0];
+};
+
+// Global default voice - defaults to Amharic Aradaw
+export const getDefaultVoice = (): VoiceOption => {
+  return AVAILABLE_VOICES.find(v => v.id === 'amharic_men_aradaw') || AVAILABLE_VOICES[0];
 };
 
 // Voice file mapping - maps voice IDs to their actual folder names with spaces

@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Modal, TextInput, TouchableOpacity, StyleSheet, Keyboard } from 'react-native';
 import { useGameTheme } from './ThemeProvider';
 import { BingoLetter } from '../../types';
 import Orientation from 'react-native-orientation-locker';
+import { useNavigation } from '@react-navigation/native';
+import { ScreenNames } from '../../constants/ScreenNames';
+import LottieView from 'lottie-react-native';
 
 interface CheckModalProps {
   visible: boolean;
@@ -32,6 +35,7 @@ export const CheckModal: React.FC<CheckModalProps> = ({
   isLandscape,
 }) => {
   const { theme } = useGameTheme();
+  const navigation = useNavigation();
   const [cardIndexText, setCardIndexText] = useState('');
   const [displayedCardNumber, setDisplayedCardNumber] = useState('');
 
@@ -54,6 +58,9 @@ export const CheckModal: React.FC<CheckModalProps> = ({
   }, [visible, isLandscape]);
 
   const handleSubmit = () => {
+    // Dismiss keyboard when check is clicked
+    Keyboard.dismiss();
+    
     const cardIndex = parseInt(cardIndexText, 10);
     if (canCheck && cardIndex > 0) {
       setDisplayedCardNumber(cardIndexText);
@@ -62,6 +69,14 @@ export const CheckModal: React.FC<CheckModalProps> = ({
   };
 
   const handleClose = () => {
+    setCardIndexText('');
+    setDisplayedCardNumber('');
+    onClose();
+    // Navigate to PlayerCartelaSelectionScreen
+    navigation.getParent()?.navigate(ScreenNames.PLAYER_CARTELA_SELECTION as never);
+  };
+
+  const handleContinue = () => {
     setCardIndexText('');
     setDisplayedCardNumber('');
     onClose();
@@ -86,6 +101,16 @@ export const CheckModal: React.FC<CheckModalProps> = ({
           shadowRadius: 8,
           elevation: 8,
         }]}>
+          {/* Confetti Animation - positioned within modal card behind content */}
+          {previewWon && (
+            <LottieView
+              source={require('../../assets/animations/Confetti.json')}
+              autoPlay
+              loop={false}
+              style={styles.confettiAnimation}
+              resizeMode="cover"
+            />
+          )}
           {/* Left side - Input and controls */}
           <View style={[styles.inputSection, { 
             flex: isLandscape ? 1 : 0,
@@ -98,14 +123,26 @@ export const CheckModal: React.FC<CheckModalProps> = ({
             <Text style={[styles.modalHelper, { color: theme.colors.textSecondary }]}>
               Enter card number for selected cartela
             </Text>
-            <TextInput
-              placeholder="e.g. 3"
-              placeholderTextColor={theme.colors.textSecondary}
-              keyboardType="number-pad"
-              value={cardIndexText}
-              onChangeText={(t) => setCardIndexText(t.replace(/[^0-9]/g, ''))}
-              style={[styles.modalInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.background }]}
-            />
+            {/* Input and Check button on same line */}
+            <View style={styles.inputRow}>
+              <TextInput
+                placeholder="e.g. 3"
+                placeholderTextColor={theme.colors.textSecondary}
+                keyboardType="number-pad"
+                value={cardIndexText}
+                onChangeText={(t) => setCardIndexText(t.replace(/[^0-9]/g, ''))}
+                style={[styles.modalInput, styles.inputFlex, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.background }]}
+              />
+              <TouchableOpacity 
+                onPress={handleSubmit} 
+                disabled={!canCheck} 
+                style={[styles.checkBtn, { backgroundColor: canCheck ? theme.colors.primary : theme.colors.border }]}
+              >
+                <Text style={[styles.checkBtnText, { color: canCheck ? '#fff' : theme.colors.textSecondary }]}>
+                  Check
+                </Text>
+              </TouchableOpacity>
+            </View>
             
             {checkMessage && (
               <Text style={[styles.modalResult, { color: checkMessage.startsWith('Bingo') ? theme.colors.success : theme.colors.text }]}>
@@ -113,18 +150,13 @@ export const CheckModal: React.FC<CheckModalProps> = ({
               </Text>
             )}
             
+            {/* Exit and Continue buttons */}
             <View style={styles.modalActions}>
-              <TouchableOpacity onPress={handleClose} style={[styles.modalBtn, { backgroundColor: theme.colors.background, borderColor: theme.colors.border, borderWidth: 1 }]}>
-                <Text style={[styles.modalBtnText, { color: theme.colors.text }]}>Close</Text>
+              <TouchableOpacity onPress={handleClose} style={[styles.exitBtn, { backgroundColor: '#EF4444', borderColor: '#DC2626', borderWidth: 1 }]}>
+                <Text style={[styles.modalBtnText, { color: '#fff' }]}>Exit</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                onPress={handleSubmit} 
-                disabled={!canCheck} 
-                style={[styles.modalBtn, { backgroundColor: canCheck ? theme.colors.primary : theme.colors.border }]}
-              >
-                <Text style={[styles.modalBtnText, { color: canCheck ? '#fff' : theme.colors.textSecondary }]}>
-                  Check
-                </Text>
+              <TouchableOpacity onPress={handleContinue} style={[styles.continueBtn, { backgroundColor: theme.colors.primary, shadowColor: theme.colors.primary }]}>
+                <Text style={[styles.continueBtnText, { color: '#fff' }]}>Continue</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -232,6 +264,25 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: 'center'
   },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    justifyContent: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  inputFlex: {
+    flex: 1,
+    height: 50, 
+    borderWidth: 2, 
+    borderRadius: 8, 
+    paddingHorizontal: 16, 
+    fontSize: 16,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    margin: 0,
+    paddingVertical: 0,
+  },
   modalInput: { 
     height: 50, 
     borderWidth: 2, 
@@ -241,11 +292,62 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center'
   },
+  checkBtn: {
+    height: 50,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 80,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    display: 'flex',
+    flexDirection: 'row',
+    margin: 0,
+    paddingVertical: 0,
+  },
+  checkBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+    textAlignVertical: 'center',
+  },
   modalActions: { 
     flexDirection: 'row', 
     justifyContent: 'space-between',
     marginTop: 16,
     gap: 12
+  },
+  exitBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  continueBtn: {
+    flex: 2,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  continueBtnText: {
+    fontSize: 18,
+    fontWeight: '800',
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   modalResult: { 
     textAlign: 'center', 
@@ -318,5 +420,14 @@ const styles = StyleSheet.create({
   previewCellText: { 
     fontWeight: '700',
     textAlign: 'center'
+  },
+  confettiAnimation: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: -1, // Behind the modal content, not in front
+    pointerEvents: 'none', // Allow touches to pass through to modal content
   },
 });

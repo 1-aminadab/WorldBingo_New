@@ -19,9 +19,18 @@ import { EndGameButton } from '../../components/ui/EndGameButton';
 import { DerashMedebInfo } from '../../components/ui/DerashMedebInfo';
 import { DrawnNumber, BingoLetter } from '../../types';
 import { audioManager } from '../../utils/audioManager';
-import { ReportStorageManager } from '../../utils/reportStorage';
+import { audioQueue } from '../../utils/audioQueue';
+import { useGameReportStore } from '../../store/gameReportStore';
+import { transactionApiService } from '../../api/services/transaction';
+import { useAuthStore } from '../../store/authStore';
 import { NumberAnnouncementService } from '../../services/numberAnnouncementService';
 import { WORLD_BINGO_CARDS } from '../../data/worldbingodata';
+import { reportApiService } from '../../api/services/report';
+import { audioService } from '../../services/audioService';
+import { LoadingOverlay } from '../../components/ui/LoadingOverlay';
+import { GameLoadingOverlay } from '../../components/ui/GameLoadingOverlay';
+import { ReportStorageManager } from '../../utils/reportStorage';
+import { ScreenNames } from '../../constants/ScreenNames';
 
 const { height } = Dimensions.get('window');
 
@@ -37,6 +46,7 @@ const getPatternDisplayName = (category: any, pattern: any, linesTarget?: number
     case 'full_house': return 'Full House';
     case 't_shape': return 'T Shape';
     case 'u_shape': return 'U Shape';
+    case 'l_shape': return 'L Shape';
     case 'x_shape': return 'X Shape';
     case 'plus_sign': return 'Plus Sign';
     case 'diamond': return 'Diamond';
@@ -51,6 +61,8 @@ export const GameScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { theme } = useGameTheme();
+  const { updateGameReportOnEnd } = useGameReportStore();
+  const { user } = useAuthStore();
 
   // Hide tab bar when this screen is focused
   useFocusEffect(
@@ -113,6 +125,8 @@ export const GameScreen: React.FC = () => {
   const [forcedOrientation, setForcedOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const [gameStarted, setGameStarted] = useState(false);
   const [initialDelayComplete, setInitialDelayComplete] = useState(false);
+  const [isEndingGame, setIsEndingGame] = useState(false);
+  const [reportsCreated, setReportsCreated] = useState(false);
   const canCheck = useMemo(() => true, []); // Always allow checking, validation happens in submitCheck
 
   const ballPulse = useSharedValue(0);
@@ -162,6 +176,19 @@ export const GameScreen: React.FC = () => {
       customCardTypes: params?.customCardTypes?.length || 0,
     });
   }, [route.params]);
+
+  // Pause background music when entering game, resume when leaving
+  useEffect(() => {
+    console.log('🎵 GameScreen: Pausing background music');
+    audioService.pauseMusic();
+    
+    return () => {
+      console.log('🎵 GameScreen: Resuming background music');
+      audioService.resumeMusic();
+      // Clear audio queue when leaving the screen
+      audioQueue.clear();
+    };
+  }, []);
 
   // Sync voice settings with audioManager
   useEffect(() => {
@@ -277,12 +304,12 @@ export const GameScreen: React.FC = () => {
       });
       setCurrent(drawn);
       
-        // Play audio for the drawn number
-        console.log('About to call audio for number:', drawn.number, 'with selectedVoice:', selectedVoice);
+        // Queue audio for the drawn number to prevent overlap
+        console.log('About to queue audio for number:', drawn.number, 'with selectedVoice:', selectedVoice);
         if (selectedVoice) {
           audioManager.setVoice(selectedVoice);
         }
-      audioManager.callNumber(drawn.letter, drawn.number);
+        audioQueue.enqueue(drawn.letter, drawn.number);
       
       // Bounce animation
       ballBounce.value = 0;
@@ -296,6 +323,19 @@ export const GameScreen: React.FC = () => {
   };
 
   const endGame = async () => {
+    // Stop all intervals and audio
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current as any);
+      intervalRef.current = null;
+    }
+    
+    // Stop any ongoing audio and clear the queue
+    audioManager.stopAllSounds();
+    audioQueue.clear();
+    
+    // Show loading overlay
+    setIsEndingGame(true);
+    
     const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
     const durationMinutes = Math.floor(duration / 60);
     
@@ -304,32 +344,79 @@ export const GameScreen: React.FC = () => {
     const totalCollectedAmount = gameMedebAmount * totalCardsSold;
     const patternDisplayName = getPatternDisplayName(patternCategory, selectedPattern, classicLinesTarget);
     
-    try {
-      // Save game data to reports
-      await ReportStorageManager.addGameEntry({
-        cardsSold: totalCardsSold,
-        collectedAmount: totalCollectedAmount,
-        rtpPercentage: rtpPercentage ?? 60,
-        gameDurationMinutes: Math.max(1, durationMinutes),
-        totalNumbersCalled: calledNumbers.length,
-        pattern: patternDisplayName,
-        winnerFound: bingoFound
-      });
-    } catch (error) {
-      console.error('Error saving game report:', error);
+    // Only create reports if they haven't been created yet
+    if (!reportsCreated) {
+      try {
+        const gameId = `game_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        // Apply RTP only if more than 4 cards/players, otherwise 100% payout
+        const effectiveRtpPercentage = totalCardsSold <= 4 ? 100 : (rtpPercentage ?? 60);
+        console.log(`🎰 RTP Logic: ${totalCardsSold} cards/players - ${totalCardsSold <= 4 ? '100% payout (4 or less)' : `${effectiveRtpPercentage}% RTP applied (more than 4)`}`);
+        const payout = bingoFound ? (totalCollectedAmount * effectiveRtpPercentage / 100) : 0;
+        
+        // Update game report with payout (report was already created at game start)
+        console.log('🎮 Updating game report with payout:', {
+          totalPayout: payout
+        });
+        
+        await updateGameReportOnEnd({
+          totalPayout: payout
+        });
+        
+        console.log('✅ Game report updated with payout successfully');
+
+        // Record payout transaction if user won and there's a payout
+        if (user?.id && payout > 0) {
+          try {
+            const userId = useAuthStore.getState().getUserId();
+            if (!userId) {
+              throw new Error('No user ID available');
+            }
+            console.log('💳 Recording game payout transaction for user:', userId);
+            
+            // Only create payout transaction (payin was already created at game start)
+            await transactionApiService.createTransaction({
+              userId: userId, // Keep as string to match payin transaction
+              gameId,
+              type: 'payout',
+              amount: payout,
+              description: `Game payout - won ${payout.toFixed(0)} Birr (${patternDisplayName})`
+            });
+            
+            console.log('✅ Game payout transaction recorded successfully');
+          } catch (transactionError) {
+            console.error('❌ Error recording game payout transaction:', transactionError);
+          }
+        }
+
+        // Mark reports as created
+        setReportsCreated(true);
+      } catch (error) {
+        console.error('❌ Error saving game report to backend:', error);
+      }
+    } else {
+      console.log('📊 Reports already created, skipping report creation');
     }
     
-    (navigation as any).navigate('GameSummary', {
-      totalDrawn: calledNumbers.length,
-      derashShownBirr: derashShown,
-      medebBirr: medebAmount ?? 0,
-      durationSeconds: duration,
-      history: calledNumbers,
-      // Add additional data for enhanced summary
-      totalCardsSold,
-      totalCollectedAmount,
-      profitAmount: totalCollectedAmount * (100 - (rtpPercentage ?? 60)) / 100,
-    });
+    // Calculate profit amount based on effective RTP (100% for 4 or less cards, otherwise configured RTP)
+    const effectiveRtpPercentage = totalCardsSold <= 4 ? 100 : (rtpPercentage ?? 60);
+    const profitAmount = totalCollectedAmount * (100 - effectiveRtpPercentage) / 100;
+    
+    // Add delay for loading effect before navigating
+    setTimeout(() => {
+      setIsEndingGame(false);
+      
+      (navigation as any).navigate(ScreenNames.GAME_SUMMARY, {
+        totalDrawn: calledNumbers.length,
+        derashShownBirr: derashShown,
+        medebBirr: medebAmount ?? 0,
+        durationSeconds: duration,
+        history: calledNumbers,
+        // Add additional data for enhanced summary
+        totalCardsSold,
+        totalCollectedAmount,
+        profitAmount,
+      });
+    }, 1500); // 1.5 second loading effect
   };
 
   const validateBingoCallTiming = (
@@ -482,7 +569,7 @@ export const GameScreen: React.FC = () => {
       setCheckMessage('Bingo! This card meets the winning pattern.');
       
       // Play winner audio sequence
-      if (selectedVoice) {
+      if (true) {
         console.log('Playing winner audio for cartela:', cardIndex, 'with voice:', selectedVoice);
         NumberAnnouncementService.announceWinnerCartela(cardIndex, selectedVoice);
       } else {
@@ -502,7 +589,7 @@ export const GameScreen: React.FC = () => {
       setCheckMessage('Not yet. This card does not meet the current winning pattern.');
       
       // Play no-winner audio
-      if (selectedVoice) {
+      if (true) {
         console.log('Playing no-winner audio with voice:', selectedVoice);
         NumberAnnouncementService.announceNoWinner(selectedVoice);
       } else {
@@ -903,7 +990,7 @@ export const GameScreen: React.FC = () => {
                   {/* Group 4: Pattern Animation */}
                   <View style={styles.groupContainer}>
                     <View style={styles.patternBox}>
-                      <Text style={[styles.patternTitle, { color: theme.colors.text }]}>{classicLinesTarget} line</Text>
+                      <Text style={[styles.patternTitle, { color: theme.colors.text }]}>{getPatternDisplayName(patternCategory, selectedPattern, classicLinesTarget)}</Text>
                       <View style={styles.patternHeaderRow}>
                         {letters.map((l, index) => {
                           const ranges: Record<BingoLetter, [number, number]> = { B: [1, 15], I: [16, 30], N: [31, 45], G: [46, 60], O: [61, 75] };
@@ -934,31 +1021,42 @@ export const GameScreen: React.FC = () => {
               </View>
 
             </View>
-            <View style={[styles.bottomActions, {paddingHorizontal: 20, gap: 10,}]}>
-              <PlayPauseButton
-                paused={paused}
-                bingoFound={bingoFound}
-                onPress={() => {
-                  if (bingoFound) {
-                    setBingoFound(false);
-                    setPaused(false);
-                    playResumeSound();
-                  } else {
-                    const willBePaused = !paused;
-                    setPaused(willBePaused);
-                    if (willBePaused) {
-                      playPauseSound();
-                    } else {
+            <View style={[styles.bottomActions, {paddingHorizontal: 20, gap: 10, flexDirection: isLandscape ? 'column' : 'row'}]}>
+              <View style={{ flexDirection: 'row', gap: 10, flex: isLandscape ? 0 : 1 }}>
+                <PlayPauseButton
+                  paused={paused}
+                  bingoFound={bingoFound}
+                  onPress={() => {
+                    if (bingoFound) {
+                      setBingoFound(false);
+                      setPaused(false);
                       playResumeSound();
+                    } else {
+                      const willBePaused = !paused;
+                      setPaused(willBePaused);
+                      if (willBePaused) {
+                        playPauseSound();
+                      } else {
+                        playResumeSound();
+                      }
                     }
-                  }
-                }}
-                style={{ width: 50 }}
-              />
-              <CheckButton
-                onPress={() => openCheck()}
-                style={{ flex: 1 }}
-              />
+                  }}
+                  style={{ width: 50 }}
+                />
+                {!isLandscape && (
+                  <CheckButton
+                    onPress={() => openCheck()}
+                    style={{ flex: 1 }}
+                  />
+                )}
+              </View>
+              
+              {isLandscape && (
+                <CheckButton
+                  onPress={() => openCheck()}
+                  style={{ width: '100%' }}
+                />
+              )}
               
               {/* Quick check buttons for each player */}
               {numPlayers > 1 && (
@@ -1016,9 +1114,6 @@ export const GameScreen: React.FC = () => {
             renderLettersColumns={renderLettersColumns as any}
             getPatternDisplayName={getPatternDisplayName}
             setIsLandscape = {setIsLandscape}
-            playPauseSound={playPauseSound}
-            playResumeSound={playResumeSound}
-            playCheckSound={playCheckSound}
           />
         )}
         {/* Check Modal */}
@@ -1044,6 +1139,13 @@ export const GameScreen: React.FC = () => {
           visible={gameOverVisible}
           onClose={() => setGameOverVisible(false)}
           onSummary={endGame}
+        />
+
+        {/* Loading Overlay for Game End */}
+        <GameLoadingOverlay 
+          visible={isEndingGame} 
+          type="game_end"
+          size="large"
         />
       </SafeAreaView>
     </LinearGradient>
@@ -1115,7 +1217,7 @@ const styles = StyleSheet.create({
   logoImageSm: { width: 90, height: 90 },
   logoImageSmall: { width: 90, height: 90 },
   patternBox: { alignItems: 'center' },
-  patternTitle: { fontSize: 14, fontWeight: '700', marginBottom: 0, width:'100%', alignItems:'flex-end' },
+  patternTitle: { fontSize: 14, fontWeight: '700', marginBottom: 2, width:'100%', alignItems:'flex-end' },
   bottomActions: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 5, },
   // Called numbers under letters
   lettersColumnsRow: { flexDirection: 'row', alignItems: 'flex-start' },
@@ -1123,7 +1225,7 @@ const styles = StyleSheet.create({
   calledCell: { height: width / 8 - 12, marginRight: 0, borderRadius: 6, backgroundColor: '#e5e7eb', justifyContent: 'center', alignItems: 'center',  paddingHorizontal: 0, },
   calledCellText: { fontWeight: '700' },
   // Pattern header letters
-  patternHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', width: 103, marginBottom: 6 },
+  patternHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', width: 103, marginBottom: 2 },
   patternHeaderRowLandscape: { flexDirection: 'row', justifyContent: 'space-between', width: 160, marginBottom: 6 },
   patternHeaderLetter: { fontSize: 12, fontWeight: '700' },
   // Pattern animation container styles
@@ -1337,6 +1439,28 @@ function evaluateGridWinWithPattern(
         for (let i = 0; i < 5; i++) winningPattern[i][4 - i] = true;
       }
     }
+    if (achieved < (opts.classicLinesTarget || 1) && allowed.has('four_corners') && fourCorners(grid)) {
+      achieved++;
+      winningPattern[0][0] = winningPattern[0][4] = winningPattern[4][0] = winningPattern[4][4] = true;
+    }
+    if (achieved < (opts.classicLinesTarget || 1) && allowed.has('small_corners') && smallCorners(grid)) {
+      achieved++;
+      winningPattern[1][1] = winningPattern[1][3] = winningPattern[3][1] = winningPattern[3][3] = true;
+    }
+    if (achieved < (opts.classicLinesTarget || 1) && allowed.has('plus') && plusSign(grid)) {
+      achieved++;
+      for (let i = 0; i < 5; i++) {
+        winningPattern[2][i] = true;
+        winningPattern[i][2] = true;
+      }
+    }
+    if (achieved < (opts.classicLinesTarget || 1) && allowed.has('x') && xShape(grid)) {
+      achieved++;
+      for (let i = 0; i < 5; i++) {
+        winningPattern[i][i] = true;
+        winningPattern[i][4 - i] = true;
+      }
+    }
     return { won: achieved >= (opts.classicLinesTarget || 1), pattern: winningPattern };
   }
   
@@ -1348,6 +1472,25 @@ function evaluateGridWinWithPattern(
   switch (opts.selectedPattern) {
     case 'full_house': 
       pattern = Array(5).fill(null).map(() => Array(5).fill(true));
+      break;
+    case 't_shape':
+      for (let i = 0; i < 5; i++) {
+        pattern[0][i] = true; // top row
+        pattern[i][2] = true; // middle column
+      }
+      break;
+    case 'u_shape':
+      for (let i = 0; i < 5; i++) {
+        pattern[i][0] = true; // left column
+        pattern[i][4] = true; // right column
+        pattern[4][i] = true; // bottom row
+      }
+      break;
+    case 'l_shape':
+      for (let i = 0; i < 5; i++) {
+        pattern[i][0] = true; // left column
+        pattern[4][i] = true; // bottom row
+      }
       break;
     case 'x_shape':
       for (let i = 0; i < 5; i++) {
@@ -1361,7 +1504,24 @@ function evaluateGridWinWithPattern(
         pattern[i][2] = true; // vertical line
       }
       break;
-    // Add more patterns as needed
+    case 'diamond':
+      pattern[0][2] = true;
+      pattern[1][1] = pattern[1][3] = true;
+      pattern[2][0] = pattern[2][2] = pattern[2][4] = true;
+      pattern[3][1] = pattern[3][3] = true;
+      pattern[4][2] = true;
+      break;
+    case 'one_line':
+    case 'two_lines':
+    case 'three_lines':
+      // Show horizontal lines for these patterns
+      const lineCount = opts.selectedPattern === 'one_line' ? 1 : opts.selectedPattern === 'two_lines' ? 2 : 3;
+      for (let r = 0; r < lineCount; r++) {
+        for (let c = 0; c < 5; c++) {
+          pattern[r][c] = true;
+        }
+      }
+      break;
     default:
       pattern = Array(5).fill(null).map(() => Array(5).fill(true)); // fallback
   }
@@ -1385,6 +1545,7 @@ function evaluateGridWin(
     if (allowed.has('vertical')) achieved += countCols(grid);
     if (allowed.has('diagonal')) achieved += countDiags(grid);
     if (allowed.has('four_corners') && fourCorners(grid)) achieved += 1;
+    if (allowed.has('small_corners') && smallCorners(grid)) achieved += 1;
     if (allowed.has('plus') && plusSign(grid)) achieved += 1;
     if (allowed.has('x') && xShape(grid)) achieved += 1;
     return achieved >= (opts.classicLinesTarget || 1);
@@ -1394,6 +1555,7 @@ function evaluateGridWin(
     case 'full_house': return grid.every(r => r.every(c => c));
     case 't_shape': return tShape(grid);
     case 'u_shape': return uShape(grid);
+    case 'l_shape': return lShape(grid);
     case 'x_shape': return xShape(grid);
     case 'plus_sign': return plusSign(grid);
     case 'diamond': return diamond(grid);
@@ -1415,8 +1577,10 @@ function countRows(grid: boolean[][]): number { let c = 0; for (let r = 0; r < 5
 function countCols(grid: boolean[][]): number { let c = 0; for (let col = 0; col < 5; col++) if (grid.every(r => r[col])) c++; return c; }
 function countDiags(grid: boolean[][]): number { let c = 0; if (grid.every((row, i) => row[i])) c++; if (grid.every((row, i) => row[4 - i])) c++; return c; }
 function fourCorners(grid: boolean[][]): boolean { return grid[0][0] && grid[0][4] && grid[4][0] && grid[4][4]; }
+function smallCorners(grid: boolean[][]): boolean { return grid[1][1] && grid[1][3] && grid[3][1] && grid[3][3]; }
 function plusSign(grid: boolean[][]): boolean { return grid[2].every(v => v) && grid.every(r => r[2]); }
 function xShape(grid: boolean[][]): boolean { return grid.every((row, i) => row[i]) && grid.every((row, i) => row[4 - i]); }
 function tShape(grid: boolean[][]): boolean { return grid[0].every(v => v) && grid.every(r => r[2]); }
 function uShape(grid: boolean[][]): boolean { return grid.every(r => r[0]) && grid.every(r => r[4]) && grid[4].every(v => v); }
+function lShape(grid: boolean[][]): boolean { return grid.every(r => r[0]) && grid[4].every(v => v); }
 function diamond(grid: boolean[][]): boolean { const pts = [[0, 2], [1, 1], [1, 3], [2, 0], [2, 2], [2, 4], [3, 1], [3, 3], [4, 2]]; return pts.every(([r, c]) => grid[r][c]); }

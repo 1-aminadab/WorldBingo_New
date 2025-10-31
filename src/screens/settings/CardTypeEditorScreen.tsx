@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, Modal, BackHandler, SectionList } from 'react-native';
 import { useTheme } from '../../components/ui/ThemeProvider';
 import { Button } from '../../components/ui/Button';
@@ -41,6 +41,37 @@ export const CardTypeEditorScreen: React.FC = () => {
   const [highlightedCard, setHighlightedCard] = useState<number | null>(null);
   const [searchNumber, setSearchNumber] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [tempSliderValue, setTempSliderValue] = useState(worldBingoCardsLimit);
+  const sliderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Update tempSliderValue when worldBingoCardsLimit changes from external sources
+  useEffect(() => {
+    setTempSliderValue(worldBingoCardsLimit);
+  }, [worldBingoCardsLimit]);
+
+  // Debounced function to update the actual limit
+  const handleSliderChange = useCallback((value: number) => {
+    setTempSliderValue(value);
+    
+    // Clear existing timeout
+    if (sliderTimeoutRef.current) {
+      clearTimeout(sliderTimeoutRef.current);
+    }
+    
+    // Set new timeout for debounced update
+    sliderTimeoutRef.current = setTimeout(() => {
+      setWorldBingoCardsLimit(value);
+    }, 100); // 100ms debounce
+  }, [setWorldBingoCardsLimit]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (sliderTimeoutRef.current) {
+        clearTimeout(sliderTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Generate cards dynamically based on worldBingoCardsLimit (same logic as PlayerCartelaSelectionScreen)
   const generateLimitedCards = useMemo(() => {
@@ -692,12 +723,15 @@ export const CardTypeEditorScreen: React.FC = () => {
           
           <View style={styles.sliderWithButtonsContainer}>
             <Text style={[styles.sliderTitleLabel, { color: theme.colors.text }]}>
-              Display Limit: {worldBingoCardsLimit} / {getMaxCardsForSelectedType()} cards
+              Display Limit: {tempSliderValue} / {getMaxCardsForSelectedType()} cards
             </Text>
             
             <View style={styles.sliderWithSideButtons}>
               <TouchableOpacity 
-                onPress={() => setWorldBingoCardsLimit(Math.max(1, worldBingoCardsLimit - 10))} 
+                onPress={() => {
+                  const newValue = Math.max(1, tempSliderValue - 50);
+                  handleSliderChange(newValue);
+                }} 
                 style={[styles.sliderSideButton, { borderColor: theme.colors.border }]}
               >
                 <Text style={[styles.sliderButtonText, { color: theme.colors.text }]}>-</Text>
@@ -707,15 +741,18 @@ export const CardTypeEditorScreen: React.FC = () => {
                 style={styles.sliderWithButtons}
                 minimumValue={1}
                 maximumValue={getMaxCardsForSelectedType()}
-                value={worldBingoCardsLimit}
-                onValueChange={setWorldBingoCardsLimit}
+                value={tempSliderValue}
+                onValueChange={handleSliderChange}
                 step={1}
                 minimumTrackTintColor={theme.colors.primary}
                 maximumTrackTintColor={theme.colors.border}
               />
               
               <TouchableOpacity 
-                onPress={() => setWorldBingoCardsLimit(Math.min(getMaxCardsForSelectedType(), worldBingoCardsLimit + 10))} 
+                onPress={() => {
+                  const newValue = Math.min(getMaxCardsForSelectedType(), tempSliderValue + 50);
+                  handleSliderChange(newValue);
+                }} 
                 style={[styles.sliderSideButton, { borderColor: theme.colors.border }]}
               >
                 <Text style={[styles.sliderButtonText, { color: theme.colors.text }]}>+</Text>
@@ -727,52 +764,10 @@ export const CardTypeEditorScreen: React.FC = () => {
               <Text style={[styles.sliderEndLabel, { color: theme.colors.textSecondary }]}>{getMaxCardsForSelectedType()}</Text>
             </View>
             
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-              <TouchableOpacity
-                style={{
-                  backgroundColor: theme.colors.primary,
-                  paddingVertical: 8,
-                  paddingHorizontal: 16,
-                  borderRadius: 8,
-                  flex: 1,
-                  alignItems: 'center',
-                }}
-                onPress={resetLimitToMax}
-              >
-                <Text style={{ color: 'white', fontWeight: '600', textAlign: 'center' }}>
-                  Show All {getMaxCardsForSelectedType()}
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={{
-                  backgroundColor: theme.colors.surface,
-                  paddingVertical: 8,
-                  paddingHorizontal: 16,
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  borderColor: theme.colors.border,
-                  flex: 1,
-                  alignItems: 'center',
-                }}
-                onPress={forceRefreshWorldBingoCards}
-              >
-                <Text style={{ color: theme.colors.text, fontWeight: '600', textAlign: 'center' }}>
-                  Refresh Cards
-                </Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </View>
       )}
 
-      {worldBingoCardsLimit > 500 && isWorldBingo && (
-        <View style={[styles.warningContainer, { backgroundColor: '#FFF3CD', borderColor: '#FFEAA7', marginBottom: 16 }]}>
-          <Text style={[styles.warningText, { color: '#856404' }]}>
-            ⚠️ Note: Displaying more than 500 cards may cause performance issues on some devices.
-          </Text>
-        </View>
-      )}
 
       {/* Search by Number */}
       <View style={[styles.section, { backgroundColor: theme.colors.surface, borderRadius: 8, padding: 16, marginBottom: 16 }]}>

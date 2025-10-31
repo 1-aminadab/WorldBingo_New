@@ -6,13 +6,18 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
+  ImageBackground,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { ArrowLeft } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../components/ui/ThemeProvider';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
+import BlueButton from '../../components/ui/BlueButton';
+import AuthField from '../../components/ui/AuthField';
+import BlurBackground from '../../components/ui/BlurBackground';
 import { useAuthStore } from '../../store/authStore';
+import { ScreenNames } from '../../constants/ScreenNames';
 
 export const ChangePasswordScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -59,7 +64,7 @@ export const ChangePasswordScreen: React.FC = () => {
           [
             {
               text: 'OK',
-              onPress: () => navigation.navigate('Login' as never),
+              onPress: () => navigation.navigate(ScreenNames.LOGIN as never),
             },
           ]
         );
@@ -78,49 +83,52 @@ export const ChangePasswordScreen: React.FC = () => {
     }
   };
 
+  const goBack = () => {
+    navigation.goBack();
+  };
+
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={styles.container}>
+      {/* Background */}
+      <ImageBackground 
+        source={require('../../assets/images/auth-bg.png')}
+        style={styles.background}
+        resizeMode="cover"
+        blurRadius={6}
+      >
+        <BlurBackground intensity={6} />
+      </ImageBackground>
+      
+      {/* Back button */}
+      <TouchableOpacity style={styles.backButton} onPress={goBack}>
+        <ArrowLeft size={24} color="#ffffff" />
+      </TouchableOpacity>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.content}>
-          <View style={[styles.formContainer, { backgroundColor: theme.colors.card }]}>
-            <View style={styles.header}>
-              <Text style={styles.icon}>🔐</Text>
-              <Text style={[styles.title, { color: theme.colors.text }]}>
-                {t('auth.changePassword')}
-              </Text>
-              <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-                Create a new secure password for your account.
-              </Text>
-            </View>
-
-            <Input
-              label={t('auth.newPassword')}
+          <View style={styles.formContainer}>
+            <AuthField
+              label="New Password*"
               placeholder="Enter new password"
               value={formData.newPassword}
               onChangeText={(value) => updateFormData('newPassword', value)}
               secureTextEntry
-              error={errors.newPassword}
-              leftIcon={<Text>🔒</Text>}
             />
 
-            <Input
-              label={t('auth.confirmPassword')}
+            <AuthField
+              label="Confirm Password*"
               placeholder="Confirm new password"
               value={formData.confirmPassword}
               onChangeText={(value) => updateFormData('confirmPassword', value)}
               secureTextEntry
-              error={errors.confirmPassword}
-              leftIcon={<Text>🔒</Text>}
             />
 
-            <Button
-              title="Change Password"
+            <BlueButton
+              title={isLoading ? 'Changing...' : 'Change Password'}
               onPress={handleChangePassword}
-              loading={isLoading}
-              style={styles.changeButton}
+              disabled={isLoading}
             />
           </View>
         </View>
@@ -132,6 +140,26 @@ export const ChangePasswordScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#1a1a1a',
+  },
+  background: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  backButton: {
+    position: 'absolute',
+    top: 60,
+    left: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
   },
   keyboardAvoid: {
     flex: 1,
@@ -139,37 +167,11 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
+    paddingTop: 120,
+    paddingBottom: 40,
   },
   formContainer: {
-    borderRadius: 20,
-    padding: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  icon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  changeButton: {
-    marginTop: 20,
+    width: '100%',
   },
 });

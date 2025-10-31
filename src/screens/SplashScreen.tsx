@@ -19,6 +19,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { useAuthStore } from '../store/authStore';
+import { ScreenNames } from '../constants/ScreenNames';
 
 const { width, height } = Dimensions.get('window');
 
@@ -27,6 +28,7 @@ export const SplashScreen: React.FC = () => {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const { isAuthenticated, isGuest, user } = useAuthStore();
+  const [navigationReady, setNavigationReady] = React.useState(false);
 
   // Animation values
   const logoScale = useSharedValue(0);
@@ -35,20 +37,11 @@ export const SplashScreen: React.FC = () => {
   const shimmerTranslateX = useSharedValue(-width);
 
   useEffect(() => {
+    // Mark navigation as ready after component mounts
+    setNavigationReady(true);
     startAnimations();
   }, []);
 
-  // Listen for auth state changes
-  useEffect(() => {
-    console.log('Splash auth state changed:', { isAuthenticated, isGuest, user });
-    if (isAuthenticated || isGuest) {
-      console.log('Auth state changed - navigating to Main immediately');
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Main' as never }],
-      });
-    }
-  }, [isAuthenticated, isGuest, navigation]);
 
   const startAnimations = () => {
     // Logo entrance animation
@@ -79,21 +72,23 @@ export const SplashScreen: React.FC = () => {
   };
 
   const navigateToNextScreen = () => {
+    if (!navigationReady || !navigation) {
+      console.warn('Navigation not ready yet');
+      return;
+    }
+
     console.log('Splash Navigation Check:', {
       isAuthenticated,
       isGuest,
       user: user ? { name: user.name, isGuest: user.isGuest } : null,
     });
     
-    if (isAuthenticated || isGuest) {
-      console.log('User authenticated or guest - navigating to Main app');
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Main' as never }],
-      });
-    } else {
-      console.log('User not authenticated - navigating to Auth');
-      navigation.navigate('Auth' as never);
+    try {
+      // Navigate to Auth screen (login/signup)
+      console.log('Navigating to Auth screen');
+      navigation.navigate(ScreenNames.AUTH as never);
+    } catch (error) {
+      console.error('Navigation error in navigateToNextScreen:', error);
     }
   };
 

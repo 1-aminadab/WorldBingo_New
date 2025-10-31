@@ -112,7 +112,7 @@ export const LandscapeGameUI: React.FC<LandscapeGameUIProps> = ({
             />
               {/* Pattern info */}
             <View style={styles.patternBox}>
-              <Text style={[styles.patternTitle, { color: theme.colors.text }]}>{classicLinesTarget} line</Text>
+              <Text style={[styles.patternTitle, { color: theme.colors.text }]}>{getPatternDisplayName(patternCategory, selectedPattern, classicLinesTarget)}</Text>
               <View style={styles.patternHeaderRow}>
                 {letters.map((l, index) => {
                   const ranges: Record<BingoLetter, [number, number]> = { B: [1, 15], I: [16, 30], N: [31, 45], G: [46, 60], O: [61, 75] };
@@ -158,11 +158,14 @@ export const LandscapeGameUI: React.FC<LandscapeGameUIProps> = ({
               }}
               style={styles.playPauseBtn}
             />
-
-            <CheckButton
+            <View style={{ width: 150}}>
+               <CheckButton
               onPress={() => openCheck()}
+              isLandscape={true}
               style={styles.checkBtn}
-            />
+            /> 
+            </View>
+          
           </View>
         </View>
         {/* Center: BINGO number grid horizontal */}
@@ -327,14 +330,15 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   logoImageSmall: {
-    width: 80,
-    height: 80,
+    width: 110,
+    height: 110,
     marginLeft: 30
   },
   actionButtons: {
     flexDirection: 'row',
     gap: 12,
     alignItems: 'center',
+    marginTop: 30,
   },
   playPauseBtn: {
     width: 48,
@@ -348,7 +352,7 @@ const styles = StyleSheet.create({
   checkBtn: {
     paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: 25,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: 80,

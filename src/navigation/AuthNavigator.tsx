@@ -1,21 +1,35 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { AuthStackParamList } from '../types';
-import { LoginScreen } from '../screens/auth/LoginScreen';
+import { SignUpLoginScreen } from '../screens/auth/SignUpLoginScreen';
 import { SignUpScreen } from '../screens/auth/SignUpScreen';
 import { ForgotPasswordScreen } from '../screens/auth/ForgotPasswordScreen';
 import { OTPVerificationScreen } from '../screens/auth/OTPVerificationScreen';
 import { ChangePasswordScreen } from '../screens/auth/ChangePasswordScreen';
 import { useTheme } from '../components/ui/ThemeProvider';
+import { useAuthStore } from '../store/authStore';
+import { ScreenNames } from '../constants/ScreenNames';
 
 const Stack = createStackNavigator<AuthStackParamList>();
 
 export const AuthNavigator: React.FC = () => {
   const { theme } = useTheme();
+  const { pendingAuthScreen, setPendingAuthScreen } = useAuthStore();
+
+  // Determine initial route based on pending auth screen
+  const initialRouteName = pendingAuthScreen || ScreenNames.LOGIN;
+
+  // Clear pending auth screen when navigator mounts
+  React.useEffect(() => {
+    if (pendingAuthScreen) {
+      setPendingAuthScreen(null);
+    }
+  }, []);
 
   return (
     <Stack.Navigator
-      initialRouteName="Login"
+      initialRouteName={initialRouteName}
       screenOptions={{
         headerStyle: {
           backgroundColor: theme.colors.surface,
@@ -28,7 +42,7 @@ export const AuthNavigator: React.FC = () => {
           fontWeight: '600',
         },
         headerBackTitleVisible: false,
-        gestureEnabled: true,
+        gestureEnabled: false,
         cardStyleInterpolator: ({ current, layouts }) => {
           return {
             cardStyle: {
@@ -46,30 +60,38 @@ export const AuthNavigator: React.FC = () => {
       }}
     >
       <Stack.Screen 
-        name="Login" 
-        component={LoginScreen} 
+        name={ScreenNames.LOGIN} 
+        component={SignUpLoginScreen} 
+        options={{ headerShown: false }}
+        initialParams={{ isLogin: true }}
+      />
+      <Stack.Screen 
+        name={ScreenNames.LOGIN_SIGNUP} 
+        component={SignUpLoginScreen} 
+        options={{ headerShown: false }}
+        initialParams={{ isLogin: false }}
+      />
+      <Stack.Screen 
+        name={ScreenNames.SIGN_UP} 
+        component={SignUpScreen} 
         options={{ headerShown: false }}
       />
       <Stack.Screen 
-        name="SignUp" 
-        component={SignUpScreen} 
-        options={{ title: 'Create Account' }}
-      />
-      <Stack.Screen 
-        name="ForgotPassword" 
+        name={ScreenNames.FORGOT_PASSWORD} 
         component={ForgotPasswordScreen} 
-        options={{ title: 'Reset Password' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen 
-        name="OTPVerification" 
+        name={ScreenNames.OTP_VERIFICATION} 
         component={OTPVerificationScreen} 
-        options={{ title: 'Verify Code' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen 
-        name="ChangePassword" 
+        name={ScreenNames.CHANGE_PASSWORD} 
         component={ChangePasswordScreen} 
-        options={{ title: 'New Password' }}
+        options={{ headerShown: false }}
       />
+      {/** PhoneLogin test screen removed */}
     </Stack.Navigator>
   );
 };

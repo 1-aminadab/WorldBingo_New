@@ -9,6 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useTheme } from './ThemeProvider';
 import { Button } from './Button';
 import { useAuthStore } from '../../store/authStore';
+import { ScreenNames } from '../../constants/ScreenNames';
 
 interface GuestPromptProps {
   onDismiss?: () => void;
@@ -26,7 +27,7 @@ export const GuestPrompt: React.FC<GuestPromptProps> = ({
   if (!isGuest) return null;
 
   const handleCreateAccount = () => {
-    navigation.getParent()?.navigate('Profile' as never);
+    navigation.getParent()?.navigate(ScreenNames.PROFILE as never);
     onDismiss?.();
   };
 

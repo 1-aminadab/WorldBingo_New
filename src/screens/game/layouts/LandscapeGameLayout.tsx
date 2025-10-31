@@ -128,14 +128,16 @@ export const LandscapeGameLayout: React.FC<Props> = ({
 
         {/* Right action buttons */}
         <View style={styles.actionButtonsContainer}>
-          <TouchableOpacity onPress={onTogglePause} style={styles.actionBtn}>
-            <Text style={styles.actionText}>Pose</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onOpenCheck} style={styles.actionBtn}>
-            <Text style={styles.actionText}>Check</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onEnd} style={styles.actionBtn}>
-            <Text style={styles.actionText}>End</Text>
+          <View style={styles.topButtons}>
+            <TouchableOpacity onPress={onTogglePause} style={styles.actionBtn}>
+              <Text style={styles.actionText}>Pose</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onEnd} style={styles.actionBtn}>
+              <Text style={styles.actionText}>End</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity onPress={onOpenCheck} style={styles.checkBtn}>
+            <Text style={styles.checkText}></Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -336,19 +338,41 @@ const styles = StyleSheet.create({
   actionButtonsContainer: {
     flex: 1,
     alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  topButtons: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
   },
   actionBtn: { 
     width: 80, 
     paddingVertical: 8, 
     borderRadius: 8, 
-    alignItems: 'center', 
-    marginVertical: 4,
+    alignItems: 'center',
     backgroundColor: '#d0d0d0',
   },
   actionText: { 
     fontWeight: '700',
     fontSize: 14,
     color: '#000',
+  },
+  checkBtn: {
+    width: 168,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  checkText: {
+    fontWeight: '900',
+    fontSize: 18,
+    color: '#fff',
   },
 });
 

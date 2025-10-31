@@ -4,21 +4,48 @@ import auth from '@react-native-firebase/auth';
 // Firebase configuration
 // Note: Replace these with your actual Firebase project configuration
 const firebaseConfig = {
-  apiKey: "your-api-key",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "your-sender-id",
-  appId: "your-app-id"
+  apiKey: "demo-api-key",
+  authDomain: "demo-project.firebaseapp.com",
+  projectId: "demo-project-id",
+  storageBucket: "demo-project.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "demo-app-id"
 };
 
-// Initialize Firebase if not already initialized
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
+// Safe Firebase initialization with error handling
+let authentication: any = null;
+
+try {
+  // Initialize Firebase if not already initialized
+  if (!firebase.apps.length) {
+    // Check if google-services.json exists for Android
+    firebase.initializeApp(firebaseConfig);
+  }
+  
+  // Initialize auth service
+  authentication = auth();
+  console.log('Firebase Auth initialized successfully');
+} catch (error) {
+  console.warn('Firebase initialization failed - using fallback auth:', error);
+  
+  // Create a mock auth object for development
+  authentication = {
+    currentUser: null,
+    createUserWithEmailAndPassword: () => Promise.reject(new Error('Firebase not configured')),
+    signInWithEmailAndPassword: () => Promise.reject(new Error('Firebase not configured')),
+    signOut: () => Promise.resolve(),
+    sendPasswordResetEmail: () => Promise.reject(new Error('Firebase not configured')),
+    onAuthStateChanged: (callback: any) => {
+      // Call callback with null user immediately
+      setTimeout(() => callback(null), 0);
+      // Return unsubscribe function
+      return () => {};
+    }
+  };
 }
 
 // Export Firebase services
-export const authentication = auth();
+export { authentication };
 
 
 // Test authentication connection

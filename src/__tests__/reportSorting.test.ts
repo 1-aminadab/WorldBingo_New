@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+import '@jest/globals';
 
 describe('Report Sorting and Display', () => {
   describe('Transaction Report Sorting', () => {
@@ -47,7 +47,7 @@ describe('Report Sorting and Display', () => {
       // Apply sorting and filtering (credit only)
       const processed = mockTransactions
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-        .filter(transaction => transaction.type === 'credit');
+        .filter(_transaction => _transaction.type === 'credit');
 
       expect(processed).toHaveLength(2);
       expect(processed[0].description).toBe('New credit'); // Latest credit first
@@ -67,7 +67,7 @@ describe('Report Sorting and Display', () => {
       // Apply the component logic: sort, filter, map (no slice!)
       const processed = mockTransactions
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-        .filter(transaction => true) // 'all' filter
+        .filter(_transaction => true) // 'all' filter
         .map(t => t); // Simulate the map operation
 
       // Should show all 10 transactions, no limiting

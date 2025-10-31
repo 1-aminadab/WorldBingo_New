@@ -24,6 +24,8 @@ interface SettingsStore extends GameSettings {
   // Audio Settings
   isMusicEnabled: boolean;
   setMusicEnabled: (enabled: boolean) => void;
+  isFirstTimeStartup: boolean;
+  setFirstTimeStartup: (isFirstTime: boolean) => void;
 
   // Classic configuration
   setClassicLinesTarget: (count: number) => void;
@@ -114,20 +116,20 @@ const generateDefaultCards = (): number[][] => {
 const defaultSettings: GameSettings = {
   selectedPattern: null,
   patternCategory: 'classic',
-  voiceLanguage: 'english',
+  voiceLanguage: 'amharic',
   appLanguage: 'en',
-  rtpPercentage: 60,
+  rtpPercentage: 80,
   theme: 'dark',
   classicLinesTarget: 1,
   classicSelectedLineTypes: ['horizontal', 'vertical', 'diagonal'],
   cardTheme: 'default',
   numberCallingMode: 'automatic',
-  gameDuration: 10,
+  gameDuration: 3,
   allowedLateCalls: 'off',
 };
 
 const getDefaultVoice = (): VoiceOption => {
-  return getDefaultVoiceForLanguage('english');
+  return getDefaultVoiceForLanguage('amharic');
 };
 
 export const useSettingsStore = create<SettingsStore>()(
@@ -141,6 +143,7 @@ export const useSettingsStore = create<SettingsStore>()(
       lastEnteredAmount: 0,
       worldBingoCardsLimit: 1000,
       isMusicEnabled: true,
+      isFirstTimeStartup: true,
       selectedCardTypeName: 'default',
       selectedVoiceId: getDefaultVoice().id,
       selectedVoice: getDefaultVoice(),
@@ -290,6 +293,10 @@ export const useSettingsStore = create<SettingsStore>()(
         set({ isMusicEnabled: enabled });
       },
 
+      setFirstTimeStartup: (isFirstTime: boolean) => {
+        set({ isFirstTimeStartup: isFirstTime });
+      },
+
       setWorldBingoCardsLimit: (limit: number) => {
         const clampedLimit = Math.min(1000, Math.max(1, limit));
         set({ worldBingoCardsLimit: clampedLimit });
@@ -379,11 +386,14 @@ export const useSettingsStore = create<SettingsStore>()(
         const { customCardTypes } = get();
         const selectedCardType = customCardTypes.find(c => c.name === name);
         if (selectedCardType) {
-          // For World Bingo (default), allow up to 1000 cards (generated + predefined)
+          // For World Bingo (default), keep the current limit (don't override user preference)
           if (selectedCardType.name === 'default') {
             const currentLimit = get().worldBingoCardsLimit;
-            // Keep current limit if it's reasonable, otherwise allow up to 1000 cards
-            set({ worldBingoCardsLimit: Math.max(currentLimit, 1000) });
+            // Only set a default if no limit is currently set
+            if (!currentLimit || currentLimit <= 0) {
+              set({ worldBingoCardsLimit: 1000 });
+            }
+            // Otherwise keep the user's current preference
           } else {
             // For custom card types, set to their exact count
             set({ worldBingoCardsLimit: selectedCardType.cards.length });
@@ -399,7 +409,11 @@ export const useSettingsStore = create<SettingsStore>()(
       isGameReadyToStart: () => {
         const { selectedPattern, patternCategory, classicLinesTarget, classicSelectedLineTypes } = get();
         if (patternCategory === 'classic') {
-          // In the new classic mode, we require at least 1 allowed line type and a target number.
+          // Full House is a special case - it's always ready if selected
+          if (selectedPattern === 'full_house') {
+            return true;
+          }
+          // For other classic patterns, require at least 1 allowed line type and a target number.
           return Boolean(classicLinesTarget && (classicSelectedLineTypes && classicSelectedLineTypes.length > 0));
         }
         return selectedPattern !== null; // modern requires selecting a preset
@@ -448,12 +462,23 @@ export const useSettingsStore = create<SettingsStore>()(
         numberCallingMode: state.numberCallingMode,
         gameDuration: state.gameDuration,
         isMusicEnabled: state.isMusicEnabled,
+        isFirstTimeStartup: state.isFirstTimeStartup,
         worldBingoCardsLimit: state.worldBingoCardsLimit,
         allowedLateCalls: state.allowedLateCalls,
       }),
       // Ensure proper hydration of the state
       onRehydrateStorage: () => (state) => {
         if (state) {
+          // Ensure isMusicEnabled defaults to true for first-time users
+          if (state.isMusicEnabled === undefined) {
+            state.isMusicEnabled = true;
+          }
+
+          // Handle first-time startup flag
+          if (state.isFirstTimeStartup === undefined) {
+            state.isFirstTimeStartup = true;
+          }
+          
           // Ensure default card type exists if no custom card types are persisted
           if (!state.customCardTypes || state.customCardTypes.length === 0) {
             state.customCardTypes = [
@@ -473,9 +498,11 @@ export const useSettingsStore = create<SettingsStore>()(
           const selectedCardType = state.customCardTypes.find(c => c.name === state.selectedCardTypeName);
           if (selectedCardType) {
             if (selectedCardType.name === 'default') {
-              // For default (World Bingo) cards, ensure limit allows access to all 1000 cards
-              const maxAvailable = Math.min(1000, selectedCardType.cards.length);
-              state.worldBingoCardsLimit = Math.max(state.worldBingoCardsLimit || 16, maxAvailable);
+              // For default (World Bingo) cards, ensure we have a valid limit but respect user preference
+              if (!state.worldBingoCardsLimit || state.worldBingoCardsLimit <= 0) {
+                state.worldBingoCardsLimit = 1000;
+              }
+              // Otherwise keep the user's saved preference as-is
             } else {
               // For custom card types, set to their exact count
               state.worldBingoCardsLimit = selectedCardType.cards.length;
@@ -521,6 +548,11 @@ export const MODERN_PATTERNS: Array<{key: BingoPattern, name: string, descriptio
     key: 'u_shape',
     name: 'U Shape',
     description: 'Complete left column, right column, and bottom row'
+  },
+  {
+    key: 'l_shape',
+    name: 'L Shape',
+    description: 'Complete left column and bottom row'
   },
   {
     key: 'x_shape',

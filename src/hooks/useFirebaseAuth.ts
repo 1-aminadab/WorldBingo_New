@@ -6,6 +6,9 @@ export const useFirebaseAuth = () => {
 
   useEffect(() => {
     // Initialize Firebase auth state listener when hook is first used
-    initializeAuth();
+    const initAuth = async () => {
+      await initializeAuth();
+    };
+    initAuth();
   }, [initializeAuth]);
 };

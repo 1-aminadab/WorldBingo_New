@@ -23,14 +23,24 @@ import { useTheme } from '../../components/ui/ThemeProvider';
 import { useSettingsStore } from '../../store/settingsStore';
 import { audioManager } from '../../utils/audioManager';
 import { WORLD_BINGO_CARDS } from '../../data/worldbingodata';
+import { useAuthStore } from '../../store/authStore';
+import { useGameReportStore } from '../../store/gameReportStore';
+import { transactionApiService } from '../../api/services/transaction';
+import { Alert } from 'react-native';
+import { InsufficientCoinsModal } from '../../components/ui/InsufficientCoinsModal';
+import { LoadingOverlay } from '../../components/ui/LoadingOverlay';
+import { ReportStorageManager } from '../../utils/reportStorage';
+import { ScreenNames } from '../../constants/ScreenNames';
 
 const { width } = Dimensions.get('window');
 
 const PlayerCartelaSelectionScreen = () => {
   const { theme } = useTheme();
   const navigation = useNavigation();
+  const { userCoins, deductCoins, user, getUserId } = useAuthStore();
+  const { createInitialGameReport } = useGameReportStore();
 
-  // Hide tab bar when this screen is focused
+  // Hide tab bar when this screen is focused and reset selections
   useFocusEffect(
     React.useCallback(() => {
       const parent = navigation.getParent();
@@ -39,6 +49,12 @@ const PlayerCartelaSelectionScreen = () => {
           tabBarStyle: { display: 'none' }
         });
       }
+
+      // Reset all selections when screen is focused (coming back from game)
+      setGroupSelectedNumbers(new Set());
+      setSingleSelectedNumbers(new Set());
+      setSelectionMode('group'); // Reset to default mode
+      console.log('🔄 Screen focused - resetting all selections');
 
       return () => {
         // Show tab bar again when leaving
@@ -84,6 +100,8 @@ const PlayerCartelaSelectionScreen = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [noCartelaModalVisible, setNoCartelaModalVisible] = useState(false);
   const [medebAmount, setMedebAmount] = useState<string>('');
+  const [insufficientCoinsModalVisible, setInsufficientCoinsModalVisible] = useState(false);
+  const [requiredCoins, setRequiredCoins] = useState(0);
 
   console.log('Group Selected Numbers:', Array.from(groupSelectedNumbers));
   console.log('Single Selected Numbers:', Array.from(singleSelectedNumbers));
@@ -221,7 +239,7 @@ const PlayerCartelaSelectionScreen = () => {
   useEffect(() => {
     const handleBackPress = () => {
       // Navigate back to MainTabs instead of exiting app
-      navigation.getParent()?.navigate('MainTabs' as never);
+      navigation.getParent()?.navigate(ScreenNames.MAIN_TABS as never);
       return true;
     };
     const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
@@ -268,13 +286,26 @@ const PlayerCartelaSelectionScreen = () => {
   const calculateDerashValue = useCallback(() => {
     const medeb = parseFloat(medebAmount) || 0;
     const totalSelections = getTotalSelectedCount();
-    const rtpDecimal = rtpPercentage / 100;
+    // Apply RTP only if more than 4 cards/players, otherwise 100% payout
+    const effectiveRtpPercentage = totalSelections <= 4 ? 100 : rtpPercentage;
+    const rtpDecimal = effectiveRtpPercentage / 100;
     const derash = Math.floor(medeb * totalSelections * rtpDecimal);
+    console.log(`💰 Derash Calculation: ${totalSelections} cards - ${effectiveRtpPercentage}% RTP - Prize: ${derash} Birr`);
     return derash;
   }, [medebAmount, getTotalSelectedCount, rtpPercentage]);
 
+  const handleBuyCoin = useCallback(() => {
+    setInsufficientCoinsModalVisible(false);
+    // Navigate to PaymentWebView screen (same as in ProfileScreen)
+    navigation.navigate(ScreenNames.PAYMENT_WEBVIEW as never);
+  }, [navigation]);
 
-  const handleStartPlay = useCallback(() => {
+  const handleCloseInsufficientCoins = useCallback(() => {
+    setInsufficientCoinsModalVisible(false);
+  }, []);
+
+
+  const handleStartPlay = useCallback(async () => {
     const totalSelected = getTotalSelectedCount();
     const medeb = parseFloat(medebAmount) || 0;
     
@@ -290,56 +321,146 @@ const PlayerCartelaSelectionScreen = () => {
       return;
     }
 
+    // Calculate transaction amounts first (before loading)
+    const total = medeb * totalSelected;
+    const derashValue = calculateDerashValue();
+    const houseAmount = total - derashValue; // Amount to deduct from coins
+    
+    console.log('💰 Transaction Calculation:', {
+      medeb,
+      totalSelected,
+      total,
+      rtpPercentage,
+      derashValue,
+      houseAmount,
+      currentCoins: userCoins
+    });
+
+    // Check if user has enough coins BEFORE showing loading
+    if (userCoins < houseAmount) {
+      setRequiredCoins(houseAmount);
+      setInsufficientCoinsModalVisible(true);
+      return;
+    }
+
+    // Show loading overlay only after coin check passes
+    setIsLoading(true);
+
+    // Deduct coins
+    const deductionSuccess = deductCoins(houseAmount);
+    if (!deductionSuccess) {
+      setIsLoading(false); // Reset loading state on failure
+      Alert.alert(
+        'Transaction Failed',
+        'Failed to deduct coins. Please try again.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    // Create transaction record
+    try {
+      const userId = getUserId();
+      const gameId = `GAME_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      console.log('💳 DEBUG: getUserId() returned:', userId);
+      console.log('💳 DEBUG: user object:', user);
+      console.log('💳 Creating payin transaction:', {
+        userId,
+        gameId,
+        amount: houseAmount,
+        type: 'payin'
+      });
+
+      if (userId) {
+        const result = await transactionApiService.createTransaction({
+          userId: userId, // Keep as string to avoid parsing issues
+          gameId,
+          type: 'payin',
+          amount: houseAmount,
+          description: `Game start - ${totalSelected} cards @ ${medeb} Birr each (House: ${houseAmount.toFixed(0)} Birr, Prize Pool: ${derashValue.toFixed(0)} Birr)`
+        });
+        
+        console.log('✅ Transaction created successfully:', result);
+      } else {
+        console.warn('⚠️ No userId found - transaction not created');
+      }
+    } catch (error) {
+      console.error('❌ Failed to create transaction:', error);
+      // Transaction failed, but we already deducted coins, so we continue
+      // In a real app, you might want to refund the coins or handle this differently
+    }
+
+    // Create game report using the old working system at game START
+    try {
+      const userId = getUserId();
+      await ReportStorageManager.addGameEntry({
+        cardsSold: totalSelected,
+        collectedAmount: houseAmount,
+        rtpPercentage: rtpPercentage || 60,
+        gameDurationMinutes: 0, // Game just started
+        totalNumbersCalled: 0, // Game just started
+        pattern: 'Game Started', // Temporary pattern name
+        winnerFound: false, // Game just started, no winner yet
+        userId: userId || undefined
+      });
+      console.log('✅ Game report created at START using ReportStorageManager');
+    } catch (error) {
+      console.error('❌ Failed to create game report at START:', error);
+      // Don't block game start if report creation fails
+    }
+
     // Save the entered amount for future use
     setLastEnteredAmount(medeb);
     
-    // Ensure audioManager has the current voice set and play game start sound
+    // Ensure audioManager has the current voice set
     console.log('Setting voice in audioManager:', selectedVoice);
     audioManager.setVoice(selectedVoice);
-    // Wait a moment before playing game start sound to avoid overlapping audio
-    setTimeout(() => {
-      audioManager.playGameStartSound();
-    }, 100);
     
     const allUniqueNumbers = getAllSelectedNumbers();
-    const derashValue = calculateDerashValue();
+    const finalDerashValue = calculateDerashValue();
     
     console.log('Starting game with:');
     console.log('All selections:', Array.from(allUniqueNumbers));
     console.log('Medeb amount:', medeb);
     console.log('Total selections:', totalSelected);
-    console.log('Derash value:', derashValue);
+    console.log('Derash value:', finalDerashValue);
     console.log('Selected card type name:', selectedCardTypeName);
     console.log('Custom card types:', customCardTypes);
     console.log('Selection mode:', selectionMode);
     
-    // Navigate to different screens based on selection mode
-    if (selectionMode === 'single' && singleSelectedNumbers.size > 0) {
-      // Navigate to SinglePlayerGameScreen for individual selections
-      navigation.navigate('SinglePlayerGame' as never, {
-        selectedCardNumbers: Array.from(allUniqueNumbers),
-        singleSelectedNumbers: Array.from(singleSelectedNumbers),
-        medebAmount: medeb,
-        derashValue: derashValue,
-        totalSelections: totalSelected,
-        selectedCardTypeName: selectedCardTypeName,
-        customCardTypes: customCardTypes,
-      } as any);
-    } else {
-      // Navigate to regular GameScreen for group selections
-      navigation.navigate('GamePlay' as never, {
-        selectedCardNumbers: Array.from(allUniqueNumbers),
-        groupSelectedNumbers: Array.from(groupSelectedNumbers),
-        singleSelectedNumbers: Array.from(singleSelectedNumbers),
-        selectionMode: selectionMode,
-        medebAmount: medeb,
-        derashValue: derashValue,
-        totalSelections: totalSelected,
-        selectedCardTypeName: selectedCardTypeName,
-        customCardTypes: customCardTypes,
-      } as any);
-    }
-  }, [getTotalSelectedCount, medebAmount, getAllSelectedNumbers, groupSelectedNumbers, singleSelectedNumbers, selectionMode, calculateDerashValue, navigation, selectedCardTypeName, customCardTypes, setLastEnteredAmount]);
+    // Add delay for loading effect before navigating
+    setTimeout(() => {
+      setIsLoading(false);
+      
+      // Navigate to different screens based on selection mode
+      if (selectionMode === 'single' && singleSelectedNumbers.size > 0) {
+        // Navigate to SinglePlayerGameScreen for individual selections
+        navigation.navigate(ScreenNames.SINGLE_PLAYER_GAME as never, {
+          selectedCardNumbers: Array.from(allUniqueNumbers),
+          singleSelectedNumbers: Array.from(singleSelectedNumbers),
+          medebAmount: medeb,
+          derashValue: finalDerashValue,
+          totalSelections: totalSelected,
+          selectedCardTypeName: selectedCardTypeName,
+          customCardTypes: customCardTypes,
+        } as any);
+      } else {
+        // Navigate to regular GameScreen for group selections
+        navigation.navigate(ScreenNames.GAME_PLAY as never, {
+          selectedCardNumbers: Array.from(allUniqueNumbers),
+          groupSelectedNumbers: Array.from(groupSelectedNumbers),
+          singleSelectedNumbers: Array.from(singleSelectedNumbers),
+          selectionMode: selectionMode,
+          medebAmount: medeb,
+          derashValue: finalDerashValue,
+          totalSelections: totalSelected,
+          selectedCardTypeName: selectedCardTypeName,
+          customCardTypes: customCardTypes,
+        } as any);
+      }
+    }, 1500); // 1.5 second loading effect
+  }, [getTotalSelectedCount, medebAmount, getAllSelectedNumbers, groupSelectedNumbers, singleSelectedNumbers, selectionMode, calculateDerashValue, navigation, selectedCardTypeName, customCardTypes, setLastEnteredAmount, userCoins, deductCoins, getUserId, rtpPercentage]);
   
   const gradientColors = ['rgba(0, 163, 141, 0.61)', 'rgba(0, 103, 221, 0.63)']
 
@@ -350,7 +471,7 @@ const PlayerCartelaSelectionScreen = () => {
       const isDisabledInSingle = selectionMode === 'group' && singleSelectedNumbers.has(item);
       const isDisabled = isDisabledInGroup || isDisabledInSingle;
       
-      let backgroundColor = theme.colors.surface || '#e7f1ff';
+      let backgroundColor = 'rgb(0, 42, 81)';
       if (isSelected) {
         backgroundColor = selectionMode === 'group' ? theme.colors.primary : '#FF9800'; // Primary for group, Orange for single
       }
@@ -441,6 +562,9 @@ const PlayerCartelaSelectionScreen = () => {
     setCurrentPage(Math.min(currentPageNum, totalPages));
     setScrollPosition(scrollY);
     
+    // Check if scrolled to bottom (with small tolerance)
+    const isAtBottom = scrollY + viewHeight >= contentHeight - 10;
+    
     // Detect swipe direction for bottom pagination visibility
     const scrollDelta = scrollY - lastScrollY;
     if (Math.abs(scrollDelta) > 5) { // Only respond to significant scroll movements
@@ -452,8 +576,8 @@ const PlayerCartelaSelectionScreen = () => {
           duration: 200,
           useNativeDriver: true,
         }).start();
-      } else {
-        // Scrolling up/swiping down - show pagination
+      } else if (!isAtBottom) {
+        // Scrolling up/swiping down - show pagination only if not at bottom
         setShowBottomPagination(true);
         Animated.timing(paginationAnimValue, {
           toValue: 1,
@@ -462,6 +586,17 @@ const PlayerCartelaSelectionScreen = () => {
         }).start();
       }
     }
+    
+    // Hide pagination if at bottom
+    if (isAtBottom) {
+      setShowBottomPagination(false);
+      Animated.timing(paginationAnimValue, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+    
     setLastScrollY(scrollY);
     
     // Show top pagination indicator when scrolling
@@ -533,7 +668,7 @@ const PlayerCartelaSelectionScreen = () => {
 
   
   return (
-    <View style={[globalStyles.container, { backgroundColor: theme.colors.background, flex: 1 }]}>
+    <View style={[globalStyles.container, { backgroundColor: 'rgb(28, 42, 89)', flex: 1 }]}>
       <View style={{ padding: 2, paddingHorizontal: 10 }}>
         {/* Custom Header with Back Button */}
         <View style={{ 
@@ -544,7 +679,7 @@ const PlayerCartelaSelectionScreen = () => {
           paddingTop: 2
         }}>
           <TouchableOpacity 
-            onPress={() => navigation.getParent()?.navigate('MainTabs' as never)}
+            onPress={() => navigation.getParent()?.navigate(ScreenNames.MAIN_TABS as never)}
             style={{ 
               padding: 8,
               marginRight: 12,
@@ -576,7 +711,7 @@ const PlayerCartelaSelectionScreen = () => {
                 height: 42,
                 paddingHorizontal: 14,
                 borderRadius: 10,
-                backgroundColor: theme.colors.surface,
+                backgroundColor: 'rgb(0, 20, 60)',
                 fontSize: 16,
                 color: theme.colors.text,
                 paddingRight: 35,
@@ -682,7 +817,10 @@ const PlayerCartelaSelectionScreen = () => {
               borderColor: selectionMode === 'group' ? theme.colors.primary : '#FF9800',
               minWidth: 50,
             }}
-            onPress={() => setIsModalVisible(true)}
+            onPress={() => {
+              console.log('Show button pressed, setting modal visible to true');
+              setIsModalVisible(true);
+            }}
           >
             <Eye size={20} color={theme.colors.text} />
           </TouchableOpacity>
@@ -695,10 +833,8 @@ const PlayerCartelaSelectionScreen = () => {
       <View style={{ flex: 1, marginBottom: 0, paddingHorizontal: 16 }}>
         {isLoading ? (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={{ fontSize: 16, color: theme.colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
-              Loading {worldBingoCardsLimit} cards...
-            </Text>
+            {/* <ActivityIndicator size="large" color={theme.colors.primary} /> */}
+           
           </View>
         ) : filteredArray.length === 0 ? (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -759,34 +895,23 @@ const PlayerCartelaSelectionScreen = () => {
       </View>
 
       {/* Enhanced Bottom Pagination Component */}
-      {filteredArray.length > itemsPerPageBottom && (
+      {filteredArray.length > itemsPerPageBottom && showBottomPagination && (
         <Animated.View style={{
           flexDirection: 'row',
           justifyContent: 'center',
-          
           alignItems: 'center',
-          paddingVertical: paginationAnimValue.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0, 8]
-          }),
+          paddingVertical: 4,
           paddingHorizontal: 12,
-          backgroundColor: theme.colors.surface,
-          borderTopWidth: paginationAnimValue.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0, 1]
-          }),
+          backgroundColor: 'rgb(0, 42, 81)',
+          borderTopWidth: 1,
           borderTopColor: theme.colors.border || theme.colors.textSecondary + '20',
           gap: 4,
           opacity: paginationAnimValue,
-          height: paginationAnimValue.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0, 60]
-          }),
           overflow: 'hidden',
           transform: [{
             translateY: paginationAnimValue.interpolate({
               inputRange: [0, 1],
-              outputRange: [30, 0]
+              outputRange: [20, 0]
             })
           }]
         }}>
@@ -932,10 +1057,18 @@ const PlayerCartelaSelectionScreen = () => {
         setNoCartelaModalVisible={setNoCartelaModalVisible}
       />
 
+      <InsufficientCoinsModal
+        visible={insufficientCoinsModalVisible}
+        requiredAmount={requiredCoins}
+        currentBalance={userCoins}
+        onClose={handleCloseInsufficientCoins}
+        onBuyCoin={handleBuyCoin}
+      />
+
       {/* Bottom Section: Medeb Input and Start Game */}
       <View style={{ 
         padding: 16, 
-        backgroundColor: 'transparent',
+        backgroundColor: 'rgb(28, 42, 89)',
         borderTopWidth: 0,
         borderTopColor: 'transparent',
       }}>
@@ -950,7 +1083,7 @@ const PlayerCartelaSelectionScreen = () => {
               height: 42,
               paddingHorizontal: 14,
               borderRadius: 10,
-              backgroundColor: theme.colors.background,
+              backgroundColor: 'rgb(0, 20, 60)',
               fontSize: 16,
               color: theme.colors.text,
               borderWidth: 1,
@@ -966,7 +1099,7 @@ const PlayerCartelaSelectionScreen = () => {
           
           <TouchableOpacity
             style={{
-              backgroundColor: (getTotalSelectedCount() > 0 && parseFloat(medebAmount) > 0) ? theme.colors.primary : '#888888',
+              backgroundColor: (getTotalSelectedCount() >= 2 && parseFloat(medebAmount) > 0) ? theme.colors.primary : '#888888',
               paddingVertical: 12,
               paddingHorizontal: 20,
               borderRadius: 10,
@@ -974,12 +1107,12 @@ const PlayerCartelaSelectionScreen = () => {
               minWidth: 180,
             }}
             onPress={handleStartPlay}
-            disabled={getTotalSelectedCount() === 0 || parseFloat(medebAmount) <= 0}
+            disabled={getTotalSelectedCount() < 2 || parseFloat(medebAmount) <= 0}
           >
             <Text style={{ 
               fontSize: 16, 
               fontWeight: '600', 
-              color: (getTotalSelectedCount() > 0 && parseFloat(medebAmount) > 0) ? theme.colors.text : '#FFFFFF',
+              color: (getTotalSelectedCount() >= 2 && parseFloat(medebAmount) > 0) ? theme.colors.text : '#FFFFFF',
               textAlign: 'center' 
             }}>
               Start Game
@@ -987,6 +1120,9 @@ const PlayerCartelaSelectionScreen = () => {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Loading Overlay */}
+      <LoadingOverlay visible={isLoading} message="Starting Game" />
     </View>
   );
 };

@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+import '@jest/globals';
 
 describe('Report Display Fix', () => {
   describe('Transaction Report Data Display', () => {
@@ -26,7 +26,7 @@ describe('Report Display Fix', () => {
       expect(mockCashReport.transactions.length).toBeGreaterThan(3);
 
       // Simulate the filter logic from the component
-      const filteredTransactions = mockCashReport.transactions.filter(transaction => {
+      const filteredTransactions = mockCashReport.transactions.filter(_transaction => {
         // Test 'all' filter
         return true; // shows all transactions
       });
@@ -55,7 +55,7 @@ describe('Report Display Fix', () => {
       expect(debitTransactions).toHaveLength(2);
 
       // Test all filter - should show all 5 transactions
-      const allTransactions = mockTransactions.filter(t => true);
+      const allTransactions = mockTransactions.filter(_t => true);
       expect(allTransactions).toHaveLength(5);
     });
   });

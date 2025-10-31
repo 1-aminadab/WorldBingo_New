@@ -9,7 +9,7 @@ const getCurrentVersion = (): string => {
 };
 
 // API endpoints
-const API_BASE_URL = 'https://your-api-domain.com/api'; // Replace with your actual API URL
+const API_BASE_URL = 'https://world-bingo-mobile-app-backend-230041233104.us-central1.run.app/api';
 
 export class VersionService {
   private static instance: VersionService;
@@ -30,6 +30,12 @@ export class VersionService {
       const currentVersion = getCurrentVersion();
       const platform = Platform.OS;
       
+      // Skip update check if using placeholder API URL
+      if (API_BASE_URL.includes('your-api-domain.com')) {
+        console.log('Skipping update check - placeholder API URL detected');
+        return null;
+      }
+      
       const response = await fetch(`${API_BASE_URL}/version/check`, {
         method: 'POST',
         headers: {
@@ -40,10 +46,18 @@ export class VersionService {
           platform,
           appId: 'world-bingo', // Your app identifier
         }),
+        timeout: 5000, // 5 second timeout
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        console.warn(`Update check failed with status: ${response.status}`);
+        return null;
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.warn('Update check returned non-JSON response');
+        return null;
       }
 
       const data = await response.json();
@@ -62,8 +76,9 @@ export class VersionService {
 
       return null;
     } catch (error) {
-      console.error('Failed to check for updates:', error);
-      throw error;
+      console.warn('Update check failed (non-critical):', error.message || error);
+      // Return null instead of throwing to prevent blocking the app
+      return null;
     }
   }
 

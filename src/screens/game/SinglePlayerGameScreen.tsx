@@ -16,13 +16,48 @@ import { EndGameButton } from '../../components/ui/EndGameButton';
 import { BingoGrid } from '../../components/game/BingoGrid';
 import { DrawnNumber, BingoLetter } from '../../types';
 import { audioManager } from '../../utils/audioManager';
+import { audioQueue } from '../../utils/audioQueue';
+import { useGameReportStore } from '../../store/gameReportStore';
+import { transactionApiService } from '../../api/services/transaction';
+import { useAuthStore } from '../../store/authStore';
 import { WORLD_BINGO_CARDS } from '../../data/worldbingodata';
+import { reportApiService } from '../../api/services/report';
 import { NumberAnnouncementService } from '../../services/numberAnnouncementService';
+import { audioService } from '../../services/audioService';
+import { LoadingOverlay } from '../../components/ui/LoadingOverlay';
+import { GameLoadingOverlay } from '../../components/ui/GameLoadingOverlay';
+import { ReportStorageManager } from '../../utils/reportStorage';
+import { ScreenNames } from '../../constants/ScreenNames';
+
+// Helper function to get pattern display name
+const getPatternDisplayName = (category: any, pattern: any, linesTarget?: number) => {
+  if (category === 'classic') {
+    if (pattern === 'full_house') return 'Full House';
+    const target = linesTarget || 1;
+    return `${target} Line${target > 1 ? 's' : ''}`;
+  }
+  
+  switch (pattern) {
+    case 'full_house': return 'Full House';
+    case 't_shape': return 'T Shape';
+    case 'u_shape': return 'U Shape';
+    case 'l_shape': return 'L Shape';
+    case 'x_shape': return 'X Shape';
+    case 'plus_sign': return 'Plus Sign';
+    case 'diamond': return 'Diamond';
+    case 'one_line': return '1 Line';
+    case 'two_lines': return '2 Lines';
+    case 'three_lines': return '3 Lines';
+    default: return '1 Line';
+  }
+};
 
 export const SinglePlayerGameScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { theme } = useGameTheme();
+  const { user } = useAuthStore();
+  const { createInitialGameReport, updateGameReportOnEnd } = useGameReportStore();
 
   // Hide tab bar when this screen is focused
   useFocusEffect(
@@ -52,7 +87,7 @@ export const SinglePlayerGameScreen: React.FC = () => {
       };
     }, [navigation, theme])
   );
-  const { rtpPercentage, derashAmount, medebAmount, customCardTypes, selectedCardTypeName, patternCategory, selectedPattern, classicLinesTarget, classicSelectedLineTypes, voiceGender, voiceLanguage, selectedVoice, numberCallingMode, gameDuration } = useSettingsStore();
+  const { rtpPercentage, derashAmount, medebAmount, customCardTypes, selectedCardTypeName, patternCategory, selectedPattern, classicLinesTarget, classicSelectedLineTypes, voiceLanguage, selectedVoice, numberCallingMode, gameDuration } = useSettingsStore();
   const [calledNumbers, setCalledNumbers] = useState<DrawnNumber[]>([]);
   const [current, setCurrent] = useState<DrawnNumber | null>(null);
   const [paused, setPaused] = useState(false);
@@ -79,6 +114,8 @@ export const SinglePlayerGameScreen: React.FC = () => {
   const [showConfetti, setShowConfetti] = useState(false);
   const [bingoFound, setBingoFound] = useState(false);
   const [userClickedNumbers, setUserClickedNumbers] = useState<Set<number>>(new Set());
+  const [isEndingGame, setIsEndingGame] = useState(false);
+  const [reportsCreated, setReportsCreated] = useState(false);
   const canCheck = useMemo(() => true, []); // Always allow checking, validation happens in submitCheck
 
   const ballPulse = useSharedValue(0);
@@ -111,6 +148,53 @@ export const SinglePlayerGameScreen: React.FC = () => {
       setGameCustomCardTypes(params.customCardTypes);
     }
   }, [route.params]);
+
+  // Create initial game report when game starts (once we have the game data)
+  useEffect(() => {
+    if (singleSelectedNumbers.length > 0 && gameMedebAmount > 0 && !reportsCreated) {
+      const createInitialReport = async () => {
+        try {
+          const totalCards = singleSelectedNumbers.length;
+          const totalPayin = gameMedebAmount * totalCards;
+          
+          console.log('🎮 SinglePlayer: Creating game report at START using ReportStorageManager');
+          
+          // Use the old working ReportStorageManager system
+          const userId = useAuthStore.getState().getUserId();
+          await ReportStorageManager.addGameEntry({
+            cardsSold: totalCards,
+            collectedAmount: totalPayin,
+            rtpPercentage: rtpPercentage || 60,
+            gameDurationMinutes: 0, // Game just started
+            totalNumbersCalled: 0, // Game just started
+            pattern: 'Game Started', // Temporary pattern name
+            winnerFound: false, // Game just started, no winner yet
+            userId: userId || undefined
+          });
+          
+          console.log('✅ SinglePlayer: Game report created at START using ReportStorageManager');
+          setReportsCreated(true);
+        } catch (error) {
+          console.error('❌ SinglePlayer: Failed to create game report at START:', error);
+        }
+      };
+      
+      createInitialReport();
+    }
+  }, [singleSelectedNumbers, gameMedebAmount, reportsCreated, rtpPercentage]);
+
+  // Pause background music when entering game, resume when leaving
+  useEffect(() => {
+    console.log('🎵 SinglePlayerGameScreen: Pausing background music');
+    audioService.pauseMusic();
+    
+    return () => {
+      console.log('🎵 SinglePlayerGameScreen: Resuming background music');
+      audioService.resumeMusic();
+      // Clear audio queue when leaving the screen
+      audioQueue.clear();
+    };
+  }, []);
 
   // Sync voice settings with audioManager
   useEffect(() => {
@@ -215,8 +299,8 @@ export const SinglePlayerGameScreen: React.FC = () => {
       });
       setCurrent(drawn);
       
-      // Play audio for the drawn number
-      audioManager.callNumber(drawn.letter, drawn.number);
+      // Queue audio for the drawn number to prevent overlap
+      audioQueue.enqueue(drawn.letter, drawn.number);
       
       // Final bounce animation when number is revealed
       ballBounce.value = 0;
@@ -229,15 +313,101 @@ export const SinglePlayerGameScreen: React.FC = () => {
     }, 1500);
   };
 
-  const endGame = () => {
+  const endGame = async () => {
+    // Stop all intervals and audio
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current as any);
+      intervalRef.current = null;
+    }
+    
+    // Stop any ongoing audio and clear the queue
+    audioManager.stopAllSounds();
+    audioQueue.clear();
+    
+    // Show loading overlay
+    setIsEndingGame(true);
+    
     const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
-    (navigation as any).navigate('GameSummary', {
-      totalDrawn: calledNumbers.length,
-      derashShownBirr: derashShown,
-      medebBirr: medebAmount ?? 0,
-      durationSeconds: duration,
-      history: calledNumbers,
-    });
+    const durationMinutes = Math.floor(duration / 60);
+    
+    // Calculate game data for reporting
+    const totalCardsSold = singleSelectedNumbers.length;
+    const totalCollectedAmount = gameMedebAmount * totalCardsSold;
+    const patternDisplayName = getPatternDisplayName(patternCategory, selectedPattern, classicLinesTarget);
+    
+    // Only create reports if they haven't been created yet
+    if (!reportsCreated) {
+      try {
+        const gameId = `game_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        // Apply RTP only if more than 4 cards/players, otherwise 100% payout
+        const effectiveRtpPercentage = totalCardsSold <= 4 ? 100 : (rtpPercentage ?? 60);
+        console.log(`🎰 RTP Logic: ${totalCardsSold} cards/players - ${totalCardsSold <= 4 ? '100% payout (4 or less)' : `${effectiveRtpPercentage}% RTP applied (more than 4)`}`);
+        const payout = bingoFound ? (totalCollectedAmount * effectiveRtpPercentage / 100) : 0;
+        
+        // Update game report with payout (report was already created at game start)
+        console.log('🎮 Updating game report with payout:', {
+          totalPayout: payout
+        });
+        
+        await updateGameReportOnEnd({
+          totalPayout: payout
+        });
+        
+        console.log('✅ Game report updated with payout successfully');
+
+        // Record payout transaction if user won and there's a payout
+        if (user?.id && payout > 0) {
+          try {
+            const userId = useAuthStore.getState().getUserId();
+            if (!userId) {
+              throw new Error('No user ID available');
+            }
+            console.log('💳 Recording game payout transaction for user:', userId);
+            
+            // Only create payout transaction (payin was already created at game start)
+            await transactionApiService.createTransaction({
+              userId: userId, // Keep as string to match payin transaction
+              gameId,
+              type: 'payout',
+              amount: payout,
+              description: `Game payout - won ${payout.toFixed(0)} Birr (${patternDisplayName})`
+            });
+            
+            console.log('✅ Game payout transaction recorded successfully');
+          } catch (transactionError) {
+            console.error('❌ Error recording game payout transaction:', transactionError);
+          }
+        }
+
+        // Mark reports as created
+        setReportsCreated(true);
+      } catch (error) {
+        console.error('❌ Error saving game report to backend:', error);
+      }
+    } else {
+      console.log('📊 Reports already created, skipping report creation');
+    }
+    
+    // Calculate profit amount based on effective RTP (100% for 4 or less cards, otherwise configured RTP)
+    const effectiveRtpPercentage = totalCardsSold <= 4 ? 100 : (rtpPercentage ?? 60);
+    const profitAmount = totalCollectedAmount * (100 - effectiveRtpPercentage) / 100;
+    
+    // Add delay for loading effect before navigating
+    setTimeout(() => {
+      setIsEndingGame(false);
+      
+      (navigation as any).navigate(ScreenNames.GAME_SUMMARY, {
+        totalDrawn: calledNumbers.length,
+        derashShownBirr: derashShown,
+        medebBirr: medebAmount ?? 0,
+        durationSeconds: duration,
+        history: calledNumbers,
+        // Add additional data for enhanced summary
+        totalCardsSold,
+        totalCollectedAmount,
+        profitAmount,
+      });
+    }, 1500); // 1.5 second loading effect
   };
 
   const openCheck = () => {
@@ -285,7 +455,7 @@ export const SinglePlayerGameScreen: React.FC = () => {
       for (let c = 0; c < 5; c++) {
         if (r === 2 && c === 2) { matched[r][c] = true; continue; }
         const num = gridNumbers[r][c];
-        matched[r][c] = num != null ? userClickedNumbers.has(num) : false;
+        matched[r][c] = num != null ? isCalled(num) : false;
       }
     }
     const winResult = evaluateGridWinWithPattern(matched, {
@@ -307,13 +477,17 @@ export const SinglePlayerGameScreen: React.FC = () => {
       setBingoFound(true);
       setPaused(true);
       
-      // Play winner audio sequence
-      if (selectedVoice) {
-        console.log('Playing winner audio for cartela:', cardIndex, 'with voice:', selectedVoice);
-        NumberAnnouncementService.announceWinnerCartela(cardIndex, selectedVoice);
-      } else {
-        console.log('No selectedVoice available for winner audio');
-      }
+      // Play winner audio sequence after a short delay to avoid conflict
+      setTimeout(() => {
+        if (selectedVoice) {
+          console.log('Playing winner audio for cartela:', cardIndex, 'with voice:', selectedVoice);
+          // Stop any ongoing audio first
+          audioManager.stopAllSounds();
+          NumberAnnouncementService.announceWinnerCartela(cardIndex, selectedVoice);
+        } else {
+          console.log('No selectedVoice available for winner audio');
+        }
+      }, 1000); // Wait 1 second to let current number announcement finish
       
       // Hide confetti after 3 seconds
       setTimeout(() => {
@@ -351,8 +525,8 @@ export const SinglePlayerGameScreen: React.FC = () => {
       return newSet;
     });
     
-    // Check for bingo after clicking
-    setTimeout(() => checkForBingo(), 100);
+    // Check for bingo after clicking with a delay to avoid audio conflicts
+    setTimeout(() => checkForBingo(), 2000); // Wait 2 seconds to avoid conflicts with number calling
   };
   
   const checkForBingo = () => {
@@ -385,8 +559,8 @@ export const SinglePlayerGameScreen: React.FC = () => {
           }
           const num = gridNumbers[r][c];
           if (num != null) {
-            // Check if number is both called AND clicked by user
-            const isCalled = calledNumbers.some(d => {
+            // Check if number was called in the game
+            const isNumberCalled = calledNumbers.some(d => {
               let letter: BingoLetter = 'B';
               if (num >= 1 && num <= 15) letter = 'B';
               else if (num <= 30) letter = 'I';
@@ -395,7 +569,7 @@ export const SinglePlayerGameScreen: React.FC = () => {
               else letter = 'O';
               return d.number === num && d.letter === letter;
             });
-            matched[r][c] = userClickedNumbers.has(num);
+            matched[r][c] = isNumberCalled;
           }
         }
       }
@@ -412,12 +586,21 @@ export const SinglePlayerGameScreen: React.FC = () => {
         setBingoFound(true);
         setPaused(true);
         
+        // Play winner audio after delay to avoid conflicts
+        setTimeout(() => {
+          if (selectedVoice) {
+            console.log('Auto-detected bingo for card:', cardNumber, 'with voice:', selectedVoice);
+            // Stop any ongoing audio first
+            audioManager.stopAllSounds();
+            NumberAnnouncementService.announceWinnerCartela(cardNumber, selectedVoice);
+          }
+        }, 1000); // Wait 1 second to let current number announcement finish
+        
         // Hide confetti after 3 seconds
         setTimeout(() => {
           setShowConfetti(false);
         }, 3000);
         
-       
         return; // Stop checking other cards
       }
     }
@@ -438,7 +621,6 @@ export const SinglePlayerGameScreen: React.FC = () => {
                   {
                     backgroundColor: ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'][i % 6],
                     left: Math.random() * width,
-                    animationDelay: `${Math.random() * 2}s`
                   }
                 ]}
               />
@@ -446,11 +628,27 @@ export const SinglePlayerGameScreen: React.FC = () => {
           </View>
         )}
 
-        {/* Game Progress Indicator - Absolute positioned */}
+        {/* Game Progress Indicator with Profit/Entry Info - Absolute positioned */}
         <View style={styles.progressIndicator}>
-          <Text style={[styles.progressText, { color: '#fff' }]}>
-            {calledNumbers.length}/75
-          </Text>
+          <View style={styles.progressRow}>
+            <Text style={[styles.progressText, { color: theme.colors.text }]}>
+              {calledNumbers.length}/75
+            </Text>
+            <View style={styles.profitEntryRow}>
+              <View style={styles.profitEntryItem}>
+                <Text style={[styles.profitEntryLabel, { color: theme.colors.text }]}>Profit: </Text>
+                <Text style={[styles.profitEntryValue, { color: theme.colors.text }]}>
+                  {derashShown} Birr
+                </Text>
+              </View>
+              <View style={styles.profitEntryItem}>
+                <Text style={[styles.profitEntryLabel, { color: theme.colors.text }]}>Entry Fee: </Text>
+                <Text style={[styles.profitEntryValue, { color: theme.colors.text }]}>
+                  {gameMedebAmount > 0 ? gameMedebAmount : (medebAmount ?? 0)} Birr
+                </Text>
+              </View>
+            </View>
+          </View>
         </View>
 
         {/* Horizontal Game UI Bar */}
@@ -470,15 +668,15 @@ export const SinglePlayerGameScreen: React.FC = () => {
                     { borderColor: ballColor },
                     isMainBall ? ballAnim : undefined
                   ]}>
-                    <View style={[styles.bingoBallInner, { backgroundColor: '#fff' }]}>
+                    <View style={[styles.bingoBallInner, { backgroundColor: theme.colors.card }]}>
                       { ballNumber && (
-                        <Text style={[styles.bingoBallLetter, { color: ballColor }]}>
+                        <Text style={[styles.bingoBallLetter, { color: theme.colors.text }]}>
                           {ballNumber.letter}
                         </Text>
                       )}
                       <View style={{ marginBottom: 10 }}>
                            <Text style={[styles.bingoBallNumber, { 
-                        color: isAnimating && isMainBall ? '#999' : (ballNumber ? ballColor : '#666'),
+                        color: isAnimating && isMainBall ? theme.colors.textSecondary : (ballNumber ? ballColor : theme.colors.text),
                         opacity: isAnimating && isMainBall ? 0.3 : 1,
                         marginTop: (!isAnimating && ballNumber) ? -4 : 0
                       }]}>
@@ -494,34 +692,12 @@ export const SinglePlayerGameScreen: React.FC = () => {
             })}
           </View>
           
-          {/* Prize Information - Right */}
-          <View style={styles.prizeInfoContainer}>
-            <View style={[{ backgroundColor: theme.colors.surface, borderRadius: 8, padding: 0, height: 50 }, styles.prizeCardContainer]}
-            >
-              <View style={styles.prizeCardContent}>
-                <View style={styles.prizeRow}>
-                  <Text style={styles.coinIcon}>💰</Text>
-                  <Text style={styles.prizeAmount}>
-                    {derashShown} Birr
-                  </Text>
-                </View>
-                <View style={{alignItems:'center'}}>
-                   <Text style={{color:'white', fontWeight:'bold', fontSize: 12}}>Medeb</Text>
-                <Text style={styles.medebInfo}>
-                   {gameMedebAmount > 0 ? gameMedebAmount : (medebAmount ?? 0)} Birr
-                </Text>
-                </View>
-               
-              </View>
-            </View>
-          </View>
-          
           {/* Winning Pattern Preview - Far Right */}
            {/* Pattern info */}
-           <View style={[{ backgroundColor: theme.colors.surface, borderRadius: 8, padding: 16, width: 90, height: 80 }, styles.patternCardContainer]}
+           <View style={[{ position:'absolute', top: -25, right: 0, borderRadius: 8, padding: 0, width: 90, height: 80 }, styles.patternCardContainer]}
            >
              <View style={styles.patternCardContent}>
-               <Text style={[styles.patternTitle, { color: theme.colors.text }]}>{classicLinesTarget} line</Text>
+               <Text style={[styles.patternTitle, { color: theme.colors.text }]}>{getPatternDisplayName(patternCategory, selectedPattern, classicLinesTarget)}</Text>
                <View style={styles.patternHeaderRow}>
                  {letters.map((l, index) => {
                    const ranges: Record<BingoLetter, [number, number]> = { B: [1, 15], I: [16, 30], N: [31, 45], G: [46, 60], O: [61, 75] };
@@ -574,7 +750,7 @@ export const SinglePlayerGameScreen: React.FC = () => {
                   borderWidth: 1, 
                   borderColor: letterColors[letter]
                 }]}>
-                  <Text style={styles.bingoLetterHeaderText}>{letter}</Text>
+                  <Text style={[styles.bingoLetterHeaderText, { color: theme.colors.text }]}>{letter}</Text>
                 </View>
                 
                 {/* Numbers row */}
@@ -589,13 +765,13 @@ export const SinglePlayerGameScreen: React.FC = () => {
                         style={[
                           styles.numberCell,
                           {
-                            backgroundColor: isCalled ? letterColors[letter] : 'rgba(255, 255, 255, 0.2)',
+                            backgroundColor: isCalled ? letterColors[letter] : theme.colors.surface,
                           }
                         ]}
                       >
                         <Text style={[
                           styles.numberCellText,
-                          { color:  '#fff' }
+                          { color: theme.colors.text }
                         ]}>
                           {num}
                         </Text>
@@ -672,6 +848,13 @@ export const SinglePlayerGameScreen: React.FC = () => {
           onClose={() => setGameOverVisible(false)}
           onSummary={endGame}
         />
+
+        {/* Loading Overlay for Game End */}
+        <GameLoadingOverlay 
+          visible={isEndingGame} 
+          type="game_end"
+          size="large"
+        />
       </SafeAreaView>
     </LinearGradient>
   );
@@ -685,31 +868,84 @@ const styles = StyleSheet.create({
   // Horizontal Game Bar Styles
   horizontalGameBar: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
     paddingHorizontal: 12,
     paddingVertical: 4,
     marginHorizontal: 5,
     marginVertical: 6,
     minHeight: 60,
-    marginTop: 15
+    marginTop: 30,
   },
   progressIndicator: {
     position: 'absolute',
     top: 10,
     left: 10,
+    right: 10,
     zIndex: 100,
+  },
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
   },
   progressText: {
     fontSize: 12,
     fontWeight: '700',
   },
-  bingoBallsContainer: {
+  patternSection: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  patternPreviewTop: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  patternSectionTop: {
+    alignItems: 'center',
+  },
+  patternTitleTop: {
+    fontSize: 11,
+    fontWeight: '600',
+    opacity: 0.9,
+  },
+  profitEntryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
+  },
+  bingoBallsLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     flex: 1,
+    justifyContent: 'flex-start',
+  },
+  bingoBallsCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
+    flex: 1,
+  },
+  profitEntryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  profitEntryLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    opacity: 0.8,
+  },
+  profitEntryValue: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  bingoBallsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    flex: 1,
+    justifyContent: 'flex-start',
   },
   bingoBallWrapper: {
     alignItems: 'center',

@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useTheme } from '../../components/ui/ThemeProvider';
 import { useSettingsStore } from '../../store/settingsStore';
+import { ScreenNames } from '../../constants/ScreenNames';
 
 
 export const StakeSetupScreen: React.FC = () => {
@@ -28,7 +29,7 @@ export const StakeSetupScreen: React.FC = () => {
     const m = Math.max(0, parseInt(medeb || '0', 10));
     setDerashAmount(d);
     setMedebAmount(m);
-    navigation.navigate('PlayerCartelaSelection' as never);
+    navigation.navigate(ScreenNames.PLAYER_CARTELA_SELECTION as never);
   };
 
   const shownDerash = Math.round((parseInt(derash || '0', 10) * (rtpPercentage || 0)) / 100);

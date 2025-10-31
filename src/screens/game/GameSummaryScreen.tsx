@@ -1,23 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Dimensions } from 'react-native';
-import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect, RouteProp } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import { DrawnNumber, GameStackParamList } from '../../types';
 import { useTheme } from '../../components/ui/ThemeProvider';
+import { ScreenNames } from '../../constants/ScreenNames';
 
-import { ArrowLeft, Clock, Trophy, Target, DollarSign, TrendingUp } from 'lucide-react-native';
+import { Clock, Trophy, Target, DollarSign, TrendingUp, Eye, EyeOff } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
 
-type RouteParam = {
-  params: GameStackParamList['GameSummary'];
-};
+type GameSummaryRouteProp = RouteProp<GameStackParamList, 'GameSummary'>;
 
 export const GameSummaryScreen: React.FC = () => {
-  const route = useRoute<RouteParam>();
+  const route = useRoute<GameSummaryRouteProp>();
   const navigation = useNavigation();
   const { theme } = useTheme();
   const data = route.params;
+  
+  // State for showing/hiding amounts
+  const [showAmounts, setShowAmounts] = useState(false);
 
   // Hide tab bar when this screen is focused
   useFocusEffect(
@@ -48,7 +50,8 @@ export const GameSummaryScreen: React.FC = () => {
     }, [navigation, theme])
   );
 
-  const goHome = () => navigation.getParent()?.navigate('MainTabs' as never);
+  const goHome = () => navigation.getParent()?.navigate(ScreenNames.PLAYER_CARTELA_SELECTION as never);
+  const continueGame = () => navigation.goBack();
 
   const letterColors = {
     B: '#1E90FF', // Blue
@@ -112,11 +115,7 @@ export const GameSummaryScreen: React.FC = () => {
       <SafeAreaView style={styles.safeArea}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={goHome} style={styles.backButton}>
-            <ArrowLeft size={24} color="#fff" />
-          </TouchableOpacity>
           <Text style={styles.headerTitle}>Game Summary</Text>
-          <View style={styles.headerSpacer} />
         </View>
 
         {/* Scrollable Content */}
@@ -210,11 +209,15 @@ export const GameSummaryScreen: React.FC = () => {
                 </View>
                 <View style={styles.additionalFinancialRow}>
                   <Text style={[styles.additionalLabel, { color: theme.colors.textSecondary }]}>Total Collected</Text>
-                  <Text style={[styles.additionalValue, { color: theme.colors.text }]}>{data.totalCollectedAmount?.toFixed(2) ?? 0} Birr</Text>
+                  <Text style={[styles.additionalValue, { color: theme.colors.text }]}>
+                    {showAmounts ? `${data.totalCollectedAmount?.toFixed(2) ?? 0} Birr` : '****'}
+                  </Text>
                 </View>
                 <View style={styles.additionalFinancialRow}>
                   <Text style={[styles.additionalLabel, { color: theme.colors.textSecondary }]}>Total Profit</Text>
-                  <Text style={[styles.additionalValue, { color: theme.colors.success || '#4CAF50' }]}>{data.profitAmount?.toFixed(2) ?? 0} Birr</Text>
+                  <Text style={[styles.additionalValue, { color: theme.colors.success || '#4CAF50' }]}>
+                    {showAmounts ? `${data.profitAmount?.toFixed(2) ?? 0} Birr` : '****'}
+                  </Text>
                 </View>
               </View>
             )}
@@ -229,11 +232,16 @@ export const GameSummaryScreen: React.FC = () => {
           )}
         </ScrollView>
 
-        {/* Fixed Bottom Button */}
+        {/* Fixed Bottom Buttons */}
         <View style={[styles.bottomButton, { backgroundColor: theme.colors.surface }]}>
-          <TouchableOpacity onPress={goHome} style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}>
-            <Text style={styles.actionButtonText}>Back to Home</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity onPress={continueGame} style={[styles.actionButton, styles.continueButton, { backgroundColor: theme.colors.primary }]}>
+              <Text style={styles.actionButtonText}>Continue</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={goHome} style={[styles.actionButton, styles.exitButton, { backgroundColor: '#EF4444' }]}>
+              <Text style={styles.actionButtonText}>Exit</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     </LinearGradient>
@@ -294,26 +302,16 @@ const styles = StyleSheet.create({
   
   // Header Styles
   header: {
-    flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
     paddingTop: 8,
   },
-  backButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
   headerTitle: {
-    flex: 1,
     fontSize: 24,
     fontWeight: '800',
     color: '#fff',
     textAlign: 'center',
-  },
-  headerSpacer: {
-    width: 40,
   },
 
   // Scroll Styles
@@ -568,7 +566,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 8,
   },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
   actionButton: { 
+    flex: 1,
     paddingVertical: 16, 
     borderRadius: 16,
     alignItems: 'center',
@@ -578,6 +581,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
+  },
+  continueButton: {
+    // Primary color set inline
+  },
+  exitButton: {
+    // Red color set inline
   },
   actionButtonText: { 
     color: '#fff', 

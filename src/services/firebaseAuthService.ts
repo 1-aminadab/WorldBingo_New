@@ -150,7 +150,12 @@ class FirebaseAuthService {
 
   // Get Current User
   getCurrentUser(): FirebaseAuthTypes.User | null {
-    return authentication.currentUser;
+    try {
+      return authentication?.currentUser || null;
+    } catch (error) {
+      console.error('Get current user error:', error);
+      return null;
+    }
   }
 
   // Get Current App User
@@ -164,27 +169,44 @@ class FirebaseAuthService {
 
   // Listen to Authentication State Changes
   onAuthStateChanged(callback: (user: User | null) => void): () => void {
-    this.authStateListener = authentication.onAuthStateChanged((firebaseUser) => {
-      if (firebaseUser) {
-        const appUser = this.convertFirebaseUserToAppUser(firebaseUser);
-        callback(appUser);
-      } else {
-        callback(null);
+    try {
+      if (!authentication) {
+        safeLog('Authentication not available, calling callback with null');
+        setTimeout(() => callback(null), 0);
+        return () => {};
       }
-    });
 
-    return () => {
-      if (this.authStateListener) {
-        this.authStateListener();
-        this.authStateListener = null;
-      }
-    };
+      this.authStateListener = authentication.onAuthStateChanged((firebaseUser) => {
+        if (firebaseUser) {
+          const appUser = this.convertFirebaseUserToAppUser(firebaseUser);
+          callback(appUser);
+        } else {
+          callback(null);
+        }
+      });
+
+      return () => {
+        if (this.authStateListener) {
+          this.authStateListener();
+          this.authStateListener = null;
+        }
+      };
+    } catch (error) {
+      console.error('Auth state listener error:', error);
+      setTimeout(() => callback(null), 0);
+      return () => {};
+    }
   }
 
 
   // Check if user is authenticated
   isAuthenticated(): boolean {
-    return this.getCurrentUser() !== null;
+    try {
+      return this.getCurrentUser() !== null;
+    } catch (error) {
+      console.error('Is authenticated check error:', error);
+      return false;
+    }
   }
 
   // Cleanup

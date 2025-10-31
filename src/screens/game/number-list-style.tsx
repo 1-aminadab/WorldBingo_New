@@ -124,6 +124,7 @@ export const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     padding: 16,
+    paddingBottom: 16,
     maxHeight: Dimensions.get('window').height * 0.7,
   },
   modalTitle: {
@@ -138,13 +139,11 @@ export const styles = StyleSheet.create({
     margin: 5,
     borderWidth: 2,
     borderRadius: 8,
-    borderColor: 'rgb(1, 150, 63)',
-    backgroundColor: '#ffebee',
     alignItems: 'center',
     justifyContent: 'center',
   },
   closeModalButton: {
-    backgroundColor: 'rgb(1, 150, 63)',
+    backgroundColor: '#2196F3',
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',

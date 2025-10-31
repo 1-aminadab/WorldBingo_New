@@ -13,8 +13,10 @@ import PlayerCartelaSelectionScreen from '../screens/game/PlayerCartelaSelection
 import { GameSummaryScreen } from '../screens/game/GameSummaryScreen';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { MainTabParamList, GameStackParamList, MainStackParamList } from '../types';
+import { ScreenNames } from '../constants/ScreenNames';
 import { CardTypeEditorScreen } from '../screens/settings/CardTypeEditorScreen';
 import { BingoCardsScreen } from '../screens/BingoCardsScreen';
+import { TAB_BAR_STYLES, TAB_BAR_LABEL_STYLES, TAB_BAR_COLORS } from '../utils/tabBarStyles';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const MainStack = createStackNavigator<MainStackParamList>();
@@ -27,39 +29,26 @@ const MainTabNavigator: React.FC = () => {
 
   return (
     <Tab.Navigator
-      initialRouteName="Home"
+      initialRouteName={ScreenNames.HOME}
       backBehavior="initialRoute"
       screenOptions={{
         headerShown: false,
         lazy: false,
         tabBarHideOnKeyboard: true,
-        tabBarStyle: {
-          backgroundColor: '#2C2C2E',
-          borderTopWidth: 0,
-          paddingBottom: Math.max(insets.bottom, 4),
-          paddingTop: 4,
-          height: 50 + Math.max(insets.bottom, 4),
-          borderRadius: 0,
-          elevation: 0,
-          shadowOpacity: 0,
-        },
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '500',
-          marginTop: 2,
-        },
-        tabBarActiveTintColor: '#FFFFFF',
-        tabBarInactiveTintColor: '#8E8E93',
+        tabBarStyle: TAB_BAR_STYLES.default,
+        tabBarLabelStyle: TAB_BAR_LABEL_STYLES,
+        tabBarActiveTintColor: TAB_BAR_COLORS.activeTintColor,
+        tabBarInactiveTintColor: TAB_BAR_COLORS.inactiveTintColor,
       }}
     >
       <Tab.Screen 
-        name="Home" 
+        name={ScreenNames.HOME} 
         component={StarterScreen}
         options={{
           tabBarLabel: 'Game',
           tabBarIcon: ({ color, size, focused }) => (
             <View style={{
-              backgroundColor: focused ? 'rgba(0, 123, 255, 0.51)' : 'transparent',
+              backgroundColor: focused ? 'rgba(0, 123, 255, 0.77)' : 'transparent',
               borderRadius: 16,
               paddingHorizontal: 12,
               paddingVertical: 4,
@@ -73,7 +62,7 @@ const MainTabNavigator: React.FC = () => {
         }}
       />
       <Tab.Screen 
-        name="Settings" 
+        name={ScreenNames.SETTINGS} 
         component={SettingsScreen}
         options={{
           headerShown: false,
@@ -105,15 +94,16 @@ const MainTabNavigator: React.FC = () => {
           ),
         }}
       />
+      
       <Tab.Screen 
-        name="Profile" 
+        name={ScreenNames.PROFILE} 
         component={ProfileTabNavigator}
         options={{
           headerShown: false,
           tabBarLabel: 'Profile',
           tabBarIcon: ({ color, size, focused }) => (
             <View style={{
-              backgroundColor: focused ? 'rgba(0, 123, 255, 0.54)' : 'transparent',
+              backgroundColor: focused ? 'rgba(0, 123, 255, 0.77)' : 'transparent',
               borderRadius: 16,
               paddingHorizontal: 12,
               paddingVertical: 4,
@@ -136,7 +126,7 @@ const GameStackNavigator: React.FC = () => {
 
   return (
     <GameStack.Navigator
-      initialRouteName="Home"
+      initialRouteName={ScreenNames.HOME}
       screenOptions={{
         headerStyle: {
           backgroundColor: theme.colors.surface,
@@ -149,7 +139,7 @@ const GameStackNavigator: React.FC = () => {
           fontWeight: '600',
         },
         headerBackTitleVisible: false,
-        gestureEnabled: true,
+        gestureEnabled: false,
         cardStyleInterpolator: ({ current, layouts }) => {
           return {
             cardStyle: {
@@ -167,27 +157,27 @@ const GameStackNavigator: React.FC = () => {
       }}
     >
       <GameStack.Screen
-        name="Home"
+        name={ScreenNames.HOME}
         component={StarterScreen}
         options={{ headerShown: false }}
       />
       <GameStack.Screen
-        name="PlayerCartelaSelection"
+        name={ScreenNames.PLAYER_CARTELA_SELECTION}
         component={PlayerCartelaSelectionScreen}
         options={{ headerShown: false }}
       />
       <GameStack.Screen 
-        name="GamePlay" 
+        name={ScreenNames.GAME_PLAY} 
         component={GameScreen} 
         options={{ headerShown: false }}
       />
       <GameStack.Screen 
-        name="SinglePlayerGame" 
+        name={ScreenNames.SINGLE_PLAYER_GAME} 
         component={SinglePlayerGameScreen} 
         options={{ headerShown: false }}
       />
       <GameStack.Screen
-        name="GameSummary"
+        name={ScreenNames.GAME_SUMMARY}
         component={GameSummaryScreen}
         options={{ headerShown: false, title: 'Game Summary' }}
       />
@@ -201,15 +191,15 @@ export const MainNavigator: React.FC = () => {
 
   return (
     <MainStack.Navigator
-      initialRouteName="MainTabs"
+      initialRouteName={ScreenNames.MAIN_TABS}
       screenOptions={{
         headerShown: false,
       }}
     >
-      <MainStack.Screen name="MainTabs" component={MainTabNavigator} />
-      <MainStack.Screen name="GameStack" component={GameStackNavigator} />
+      <MainStack.Screen name={ScreenNames.MAIN_TABS} component={MainTabNavigator} />
+      <MainStack.Screen name={ScreenNames.GAME_STACK} component={GameStackNavigator} />
       <MainStack.Screen 
-        name="CardTypeEditor" 
+        name={ScreenNames.CARD_TYPE_EDITOR} 
         component={CardTypeEditorScreen}
         options={{
           headerShown: true,
@@ -217,7 +207,7 @@ export const MainNavigator: React.FC = () => {
         }}
       />
       <MainStack.Screen 
-        name="BingoCards" 
+        name={ScreenNames.BINGO_CARDS} 
         component={BingoCardsScreen}
         options={{
           headerShown: false,

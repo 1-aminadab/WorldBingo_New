@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, BackHandler } from 'react-native';
 import { useVersionStore } from '../../store/versionStore';
 import { useGameTheme } from './ThemeProvider';
 import { UpdateModal } from './UpdateModal';
+import { FloatingUpdateButton } from './FloatingUpdateButton';
 import { AlertTriangle } from 'lucide-react-native';
 
 interface UpdateGuardProps {
@@ -11,9 +12,10 @@ interface UpdateGuardProps {
 
 export const UpdateGuard: React.FC<UpdateGuardProps> = ({ children }) => {
   const { theme } = useGameTheme();
-  const { versionInfo, isUpdateAvailable, checkForUpdates } = useVersionStore();
+  const { versionInfo, isUpdateAvailable, isUpdateDismissed, checkForUpdates } = useVersionStore();
 
   const isForceUpdate = versionInfo?.updateType === 'force';
+  const shouldShowFloatingButton = isUpdateAvailable && !isForceUpdate;
 
   useEffect(() => {
     // Check for updates when component mounts
@@ -31,8 +33,8 @@ export const UpdateGuard: React.FC<UpdateGuardProps> = ({ children }) => {
     return () => backHandler.remove();
   }, [isForceUpdate, isUpdateAvailable, checkForUpdates]);
 
-  // Show update modal if update is available
-  if (isUpdateAvailable && versionInfo) {
+  // Show update modal if update is available and not dismissed (only for initial show)
+  if (isUpdateAvailable && versionInfo && !isUpdateDismissed) {
     return (
       <>
         {isForceUpdate && (
@@ -49,11 +51,23 @@ export const UpdateGuard: React.FC<UpdateGuardProps> = ({ children }) => {
           </View>
         )}
         <UpdateModal visible={isUpdateAvailable} />
+        {/* Always show floating button when update is available */}
+        {shouldShowFloatingButton && (
+          <FloatingUpdateButton visible={shouldShowFloatingButton} />
+        )}
       </>
     );
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      {/* Always show floating button when update is available */}
+      {shouldShowFloatingButton && (
+        <FloatingUpdateButton visible={shouldShowFloatingButton} />
+      )}
+    </>
+  );
 };
 
 const styles = StyleSheet.create({

@@ -10,7 +10,6 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   withSequence,
-  withDelay,
   runOnJS,
   Easing,
   withSpring,
@@ -48,13 +47,13 @@ export const SlotMachine: React.FC<SlotMachineProps> = ({
   // Display values
   const [displayLetter, setDisplayLetter] = useState<BingoLetter>('B');
   const [displayNumber, setDisplayNumber] = useState<number>(1);
-  const [finalResult, setFinalResult] = useState<DrawnNumber | null>(null);
+  const [_finalResult, setFinalResult] = useState<DrawnNumber | null>(null);
 
   useEffect(() => {
     if (triggerSpin && !isSpinning) {
       startSpinAnimation();
     }
-  }, [triggerSpin]);
+  }, [triggerSpin, isSpinning, startSpinAnimation]);
 
   const generateRandomResult = (): DrawnNumber => {
     const letter = LETTERS[Math.floor(Math.random() * LETTERS.length)];

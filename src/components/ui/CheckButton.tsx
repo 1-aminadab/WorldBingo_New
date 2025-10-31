@@ -7,6 +7,7 @@ interface CheckButtonProps {
   text?: string;
   style?: any;
   textStyle?: any;
+  isLandscape?: boolean;
 }
 
 export const CheckButton: React.FC<CheckButtonProps> = ({
@@ -14,10 +15,9 @@ export const CheckButton: React.FC<CheckButtonProps> = ({
   text = 'Check',
   style,
   textStyle,
-}) => {
+  isLandscape = false}) => {
   const { theme } = useGameTheme();
   const { width, height } = useWindowDimensions();
-  const isLandscape = width > height;
 
   return (
     <TouchableOpacity
@@ -26,12 +26,18 @@ export const CheckButton: React.FC<CheckButtonProps> = ({
         styles.button,
         {
           backgroundColor: theme.colors.primary,
-          minWidth: isLandscape ? 120 : 80,
+          minWidth: isLandscape ? 300 : 80,
+          height: isLandscape ? 50 : 40,
+          shadowColor: '#000',
+          shadowOpacity: isLandscape ? 0.3 : 0.2,
+          shadowRadius: isLandscape ? 6 : 4,
+          shadowOffset: { width: 0, height: isLandscape ? 3 : 2 },
+          elevation: isLandscape ? 6 : 4,
         },
         style,
       ]}
     >
-      <Text style={[styles.text, { color: '#fff' }, textStyle]}>
+      <Text style={[styles.text, { color: '#fff', fontSize: isLandscape ? 20 : 16, fontWeight: isLandscape ? '900' : '700' }, textStyle]}>
         {text}
       </Text>
     </TouchableOpacity>

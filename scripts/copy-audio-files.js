@@ -94,6 +94,105 @@ function copyAudioFiles() {
     }
   });
   
+  // Copy winner cartela files
+  console.log('\nCopying winner cartela files...');
+  
+  // Men winner cartela files
+  const menWinnerPath = path.join(SOURCE_DIR, 'men game sound', 'winner-cartela');
+  if (fs.existsSync(menWinnerPath)) {
+    console.log('Processing: men game sound/winner-cartela -> men_game_sound_winner_cartela_*');
+    
+    const winnerNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+    
+    winnerNumbers.forEach(num => {
+      const sourceFile = path.join(menWinnerPath, `${num}.mp3`);
+      const targetFile = path.join(ANDROID_DEST, `men_game_sound_winner_cartela_${num}.mp3`);
+      
+      if (fs.existsSync(sourceFile)) {
+        try {
+          fs.copyFileSync(sourceFile, targetFile);
+          console.log(`  Copied: ${num}.mp3 -> men_game_sound_winner_cartela_${num}.mp3`);
+        } catch (error) {
+          console.error(`  Error copying ${num}.mp3:`, error.message);
+        }
+      } else {
+        console.log(`  Missing: ${num}.mp3`);
+      }
+    });
+  } else {
+    console.log('Warning: Men winner cartela folder not found');
+  }
+  
+  // Women winner cartela files
+  const womenWinnerPath = path.join(SOURCE_DIR, 'woman game sound', 'winner-cartela');
+  if (fs.existsSync(womenWinnerPath)) {
+    console.log('Processing: woman game sound/winner-cartela -> woman_game_sound_winner_cartela_*');
+    
+    const winnerNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+    
+    winnerNumbers.forEach(num => {
+      const sourceFile = path.join(womenWinnerPath, `${num}.mp3`);
+      const targetFile = path.join(ANDROID_DEST, `woman_game_sound_winner_cartela_${num}.mp3`);
+      
+      if (fs.existsSync(sourceFile)) {
+        try {
+          fs.copyFileSync(sourceFile, targetFile);
+          console.log(`  Copied: ${num}.mp3 -> woman_game_sound_winner_cartela_${num}.mp3`);
+        } catch (error) {
+          console.error(`  Error copying ${num}.mp3:`, error.message);
+        }
+      } else {
+        console.log(`  Missing: ${num}.mp3`);
+      }
+    });
+  } else {
+    console.log('Warning: Women winner cartela folder not found');
+  }
+  
+  // Copy game sound files (winner announcements)
+  const menGameSoundPath = path.join(SOURCE_DIR, 'men game sound');
+  const womenGameSoundPath = path.join(SOURCE_DIR, 'woman game sound');
+  
+  // Copy men game sound files
+  if (fs.existsSync(menGameSoundPath)) {
+    const menFiles = ['winner-Cartela.mp3', 'no-winner-game-continue.mp3'];
+    menFiles.forEach(fileName => {
+      const sourceFile = path.join(menGameSoundPath, fileName);
+      // Replace ALL dashes with underscores and convert to lowercase
+      const targetFileName = fileName.replace(/-/g, '_').toLowerCase();
+      const targetFile = path.join(ANDROID_DEST, `men_game_sound_${targetFileName}`);
+      
+      if (fs.existsSync(sourceFile)) {
+        try {
+          fs.copyFileSync(sourceFile, targetFile);
+          console.log(`  Copied: ${fileName} -> men_game_sound_${targetFileName}`);
+        } catch (error) {
+          console.error(`  Error copying ${fileName}:`, error.message);
+        }
+      }
+    });
+  }
+  
+  // Copy women game sound files
+  if (fs.existsSync(womenGameSoundPath)) {
+    const womenFiles = ['Winer Card.mp3', 'no-winner-game-continue.mp3'];
+    womenFiles.forEach(fileName => {
+      const sourceFile = path.join(womenGameSoundPath, fileName);
+      // Replace ALL spaces and dashes with underscores and convert to lowercase
+      const targetFileName = fileName.replace(/[\s-]/g, '_').toLowerCase();
+      const targetFile = path.join(ANDROID_DEST, `woman_game_sound_${targetFileName}`);
+      
+      if (fs.existsSync(sourceFile)) {
+        try {
+          fs.copyFileSync(sourceFile, targetFile);
+          console.log(`  Copied: ${fileName} -> woman_game_sound_${targetFileName}`);
+        } catch (error) {
+          console.error(`  Error copying ${fileName}:`, error.message);
+        }
+      }
+    });
+  }
+  
   console.log('Audio file copying completed!');
   console.log(`Files copied to: ${ANDROID_DEST}`);
   console.log('\nNext steps:');

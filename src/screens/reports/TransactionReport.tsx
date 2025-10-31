@@ -13,49 +13,40 @@ import {
   TextInput,
   Dimensions,
 } from 'react-native';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, TrendingUp, TrendingDown, Wallet, Plus, Minus, Calendar, CreditCard, ArrowUpRight, ArrowDownLeft, Coins } from 'lucide-react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../components/ui/ThemeProvider';
 
 import { ReportStorageManager } from '../../utils/reportStorage';
 import { CashReport, CashTransaction } from '../../types';
 import { DateRangeFilter } from '../../components/ui/DateRangeFilter';
+import { DateRangePicker } from '../../components/ui/DateRangePicker';
 import { FilterPeriod, getDateRange, isDateInRange, formatDateForDisplay, getDaysCount } from '../../utils/dateUtils';
+import { useAuthStore } from '../../store/authStore';
+import { transactionApiService } from '../../api/services/transaction';
+import { formatCoins } from '../../utils/numberFormat';
+import { ScreenNames } from '../../constants/ScreenNames';
+import { setTabBarVisibility } from '../../utils/tabBarStyles';
 
 const { width, height } = Dimensions.get('window');
 
 export const TransactionReport: React.FC = () => {
   const navigation = useNavigation();
   const { theme } = useTheme();
+  const { user, userCoins } = useAuthStore();
 
   // Hide tab bar when this screen is focused
   useFocusEffect(
     React.useCallback(() => {
-      const parent = navigation.getParent();
-      if (parent) {
-        parent.setOptions({
-          tabBarStyle: { display: 'none' }
-        });
-      }
+      setTabBarVisibility(navigation, false);
 
+      // Don't restore tab bar here - let other screens handle it
       return () => {
-        // Show tab bar again when leaving
-        if (parent) {
-          parent.setOptions({
-            tabBarStyle: {
-              backgroundColor: theme.colors.card,
-              borderTopColor: theme.colors.border,
-              borderTopWidth: 1,
-              paddingBottom: 8,
-              paddingTop: 8,
-              height: 70,
-              marginBottom: 42
-            }
-          });
-        }
+        // No cleanup needed - other screens will manage tab bar visibility
       };
-    }, [navigation, theme])
+    }, [navigation])
   );
+
   const [allCashReports, setAllCashReports] = useState<CashReport[]>([]);
   const [filteredReports, setFilteredReports] = useState<CashReport[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -77,9 +68,9 @@ export const TransactionReport: React.FC = () => {
     description: ''
   });
   const [summaryStats, setSummaryStats] = useState({
-    totalCredit: 1000, // Default 1000 coin deposit
+    totalCredit: 0, // Only actual transactions
     totalDebit: 0,
-    netBalance: 1000, // Start with 1000 coins
+    netBalance: 0, // Calculated from actual transactions
     transactionCount: 0,
     dateRange: '',
     daysCount: 0
@@ -88,7 +79,12 @@ export const TransactionReport: React.FC = () => {
   const loadReports = async () => {
     setIsRefreshing(true);
     try {
-      const cashData = await ReportStorageManager.getCashReports();
+      const userId = user?.userId || user?.id; // Get userId from auth store (handle both formats)
+      console.log('💳 Loading transaction reports for user:', userId);
+      console.log('💳 Full user object:', JSON.stringify(user, null, 2));
+      const cashData = await ReportStorageManager.getCashReports(userId);
+      console.log('💳 Loaded cash reports:', cashData.length);
+      console.log('💳 Cash reports details:', JSON.stringify(cashData, null, 2));
       setAllCashReports(cashData.sort((a, b) => b.date.localeCompare(a.date)));
     } catch (error) {
       console.error('Error loading cash reports:', error);
@@ -113,7 +109,7 @@ export const TransactionReport: React.FC = () => {
 
     // Calculate filtered stats
     const stats = {
-      totalCredit: 1000, // Start with default 1000 coins
+      totalCredit: 0, // Only actual transactions
       totalDebit: 0,
       transactionCount: 0,
     };
@@ -144,6 +140,7 @@ export const TransactionReport: React.FC = () => {
     }
   };
 
+
   useEffect(() => {
     loadReports();
   }, []);
@@ -154,7 +151,6 @@ export const TransactionReport: React.FC = () => {
     }
   }, [allCashReports, selectedPeriod, customStartDate, customEndDate]);
 
-  const formatCurrency = (amount: number) => `${Math.round(amount)} Coins`;
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -165,12 +161,9 @@ export const TransactionReport: React.FC = () => {
   };
 
   const handleAddBalance = () => {
-    setTransactionForm({
-      amount: '',
-      reason: '',
-      description: ''
-    });
-    setShowTransactionModal(true);
+    const userId = user?.userId || user?.id;
+    console.log('💳 Navigating to payment page with user ID:', userId);
+    navigation.navigate(ScreenNames.PAYMENT_WEBVIEW as never);
   };
 
   const handleCloseTransactionModal = () => {
@@ -200,12 +193,14 @@ export const TransactionReport: React.FC = () => {
     }
 
     try {
+      const userId = user?.userId || user?.id; // Get userId from auth store (handle both formats)
       // Always create positive transactions (credit) for coin purchases
       await ReportStorageManager.addCashTransaction({
         type: 'credit',
         amount,
         reason: transactionForm.reason,
-        description: transactionForm.description || 'Coin purchase'
+        description: transactionForm.description || 'Coin purchase',
+        userId // Pass userId to transaction
       });
       
       setShowTransactionModal(false);
@@ -238,6 +233,7 @@ export const TransactionReport: React.FC = () => {
           }
 
           try {
+            const userId = user?.userId || user?.id; // Get userId from auth store (handle both formats)
             // Only allow coin purchases (credit) to add to balance
             // Game transactions should always be debit (negative)
             const transactionType = type === 'credit' && reason.toLowerCase().includes('purchase') ? 'credit' : 'debit';
@@ -246,7 +242,8 @@ export const TransactionReport: React.FC = () => {
               type: transactionType,
               amount,
               reason: reason.toLowerCase().includes('game') ? 'game' : reason,
-              description: `Manual ${transactionType === 'credit' ? 'coin purchase' : 'coin deduction'}`
+              description: `Manual ${transactionType === 'credit' ? 'coin purchase' : 'coin deduction'}`,
+              userId // Pass userId to transaction
             });
             loadReports();
           } catch (error) {
@@ -257,39 +254,6 @@ export const TransactionReport: React.FC = () => {
     );
   };
 
-  const renderTransactionItem = (transaction: CashTransaction) => (
-    <View style={styles.transactionItem}>
-      <View style={styles.transactionContent}>
-        <View style={[
-          styles.transactionTypeIcon,
-          { backgroundColor: transaction.type === 'credit' ? '#10B981' : '#EF4444' }
-        ]}>
-          <Text style={styles.transactionTypeText}>
-            {transaction.type === 'credit' ? '+' : '-'}
-          </Text>
-        </View>
-        
-        <View style={styles.transactionInfo}>
-          <Text style={[styles.transactionDescription, { color: theme.colors.text }]}>
-            {transaction.reason === 'game_profit' ? 'Game' : transaction.reason}
-          </Text>
-          <Text style={[styles.transactionCategory, { color: theme.colors.textSecondary }]}>
-            {new Date(transaction.timestamp).toLocaleDateString('en-US', { 
-              month: 'short', 
-              day: 'numeric' 
-            })} • {transaction.description}
-          </Text>
-        </View>
-        
-        <Text style={[
-          styles.transactionAmount,
-          { color: transaction.type === 'credit' ? '#10B981' : '#EF4444' }
-        ]}>
-          {transaction.type === 'credit' ? '+' : '-'}{formatCurrency(transaction.amount)}
-        </Text>
-      </View>
-    </View>
-  );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -311,117 +275,173 @@ export const TransactionReport: React.FC = () => {
           <RefreshControl refreshing={isRefreshing} onRefresh={loadReports} />
         }
       >
-        {/* Unified Compact Filter Section */}
-        <View style={[styles.unifiedFilterCard, { backgroundColor: theme.colors.surface }]}>
-          <View style={styles.filterRow}>
-            <View style={styles.dateFilterSection}>
-              <Text style={[styles.filterSectionLabel, { color: theme.colors.textSecondary }]}>Period:</Text>
-              <TouchableOpacity
-                style={[styles.compactDateButton, { borderColor: theme.colors.border }]}
-                onPress={() => {
-                  // Use the existing DateRangeFilter modal logic
-                  setShowDateFilterModal(true);
-                }}
-              >
-                <Text style={[styles.compactDateText, { color: theme.colors.text }]}>
-                  {selectedPeriod === 'today' ? 'Today' :
-                   selectedPeriod === 'yesterday' ? 'Yesterday' :
-                   selectedPeriod === 'this_week' ? 'This Week' :
-                   selectedPeriod === 'last_week' ? 'Last Week' :
-                   selectedPeriod === 'this_month' ? 'This Month' :
-                   selectedPeriod === 'last_month' ? 'Last Month' :
-                   selectedPeriod === 'custom' ? 'Custom' : 'Today'}
-                </Text>
-                <View style={styles.compactDateIcon}>
-                  <Text style={{ color: theme.colors.primary, fontSize: 12 }}>📅</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
+        {/* Modern Date Range Picker */}
+        <DateRangePicker
+          selectedPeriod={selectedPeriod}
+          customStartDate={customStartDate}
+          customEndDate={customEndDate}
+          onFilterChange={handleFilterChange}
+          onQuickFilterPress={() => setShowDateFilterModal(true)}
+        />
 
-            <View style={styles.typeFilterSection}>
-              <Text style={[styles.filterSectionLabel, { color: theme.colors.textSecondary }]}>Type:</Text>
-              <View style={styles.typeFilterChips}>
-                {['all', 'credit', 'debit'].map((filter) => (
-                  <TouchableOpacity
-                    key={filter}
-                    style={[
-                      styles.compactTypeChip,
-                      {
-                        backgroundColor: transactionFilter === filter ? theme.colors.primary : 'transparent',
-                        borderColor: theme.colors.border,
-                      }
-                    ]}
-                    onPress={() => setTransactionFilter(filter as 'all' | 'credit' | 'debit')}
-                  >
-                    <Text style={[
-                      styles.compactTypeText,
-                      { color: transactionFilter === filter ? 'white' : theme.colors.text }
-                    ]}>
-                      {filter === 'all' ? 'All' : filter === 'credit' ? 'In' : 'Out'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+        {/* Balance Hero Card */}
+        <View style={[styles.balanceHeroCard, { backgroundColor: theme.colors.primary }]}>
+          <View style={styles.balanceHeroContent}>
+            <View style={styles.balanceIconContainer}>
+              <Wallet size={28} color="white" />
+            </View>
+            <View style={styles.balanceInfo}>
+              <Text style={styles.balanceLabel}>Current Balance</Text>
+              <Text style={styles.balanceAmount}>{formatCoins(userCoins)}</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={styles.addBalanceBtn}
+            onPress={handleAddBalance}
+          >
+            <Plus size={20} color={theme.colors.primary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Summary Cards */}
+        <View style={styles.summaryCardsRow}>
+          <View style={[styles.summaryCard, { backgroundColor: '#10B981' }]}>
+            <View style={styles.summaryCardContent}>
+              <ArrowUpRight size={20} color="white" />
+              <View style={styles.summaryCardText}>
+                <Text style={styles.summaryValue}>{formatCoins(summaryStats.totalCredit)}</Text>
+                <Text style={styles.summaryLabel}>Received</Text>
+              </View>
+            </View>
+          </View>
+          
+          <View style={[styles.summaryCard, { backgroundColor: '#EF4444' }]}>
+            <View style={styles.summaryCardContent}>
+              <ArrowDownLeft size={20} color="white" />
+              <View style={styles.summaryCardText}>
+                <Text style={styles.summaryValue}>{formatCoins(summaryStats.totalDebit)}</Text>
+                <Text style={styles.summaryLabel}>Spent</Text>
               </View>
             </View>
           </View>
         </View>
 
-        {/* Compact Balance Section */}
-        <View style={[styles.compactBalanceCard, { backgroundColor: theme.colors.surface }]}>
-          <View style={styles.balanceRow}>
-            <View style={styles.balanceInfo}>
-              <Text style={[styles.balanceLabel, { color: theme.colors.textSecondary }]}>Current Balance</Text>
-              <Text style={[styles.balanceAmount, { color: theme.colors.text }]}>
-                {formatCurrency(summaryStats.netBalance)}
-              </Text>
-            </View>
-            
+        {/* Filter Chips */}
+        <View style={styles.filterChipsContainer}>
+          {[
+            { key: 'all', label: 'All', icon: CreditCard },
+            { key: 'credit', label: 'Received', icon: ArrowUpRight },
+            { key: 'debit', label: 'Spent', icon: ArrowDownLeft }
+          ].map((filter) => (
             <TouchableOpacity
-              style={[styles.compactAddButton, { backgroundColor: theme.colors.primary }]}
-              onPress={handleAddBalance}
+              key={filter.key}
+              style={[
+                styles.filterChip,
+                {
+                  backgroundColor: transactionFilter === filter.key ? theme.colors.primary : theme.colors.surface,
+                  borderColor: transactionFilter === filter.key ? theme.colors.primary : theme.colors.border,
+                }
+              ]}
+              onPress={() => setTransactionFilter(filter.key as 'all' | 'credit' | 'debit')}
             >
-              <Text style={styles.addButtonText}>+ Add</Text>
+              <filter.icon size={14} color={transactionFilter === filter.key ? 'white' : theme.colors.textSecondary} />
+              <Text style={[
+                styles.filterChipText,
+                { color: transactionFilter === filter.key ? 'white' : theme.colors.text }
+              ]}>
+                {filter.label}
+              </Text>
             </TouchableOpacity>
-          </View>
+          ))}
         </View>
 
 
         {/* Transactions List */}
         {filteredReports.length > 0 ? (
           <View style={styles.transactionsContainer}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-              Recent Transactions ({filteredReports.reduce((sum, report) => sum + report.transactions.length, 0)})
-            </Text>
+            <View style={styles.transactionsSectionHeader}>
+              <View style={styles.transactionsTitleContainer}>
+                <Coins size={20} color={theme.colors.primary} />
+                <Text style={[styles.transactionsSectionTitle, { color: theme.colors.text }]}>Recent Transactions</Text>
+              </View>
+              <View style={[styles.transactionsCountBadge, { backgroundColor: theme.colors.primary }]}>
+                <Text style={styles.transactionsCountText}>{filteredReports.reduce((sum, report) => sum + report.transactions.length, 0)}</Text>
+              </View>
+            </View>
             
             {filteredReports.map(report => (
-              <View key={report.date} style={[styles.compactDailyCard, { backgroundColor: theme.colors.surface }]}>
-                <View style={styles.compactDayHeader}>
-                  <Text style={[styles.compactDayDate, { color: theme.colors.text }]}>
-                    {formatDate(report.date)}
-                  </Text>
-                  <Text style={[styles.compactDaySummary, { color: theme.colors.textSecondary }]}>
-                    {report.transactions.length} txn • {formatCurrency(report.netBalance)}
-                  </Text>
+              <View key={report.date} style={styles.dateGroup}>
+                <View style={[styles.dateHeader, { backgroundColor: theme.colors.primary + '10', borderLeftColor: theme.colors.primary }]}>
+                  <View style={styles.dateInfo}>
+                    <Calendar size={14} color={theme.colors.primary} />
+                    <Text style={[styles.dateHeaderText, { color: theme.colors.text }]}>{formatDate(report.date)}</Text>
+                  </View>
+                  <View style={styles.dateStats}>
+                    <View style={styles.dateStat}>
+                      <Text style={[styles.dateStatValue, { color: theme.colors.textSecondary }]}>{report.transactions.length}</Text>
+                      <Text style={[styles.dateStatLabel, { color: theme.colors.textSecondary }]}>txns</Text>
+                    </View>
+                    <View style={styles.dateStat}>
+                      <Text style={[styles.dateStatValue, { color: report.netBalance >= 0 ? '#10B981' : '#EF4444' }]}>{formatCoins(Math.abs(report.netBalance))}</Text>
+                      <Text style={[styles.dateStatLabel, { color: theme.colors.textSecondary }]}>net</Text>
+                    </View>
+                  </View>
                 </View>
                 
-                <View style={styles.transactionsList}>
+                <View style={styles.transactionsFlow}>
                   {report.transactions
                     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
                     .filter(transaction => {
                       if (transactionFilter === 'all') return true;
                       return transaction.type === transactionFilter;
                     })
-                    .map(renderTransactionItem)}
+                    .map((transaction, index) => (
+                      <View key={`${report.date}-${index}`} style={[styles.transactionFlowItem, { backgroundColor: theme.colors.surface }]}>
+                        <View style={[
+                          styles.transactionIcon,
+                          { backgroundColor: transaction.type === 'credit' ? '#10B981' : '#EF4444' }
+                        ]}>
+                          {transaction.type === 'credit' ? 
+                            <ArrowUpRight size={14} color="white" /> : 
+                            <ArrowDownLeft size={14} color="white" />
+                          }
+                        </View>
+                        
+                        <View style={styles.transactionDetails}>
+                          <Text style={[styles.transactionTitle, { color: theme.colors.text }]}>
+                            {transaction.reason === 'payin' ? 'Game Start' : 
+                             transaction.reason === 'payout' ? 'Game Payout' : 
+                             transaction.reason === 'game_profit' ? 'Payout' :
+                             transaction.reason}
+                          </Text>
+                          <Text style={[styles.transactionSubtitle, { color: theme.colors.textSecondary }]}>
+                            {new Date(transaction.timestamp).toLocaleTimeString('en-US', { 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            })} • {transaction.description}
+                          </Text>
+                        </View>
+                        
+                        <Text style={[
+                          styles.transactionAmount,
+                          { color: transaction.type === 'credit' ? '#10B981' : '#EF4444' }
+                        ]}>
+                          {transaction.type === 'credit' ? '+' : '-'}{formatCoins(transaction.amount)}
+                        </Text>
+                      </View>
+                    ))}
                 </View>
               </View>
             ))}            
           </View>
         ) : (
-          <View style={[styles.emptyStateCard, { backgroundColor: theme.colors.surface }]}>
-            <Text style={styles.emptyIcon}>💰</Text>
-            <Text style={[styles.emptyText, { color: theme.colors.text }]}>No transactions yet</Text>
+          <View style={[styles.emptyState, { backgroundColor: theme.colors.surface }]}>
+            <View style={[styles.emptyIconContainer, { backgroundColor: theme.colors.primary + '20' }]}>
+              <Coins size={32} color={theme.colors.primary} />
+            </View>
+            <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No Transactions Yet</Text>
             <Text style={[styles.emptySubtext, { color: theme.colors.textSecondary }]}>
-              Add your first transaction to get started
+              Start playing or add coins to see your transaction history
             </Text>
           </View>
         )}
@@ -617,6 +637,7 @@ export const TransactionReport: React.FC = () => {
           </View>
         </View>
       </Modal>
+
     </SafeAreaView>
   );
 };
@@ -629,15 +650,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 8,
-    paddingTop: 40,
+    paddingVertical: 4,
+    paddingTop: 20,
   },
   backButton: {
     padding: 8,
   },
   headerTitle: {
     flex: 1,
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: 'bold',
     color: 'white',
     textAlign: 'center',
@@ -701,42 +722,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  transactionsContainer: {
-    marginBottom: 24,
-  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 16,
-  },
-  transactionItem: {
-    marginBottom: 8,
-  },
-  transactionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  transactionLeft: {
-    flex: 1,
-  },
-  transactionInfo: {
-    flex: 1,
-  },
-  transactionDescription: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  transactionCategory: {
-    fontSize: 12,
-  },
-  transactionRight: {
-    alignItems: 'flex-end',
-  },
-  transactionAmount: {
-    fontSize: 16,
-    fontWeight: 'bold',
   },
   dailyReportCard: {
     marginBottom: 16,
@@ -766,10 +755,6 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: 'rgba(0,0,0,0.1)',
-  },
-  emptyState: {
-    alignItems: 'center',
-    marginTop: 20,
   },
   periodSummary: {
     padding: 16,
@@ -952,154 +937,225 @@ const styles = StyleSheet.create({
     color: 'white',
   },
 
-  // Compact UI Styles
-  unifiedFilterCard: {
-    marginBottom: 12,
-    borderRadius: 12,
-    padding: 12,
-    elevation: 2,
+  // Modern Dynamic UI Styles
+  
+  balanceHeroCard: {
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
   },
-  filterRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 16,
-  },
-  dateFilterSection: {
+  balanceHeroContent: {
     flex: 1,
-  },
-  typeFilterSection: {
-    flex: 1,
-  },
-  filterSectionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 6,
-  },
-  compactDateButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    minHeight: 36,
   },
-  compactDateText: {
-    fontSize: 13,
-    fontWeight: '500',
-    flex: 1,
-  },
-  compactDateIcon: {
-    marginLeft: 6,
-  },
-  typeFilterChips: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  compactTypeChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    flex: 1,
-    alignItems: 'center',
-    minHeight: 32,
+  balanceIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
-  },
-  compactTypeText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-
-  compactBalanceCard: {
-    marginBottom: 12,
-    borderRadius: 12,
-    padding: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  balanceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    marginRight: 16,
   },
   balanceInfo: {
     flex: 1,
   },
   balanceLabel: {
     fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
     fontWeight: '500',
     marginBottom: 4,
   },
   balanceAmount: {
-    fontSize: 24,
-    fontWeight: '800',
-  },
-  compactAddButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    minWidth: 80,
-    alignItems: 'center',
-  },
-  addButtonText: {
+    fontSize: 28,
+    fontWeight: '900',
     color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
   },
-
-
-  compactDailyCard: {
-    marginBottom: 12,
-    borderRadius: 12,
-    padding: 12,
+  addBalanceBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
     elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  
+  summaryCardsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  summaryCard: {
+    flex: 1,
+    borderRadius: 16,
+    padding: 16,
+    elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
-  compactDayHeader: {
+  summaryCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  summaryCardText: {
+    flex: 1,
+  },
+  summaryValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: 'white',
+    marginBottom: 2,
+  },
+  summaryLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.9)',
+  },
+  
+  filterChipsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 20,
+  },
+  filterChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 6,
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  transactionsContainer: {
+    marginBottom: 24,
+  },
+  transactionsSectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
-    paddingBottom: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
+    marginBottom: 16,
   },
-  compactDayDate: {
+  transactionsTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  transactionsSectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  transactionsCountBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    minWidth: 40,
+    alignItems: 'center',
+  },
+  transactionsCountText: {
+    color: 'white',
     fontSize: 14,
     fontWeight: '700',
   },
-  compactDaySummary: {
-    fontSize: 12,
+
+
+  dateGroup: {
+    marginBottom: 20,
+  },
+  dateHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dateInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dateHeaderText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  dateStats: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  dateStat: {
+    alignItems: 'center',
+  },
+  dateStatValue: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  dateStatLabel: {
+    fontSize: 10,
     fontWeight: '500',
   },
-  transactionsList: {
-    gap: 4,
+  
+  transactionsFlow: {
+    gap: 8,
   },
-  transactionTypeIcon: {
-    width: 24,
-    height: 24,
+  transactionFlowItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
     borderRadius: 12,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
+  },
+  transactionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  transactionTypeText: {
-    color: 'white',
+  transactionDetails: {
+    flex: 1,
+  },
+  transactionTitle: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  transactionSubtitle: {
+    fontSize: 12,
+    fontWeight: '400',
+  },
+  transactionAmount: {
+    fontSize: 14,
+    fontWeight: '700',
   },
   moreText: {
     fontSize: 12,
@@ -1111,10 +1167,10 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(0,0,0,0.05)',
   },
 
-  emptyStateCard: {
+  emptyState: {
     alignItems: 'center',
-    padding: 32,
-    borderRadius: 12,
+    padding: 40,
+    borderRadius: 16,
     marginTop: 20,
     elevation: 2,
     shadowColor: '#000',
@@ -1122,19 +1178,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
-  emptyIcon: {
-    fontSize: 48,
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 16,
   },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
+    opacity: 0.8,
   },
 
   // Date Modal Styles
