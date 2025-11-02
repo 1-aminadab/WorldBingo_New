@@ -249,7 +249,7 @@ export const useSettingsStore = create<SettingsStore>()(
       },
 
       setRtpPercentage: (percentage: number) => {
-        const clampedPercentage = Math.min(85, Math.max(35, percentage));
+        const clampedPercentage = Math.min(85, Math.max(60, percentage));
         set({ rtpPercentage: clampedPercentage });
       },
 
@@ -261,7 +261,7 @@ export const useSettingsStore = create<SettingsStore>()(
 
       decreaseRtp: () => {
         const { rtpPercentage } = get();
-        const newPercentage = Math.max(35, rtpPercentage - 1);
+        const newPercentage = Math.max(60, rtpPercentage - 1);
         set({ rtpPercentage: newPercentage });
       },
 

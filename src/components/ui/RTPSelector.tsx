@@ -29,7 +29,7 @@ export const RTPSelector: React.FC<RTPSelectorProps> = ({
   };
 
   const handleDecrease = () => {
-    const newValue = Math.max(35, value - 1);
+    const newValue = Math.max(60, value - 1);
     onChange(newValue);
     setInputValue(newValue.toString());
   };
@@ -37,14 +37,14 @@ export const RTPSelector: React.FC<RTPSelectorProps> = ({
   const handleInputChange = (text: string) => {
     setInputValue(text);
     const numValue = parseInt(text, 10);
-    if (!isNaN(numValue) && numValue >= 35 && numValue <= 85) {
+    if (!isNaN(numValue) && numValue >= 60 && numValue <= 85) {
       onChange(numValue);
     }
   };
 
   const handleInputBlur = () => {
     const numValue = parseInt(inputValue, 10);
-    if (isNaN(numValue) || numValue < 35 || numValue > 85) {
+    if (isNaN(numValue) || numValue < 60 || numValue > 85) {
       setInputValue(value.toString());
     }
   };
@@ -81,11 +81,11 @@ export const RTPSelector: React.FC<RTPSelectorProps> = ({
             { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
           ]}
           onPress={handleDecrease}
-          disabled={value <= 35}
+          disabled={value <= 60}
         >
           <Text style={[
             styles.controlButtonText,
-            { color: value <= 35 ? theme.colors.disabled : theme.colors.text }
+            { color: value <= 60 ? theme.colors.disabled : theme.colors.text }
           ]}>
             −
           </Text>
@@ -131,7 +131,7 @@ export const RTPSelector: React.FC<RTPSelectorProps> = ({
               styles.rangeProgress,
               {
                 backgroundColor: getRTPColor(value),
-                width: `${((value - 35) / (85 - 35)) * 100}%`,
+                width: `${((value - 60) / (85 - 60)) * 100}%`,
               },
             ]}
           />
@@ -140,14 +140,14 @@ export const RTPSelector: React.FC<RTPSelectorProps> = ({
               styles.rangeThumb,
               {
                 backgroundColor: getRTPColor(value),
-                left: `${((value - 35) / (85 - 35)) * 100}%`,
+                left: `${((value - 60) / (85 - 60)) * 100}%`,
               },
             ]}
           />
         </View>
         <View style={styles.rangeLabels}>
           <Text style={[styles.rangeLabel, { color: theme.colors.textSecondary }]}>
-            35%
+            60%
           </Text>
           <Text style={[styles.rangeLabel, { color: theme.colors.textSecondary }]}>
             85%

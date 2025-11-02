@@ -372,11 +372,12 @@ function checkXShape(grid: boolean[][]): boolean {
 }
 
 function checkPlusSign(grid: boolean[][]): boolean {
-  // Middle row and middle column complete
-  const middleRowComplete = grid[2].every(cell => cell);
-  const middleColumnComplete = grid.every(row => row[2]);
-  
-  return middleRowComplete && middleColumnComplete;
+  // Small plus: center cell and 4 adjacent cells
+  return grid[2][2] && // center
+         grid[1][2] && // top
+         grid[3][2] && // bottom
+         grid[2][1] && // left
+         grid[2][3];   // right
 }
 
 function checkDiamond(grid: boolean[][]): boolean {

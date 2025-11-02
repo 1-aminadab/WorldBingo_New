@@ -11,7 +11,7 @@ export const GAME_CONFIG = {
   maxDrawnNumbers: 75,
   autoDrawInterval: 3000, // 3 seconds
   celebrationDuration: 2000, // 2 seconds
-  minRTP: 35,
+  minRTP: 60,
   maxRTP: 85,
   defaultRTP: 60,
 };

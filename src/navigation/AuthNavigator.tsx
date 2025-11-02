@@ -18,7 +18,16 @@ export const AuthNavigator: React.FC = () => {
   const { pendingAuthScreen, setPendingAuthScreen } = useAuthStore();
 
   // Determine initial route based on pending auth screen
-  const initialRouteName = pendingAuthScreen || ScreenNames.LOGIN;
+  const getInitialRouteName = () => {
+    if (pendingAuthScreen === 'SignUp') {
+      return ScreenNames.LOGIN_SIGNUP; // This maps to SignUpLoginScreen with isLogin: false
+    } else if (pendingAuthScreen === 'Login') {
+      return ScreenNames.LOGIN; // This maps to SignUpLoginScreen with isLogin: true
+    }
+    return ScreenNames.LOGIN; // Default to login
+  };
+  
+  const initialRouteName = getInitialRouteName();
 
   // Clear pending auth screen when navigator mounts
   React.useEffect(() => {

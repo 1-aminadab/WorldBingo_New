@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
   Image,
   Share,
   TouchableOpacity,
-  Animated,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -42,9 +41,6 @@ export const StarterScreen: React.FC = () => {
   // Card floating animation
   const cardRotate = useSharedValue(0);
   
-  // Auth toggle state
-  const [activeAuthTab, setActiveAuthTab] = useState<'login' | 'signup'>('login');
-  const authTabAnimation = useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
     // Card floating animation
@@ -171,22 +167,6 @@ https://myworldbingo.com/app`;
     });
   };
 
-  const switchAuthTab = (tab: 'login' | 'signup') => {
-    setActiveAuthTab(tab);
-    Animated.timing(authTabAnimation, {
-      toValue: tab === 'login' ? 0 : 1,
-      duration: 300,
-      useNativeDriver: false,
-    }).start();
-  };
-
-  const handleAuthNavigation = () => {
-    if (activeAuthTab === 'login') {
-      navigation.navigate(ScreenNames.LOGIN as never);
-    } else {
-      navigation.navigate(ScreenNames.LOGIN_SIGNUP as never);
-    }
-  };
 
   return (
     <View style={styles.container}>

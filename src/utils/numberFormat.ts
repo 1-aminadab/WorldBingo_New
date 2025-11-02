@@ -13,14 +13,14 @@ export const formatNumber = (value: number, showDecimals: boolean = false): stri
     return showDecimals && millions % 1 !== 0 
       ? `${millions.toFixed(1)}M` 
       : `${Math.round(millions)}M`;
-  } else if (absValue >= 1000) {
-    // Thousands
+  } else if (absValue >= 10000) {
+    // Thousands (only for values >= 10,000 - 5+ digits)
     const thousands = value / 1000;
     return showDecimals && thousands % 1 !== 0 
       ? `${thousands.toFixed(1)}K` 
       : `${Math.round(thousands)}K`;
   } else {
-    // Less than 1000
+    // Less than 10,000 (4 digits or less)
     return Math.round(value).toString();
   }
 };

@@ -80,7 +80,14 @@ function createPreview(
   };
   const markFourCorners = () => { g[0][0] = g[0][4] = g[4][0] = g[4][4] = true; };
   const markSmallCorners = () => { g[1][1] = g[1][3] = g[3][1] = g[3][3] = true; };
-  const markPlus = () => { markRow(2); markCol(2); };
+  const markPlus = () => { 
+    // Small plus: center cell and 4 adjacent cells
+    g[2][2] = true; // center
+    g[1][2] = true; // top
+    g[3][2] = true; // bottom
+    g[2][1] = true; // left
+    g[2][3] = true; // right
+  };
   const markX = () => { markDiag('main'); markDiag('anti'); };
   const markFull = () => { for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) g[r][c] = true; };
   const markT = () => { markRow(0); markCol(2); };
