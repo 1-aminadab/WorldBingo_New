@@ -13,22 +13,34 @@ export class CoinStorageManager {
    * Get coin balance for a user
    */
   static async getCoins(userId?: string): Promise<number> {
+    const debugId = Math.random().toString(36).substr(2, 9);
+    console.log(`💰 [${debugId}] === GET COINS FROM LOCAL STORAGE ===`);
+    
     try {
       const key = this.getCoinKey(userId);
+      console.log(`💰 [${debugId}] Storage key: ${key}`);
+      console.log(`💰 [${debugId}] User ID: ${userId || 'GUEST'}`);
+      
       const coinsStr = await AsyncStorage.getItem(key);
+      console.log(`💰 [${debugId}] Raw storage value: ${coinsStr}`);
       
       if (coinsStr !== null) {
         const coins = parseFloat(coinsStr);
-        console.log(`💰 Loaded ${coins} coins for user ${userId || 'GUEST'}`);
+        console.log(`💰 [${debugId}] Parsed coins: ${coins}`);
+        console.log(`💰 [${debugId}] ✅ Loaded ${coins} coins for user ${userId || 'GUEST'}`);
         return coins;
       }
       
       // First time user - initialize with 0 coins
-      console.log(`💰 New user ${userId || 'GUEST'} - initializing with 0 coins`);
+      console.log(`💰 [${debugId}] No existing coins found - new user`);
+      console.log(`💰 [${debugId}] Initializing ${userId || 'GUEST'} with 0 coins`);
+      
       await this.setCoins(0, userId);
+      console.log(`💰 [${debugId}] ✅ New user initialized with 0 coins`);
       return 0;
     } catch (error) {
-      console.error('Error loading coins:', error);
+      console.error(`💰 [${debugId}] ❌ Error loading coins:`, error);
+      console.error(`💰 [${debugId}] Returning 0 as fallback`);
       return 0;
     }
   }
@@ -37,13 +49,22 @@ export class CoinStorageManager {
    * Set coin balance for a user
    */
   static async setCoins(amount: number, userId?: string): Promise<void> {
+    const debugId = Math.random().toString(36).substr(2, 9);
+    console.log(`💰 [${debugId}] === SET COINS IN LOCAL STORAGE ===`);
+    
     try {
       const key = this.getCoinKey(userId);
       const finalAmount = Math.max(0, amount); // Ensure non-negative
+      
+      console.log(`💰 [${debugId}] Storage key: ${key}`);
+      console.log(`💰 [${debugId}] User ID: ${userId || 'GUEST'}`);
+      console.log(`💰 [${debugId}] Input amount: ${amount}`);
+      console.log(`💰 [${debugId}] Final amount (non-negative): ${finalAmount}`);
+      
       await AsyncStorage.setItem(key, finalAmount.toString());
-      console.log(`💰 Set ${finalAmount} coins for user ${userId || 'GUEST'}`);
+      console.log(`💰 [${debugId}] ✅ Set ${finalAmount} coins for user ${userId || 'GUEST'}`);
     } catch (error) {
-      console.error('Error saving coins:', error);
+      console.error(`💰 [${debugId}] ❌ Error saving coins:`, error);
     }
   }
 
@@ -51,14 +72,25 @@ export class CoinStorageManager {
    * Add coins to user balance
    */
   static async addCoins(amount: number, userId?: string): Promise<number> {
+    const debugId = Math.random().toString(36).substr(2, 9);
+    console.log(`💰 [${debugId}] === ADD COINS TO LOCAL STORAGE ===`);
+    
     try {
+      console.log(`💰 [${debugId}] User ID: ${userId || 'GUEST'}`);
+      console.log(`💰 [${debugId}] Amount to add: ${amount}`);
+      
       const currentCoins = await this.getCoins(userId);
+      console.log(`💰 [${debugId}] Current balance: ${currentCoins}`);
+      
       const newBalance = currentCoins + amount;
+      console.log(`💰 [${debugId}] Calculating new balance: ${currentCoins} + ${amount} = ${newBalance}`);
+      
       await this.setCoins(newBalance, userId);
-      console.log(`💰 Added ${amount} coins: ${currentCoins} → ${newBalance} (User: ${userId || 'GUEST'})`);
+      console.log(`💰 [${debugId}] ✅ Added ${amount} coins: ${currentCoins} → ${newBalance} (User: ${userId || 'GUEST'})`);
       return newBalance;
     } catch (error) {
-      console.error('Error adding coins:', error);
+      console.error(`💰 [${debugId}] ❌ Error adding coins:`, error);
+      console.log(`💰 [${debugId}] Fallback: returning current balance`);
       return await this.getCoins(userId);
     }
   }

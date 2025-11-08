@@ -3,6 +3,8 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GameSettings, BingoPattern, PatternCategory, VoiceLanguage, AppLanguage, Theme, ClassicLineType, CustomCardType, CardTheme, NumberCallingMode, VoiceOption, VoiceGender } from '../types';
 import { WORLD_BINGO_CARDS } from '../data/worldbingodata';
+import { AFRICA_BINGO_CARDS } from '../data/africabingodata';
+import { getCardTypeInfo, getDefaultLimitForCardType } from '../utils/cardTypeManager';
 import { AVAILABLE_VOICES, getDefaultVoiceForLanguage, getVoiceById } from '../utils/voiceConfig';
 
 interface SettingsStore extends GameSettings {
@@ -144,16 +146,23 @@ export const useSettingsStore = create<SettingsStore>()(
       worldBingoCardsLimit: 1000,
       isMusicEnabled: true,
       isFirstTimeStartup: true,
-      selectedCardTypeName: 'default',
+      selectedCardTypeName: 'World Bingo',
       selectedVoiceId: getDefaultVoice().id,
       selectedVoice: getDefaultVoice(),
       customCardTypes: (() => {
         const defaultCards = generateDefaultCards();
         console.log('🎯 Store initialization - default cards length:', defaultCards.length);
+        console.log('🎯 Store initialization - africa cards length:', AFRICA_BINGO_CARDS.length);
         return [
           {
-            name: 'default',
+            name: 'World Bingo',
+            displayName: 'World Bingo',
             cards: defaultCards
+          },
+          {
+            name: 'Africa Bingo', 
+            displayName: 'Africa Bingo',
+            cards: AFRICA_BINGO_CARDS
           }
         ];
       })(),
@@ -298,25 +307,16 @@ export const useSettingsStore = create<SettingsStore>()(
       },
 
       setWorldBingoCardsLimit: (limit: number) => {
-        const clampedLimit = Math.min(1000, Math.max(1, limit));
+        const { selectedCardTypeName } = get();
+        const maxCards = get().getMaxCardsForSelectedType();
+        const clampedLimit = Math.min(maxCards, Math.max(1, limit));
         set({ worldBingoCardsLimit: clampedLimit });
       },
 
       getMaxCardsForSelectedType: () => {
         const { customCardTypes, selectedCardTypeName } = get();
-        const selectedCardType = customCardTypes.find(c => c.name === selectedCardTypeName);
-        if (selectedCardType) {
-          // For World Bingo (default), allow up to 1000 cards (16 predefined + 984 generated)
-          if (selectedCardType.name === 'default') {
-            return 1000;
-          }
-          return selectedCardType.cards.length;
-        }
-        // If the selected card type doesn't exist yet, return 0 for custom types
-        if (selectedCardTypeName && selectedCardTypeName !== 'default') {
-          return 0;
-        }
-        return 1000; // fallback to allow 1000 World Bingo cards for default
+        const cardTypeInfo = getCardTypeInfo(selectedCardTypeName, customCardTypes);
+        return cardTypeInfo.maxLimit;
       },
 
       resetLimitToMax: () => {
@@ -384,26 +384,11 @@ export const useSettingsStore = create<SettingsStore>()(
         set({ selectedCardTypeName: name });
         // Auto-adjust the limit when card type changes
         const { customCardTypes } = get();
-        const selectedCardType = customCardTypes.find(c => c.name === name);
-        if (selectedCardType) {
-          // For World Bingo (default), keep the current limit (don't override user preference)
-          if (selectedCardType.name === 'default') {
-            const currentLimit = get().worldBingoCardsLimit;
-            // Only set a default if no limit is currently set
-            if (!currentLimit || currentLimit <= 0) {
-              set({ worldBingoCardsLimit: 1000 });
-            }
-            // Otherwise keep the user's current preference
-          } else {
-            // For custom card types, set to their exact count
-            set({ worldBingoCardsLimit: selectedCardType.cards.length });
-          }
-        } else {
-          // If card type doesn't exist yet (like selecting 'custom' before creating any custom cards)
-          if (name !== 'default') {
-            set({ worldBingoCardsLimit: 0 });
-          }
-        }
+        const cardTypeInfo = getCardTypeInfo(name, customCardTypes);
+        const defaultLimit = getDefaultLimitForCardType(name);
+        
+        // Set to the appropriate default limit for this card type
+        set({ worldBingoCardsLimit: Math.min(defaultLimit, cardTypeInfo.maxLimit) });
       },
 
       isGameReadyToStart: () => {
@@ -426,11 +411,12 @@ export const useSettingsStore = create<SettingsStore>()(
           ...defaultSettings, 
           rewardAmount: 100, 
           playerBinding: '',
-          selectedCardTypeName: 'default',
+          selectedCardTypeName: 'World Bingo',
           worldBingoCardsLimit: Math.min(1000, defaultCards.length), // Allow up to 1000 cards
           customCardTypes: [
             {
-              name: 'default',
+              name: 'World Bingo',
+              displayName: 'World Bingo',
               cards: defaultCards
             }
           ]
@@ -483,30 +469,35 @@ export const useSettingsStore = create<SettingsStore>()(
           if (!state.customCardTypes || state.customCardTypes.length === 0) {
             state.customCardTypes = [
               {
-                name: 'default',
+                name: 'World Bingo',
+                displayName: 'World Bingo', 
                 cards: generateDefaultCards()
               }
             ];
           }
           
+          // Handle migration from old card type names to new ones
+          if (state.selectedCardTypeName === 'default') {
+            state.selectedCardTypeName = 'World Bingo';
+          }
+          if (state.selectedCardTypeName === 'africa') {
+            state.selectedCardTypeName = 'Africa Bingo';
+          }
+          
           // Ensure selectedCardTypeName is valid
           if (!state.selectedCardTypeName || !state.customCardTypes.find(c => c.name === state.selectedCardTypeName)) {
-            state.selectedCardTypeName = 'default';
+            state.selectedCardTypeName = 'World Bingo';
           }
           
           // Ensure worldBingoCardsLimit is reasonable for selected card type
-          const selectedCardType = state.customCardTypes.find(c => c.name === state.selectedCardTypeName);
-          if (selectedCardType) {
-            if (selectedCardType.name === 'default') {
-              // For default (World Bingo) cards, ensure we have a valid limit but respect user preference
-              if (!state.worldBingoCardsLimit || state.worldBingoCardsLimit <= 0) {
-                state.worldBingoCardsLimit = 1000;
-              }
-              // Otherwise keep the user's saved preference as-is
-            } else {
-              // For custom card types, set to their exact count
-              state.worldBingoCardsLimit = selectedCardType.cards.length;
-            }
+          const cardTypeInfo = getCardTypeInfo(state.selectedCardTypeName, state.customCardTypes);
+          const defaultLimit = getDefaultLimitForCardType(state.selectedCardTypeName);
+          
+          if (!state.worldBingoCardsLimit || state.worldBingoCardsLimit <= 0) {
+            state.worldBingoCardsLimit = Math.min(defaultLimit, cardTypeInfo.maxLimit);
+          } else {
+            // Ensure the current limit doesn't exceed the card type's max
+            state.worldBingoCardsLimit = Math.min(state.worldBingoCardsLimit, cardTypeInfo.maxLimit);
           }
         }
       },

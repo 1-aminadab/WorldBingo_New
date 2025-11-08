@@ -69,13 +69,37 @@ export interface ForgotPasswordResponse {
   statusCode?: number;
 }
 
-export interface ResetPasswordRequest {
+export interface VerifyResetOtpRequest {
   phoneNumber: string;
   otp: string;
+}
+
+export interface VerifyResetOtpResponse {
+  success: boolean;
+  message: string; // e.g., "OTP verified. You can now reset your password."
+  statusCode?: number;
+  // Note: This opens a 10-minute window to call resetPassword
+}
+
+export interface ResetPasswordRequest {
+  phoneNumber: string;
   newPassword: string;
+  confirmPassword: string;
 }
 
 export interface ResetPasswordResponse {
+  success: boolean;
+  message: string;
+  statusCode?: number;
+}
+
+export interface ChangePasswordRequest {
+  oldPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface ChangePasswordResponse {
   success: boolean;
   message: string;
   statusCode?: number;

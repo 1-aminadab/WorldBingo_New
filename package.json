@@ -1,13 +1,21 @@
 {
   "name": "World_Bingo",
-  "version": "0.0.1",
+  "version": "1.1.0",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
-    "test": "jest"
+    "test": "jest",
+    "version:patch": "npm version patch --no-git-tag-version",
+    "version:minor": "npm version minor --no-git-tag-version",
+    "version:major": "npm version major --no-git-tag-version",
+    "build:android": "cd android && ./gradlew assembleRelease",
+    "build:android:clean": "cd android && ./gradlew clean && ./gradlew assembleRelease",
+    "install:clean": "./scripts/install-clean.sh",
+    "install:android": "npm run build:android && npm run install:clean",
+    "deploy": "./scripts/build-and-install.sh"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",

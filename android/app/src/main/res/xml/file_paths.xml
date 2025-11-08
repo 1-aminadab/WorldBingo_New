@@ -10,6 +10,11 @@
         name="external_app_files" 
         path="/" />
     
+    <!-- Path for app's internal files directory (where we download APK) -->
+    <files-path 
+        name="internal_files" 
+        path="/" />
+    
     <!-- Path for app's cache directory -->
     <cache-path 
         name="cache" 

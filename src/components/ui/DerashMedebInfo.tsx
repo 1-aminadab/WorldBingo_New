@@ -7,6 +7,8 @@ interface DerashMedebInfoProps {
   gameMedebAmount: number;
   medebAmount: number;
   numPlayers: number;
+  totalCollectedAmount: number; // Pass the actual total collected amount
+  selectedNumbers?: number; // Number of selected numbers/cartelas
   isLandscape?: boolean;
   showPlayers?: boolean;
 }
@@ -33,6 +35,8 @@ export const DerashMedebInfo: React.FC<DerashMedebInfoProps> = ({
   gameMedebAmount,
   medebAmount,
   numPlayers,
+  totalCollectedAmount,
+  selectedNumbers = 1,
   isLandscape = false,
   showPlayers = true,
 }) => {
@@ -40,13 +44,17 @@ export const DerashMedebInfo: React.FC<DerashMedebInfoProps> = ({
   const { width } = useWindowDimensions();
 
   const medebValue = gameMedebAmount > 0 ? gameMedebAmount : (medebAmount ?? 0);
-  const derashFontSize = getDynamicFontSize(derashShown, 14);
-  const medebFontSize = getDynamicFontSize(medebValue, 14);
+  const payinAmount = totalCollectedAmount; // Use the passed total collected amount directly
+  // RTP logic: 100% if 4 or less players, otherwise 80%
+  const rtp = numPlayers <= 4 ? 1.0 : 0.8;
+  const payoutAmount = payinAmount * rtp; // Payout = Total collected * RTP
+  const derashFontSize = getDynamicFontSize(payinAmount, 14);
+  const medebFontSize = getDynamicFontSize(payoutAmount, 14);
 
   if (isLandscape) {
     return (
       <View style={[styles.landscapeContainer, { transform: [{ rotate: '90deg' }] }]}>
-        {/* Derash - Main Prize */}
+        {/* Pay in - Total Collected */}
         <View style={[styles.derashHighlightBoxLandscape, { backgroundColor: theme.colors.primary }]}>
           <Text style={[
             styles.derashValueLandscape,
@@ -54,12 +62,13 @@ export const DerashMedebInfo: React.FC<DerashMedebInfoProps> = ({
               fontSize: derashFontSize
             }
           ]}>
-            💰 {formatNumber(derashShown)} Birr
+          
+            💰 {formatNumber(payoutAmount)} Birr
           </Text>
-          <Text style={styles.derashLabelLandscape}>Profit</Text>
+          <Text style={styles.derashLabelLandscape}>Win Amount</Text>
         </View>
 
-        {/* Medeb Info */}
+        {/* Pay out Info */}
         <View style={[styles.medebContainerLandscape, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           <Text style={[
             styles.medebValueLandscape,
@@ -68,29 +77,35 @@ export const DerashMedebInfo: React.FC<DerashMedebInfoProps> = ({
               fontSize: medebFontSize
             }
           ]}>
-            💵 {formatNumber(medebValue)} Birr
+            💸 {formatNumber(gameMedebAmount)} Birr
           </Text>
-          <Text style={[styles.medebLabelLandscape, { color: theme.colors.text }]}>Entry Fee</Text>
+          <Text style={[styles.medebLabelLandscape, { color: theme.colors.text }]}>Card fee</Text>
         </View>
       </View>
     );
   }
-
+console.log('====================================');
+console.log(typeof medebAmount, derashShown,
+  gameMedebAmount,
+  medebAmount,
+  numPlayers,
+  totalCollectedAmount);
+console.log('====================================');
   return (
     <View style={styles.portraitContainer}>
-      {/* Derash - Main Prize */}
+      {/* Pay in - Total Collected */}
       <View style={[styles.derashHighlightBox, {gap: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.primary }]}>
         <Text style={styles.derashLabel}>💰</Text>
         <View style={{ alignItems: 'center', justifyContent: 'center' }}>
           <Text style={[
             styles.derashAmount,
             {
-              fontSize: getDynamicFontSize(derashShown, 12)
+              fontSize: getDynamicFontSize(payinAmount, 12)
             }
           ]}>
-            {formatNumber(derashShown)} <Text style={{ fontSize: 10 }}>Birr</Text>
+            {formatNumber(payoutAmount)} <Text style={{ fontSize: 10 }}>Birr</Text>
           </Text>
-          <Text style={[styles.profitLabel, { color: theme.colors.textSecondary }]}>Profit</Text>
+          <Text style={[styles.profitLabel, { color: theme.colors.textSecondary }]}>Win Amount</Text>
         </View>
 
       </View>
@@ -98,18 +113,18 @@ export const DerashMedebInfo: React.FC<DerashMedebInfoProps> = ({
       {/* Secondary Info */}
       <View style={styles.secondaryInfoContainer}>
         <View style={[styles.medebInfoBox, {gap: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          <Text style={[styles.medebIcon, { color: theme.colors.text }]}>💵</Text>
+          <Text style={[styles.medebIcon, { color: theme.colors.text }]}>💸</Text>
           <View>
             <Text style={[
               styles.medebValue,
               {
                 color: theme.colors.text,
-                fontSize: getDynamicFontSize(medebValue, 12)
+                fontSize: getDynamicFontSize(payoutAmount, 12)
               }
             ]}>
-              {formatNumber(medebValue)} Birr
+              {gameMedebAmount} Birr
             </Text>
-            <Text style={[styles.medebLabel, { color: theme.colors.textSecondary }]}>Entry Fee</Text>
+            <Text style={[styles.medebLabel, { color: theme.colors.textSecondary }]}>Card fee </Text>
 
           </View>
 
@@ -117,7 +132,7 @@ export const DerashMedebInfo: React.FC<DerashMedebInfoProps> = ({
 
         {showPlayers && numPlayers > 1 && (
           <View style={[styles.playersInfoBox, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-            <Text style={[styles.playersLabel, { color: theme.colors.textSecondary }]}>Players</Text>
+            <Text style={[styles.playersLabel, { color: theme.colors.textSecondary }]}>Total Players</Text>
             <Text style={[styles.playersValue, { color: theme.colors.text }]}>{numPlayers}</Text>
           </View>
         )}

@@ -46,6 +46,7 @@ interface VersionStore {
   dismissUpdate: () => void;
   dismissUpdateModal: () => void; // New action to hide modal but keep floating button
   completeUpdate: () => void; // New action to mark update as completed
+  clearVersionCache: () => void; // Clear all cached version data
   resetDownloadState: () => void;
 }
 
@@ -240,6 +241,12 @@ export const useVersionStore = create<VersionStore>()(
       },
 
       dismissUpdate: () => {
+        const { versionInfo } = get();
+        // Don't allow dismissing forced updates
+        if (versionInfo?.updateType === 'force') {
+          console.log('🚫 Cannot dismiss forced update completely');
+          return;
+        }
         set({
           isUpdateAvailable: false,
           versionInfo: null,
@@ -248,6 +255,12 @@ export const useVersionStore = create<VersionStore>()(
       },
 
       dismissUpdateModal: () => {
+        const { versionInfo } = get();
+        // Don't allow dismissing forced updates
+        if (versionInfo?.updateType === 'force') {
+          console.log('🚫 Cannot dismiss forced update');
+          return;
+        }
         set({
           isUpdateDismissed: true,
         });
@@ -258,6 +271,16 @@ export const useVersionStore = create<VersionStore>()(
           isUpdateAvailable: false,
           versionInfo: null,
           isUpdateDismissed: false,
+        });
+      },
+
+      // Clear all cached version data to force fresh version check
+      clearVersionCache: () => {
+        set({
+          versionInfo: null,
+          isUpdateAvailable: false,
+          isUpdateDismissed: false,
+          downloadProgress: initialState.downloadProgress,
         });
       },
 

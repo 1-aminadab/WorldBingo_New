@@ -547,8 +547,8 @@ export const SettingsScreen: React.FC = () => {
         </View>
         
         <View style={styles.sliderLabels}>
-          <Text style={[styles.sliderEndLabel, { color: theme.colors.textSecondary }]}>0%</Text>
-          <Text style={[styles.sliderEndLabel, { color: theme.colors.textSecondary }]}>100%</Text>
+          <Text style={[styles.sliderEndLabel, { color: theme.colors.textSecondary }]}>60%</Text>
+          <Text style={[styles.sliderEndLabel, { color: theme.colors.textSecondary }]}>85%</Text>
         </View>
       </View>
       
@@ -750,29 +750,26 @@ export const SettingsScreen: React.FC = () => {
     // Check if custom cards have any cards in them
     const hasCustomCards = customCardType && customCardType.cards && customCardType.cards.length > 0;
     
-    // Determine button text and action based on selected card type
+    // Show different button text and action based on selected card type
     const getButtonConfig = () => {
-      if (selectedCardTypeName === 'default') {
+      if (selectedCardTypeName === 'World Bingo' || selectedCardTypeName === 'default' || !selectedCardTypeName) {
         return {
-          title: 'Show World Bingo Cards',
+          title: 'Show Cards',
           variant: undefined,
-          onPress: () => (navigation as any).navigate(ScreenNames.CARD_TYPE_EDITOR, { mode: 'manage', name: 'default' })
+          onPress: () => (navigation as any).navigate(ScreenNames.CARD_TYPE_EDITOR, { mode: 'manage', name: 'World Bingo' })
+        };
+      } else if (selectedCardTypeName === 'Africa Bingo' || selectedCardTypeName === 'africa') {
+        return {
+          title: 'Show Cards',
+          variant: undefined,
+          onPress: () => (navigation as any).navigate(ScreenNames.CARD_TYPE_EDITOR, { mode: 'manage', name: 'Africa Bingo' })
         };
       } else {
-        // Custom is selected
-        if (hasCustomCards) {
-          return {
-            title: 'Show Custom Cards',
-            variant: 'outline' as const,
-            onPress: () => (navigation as any).navigate(ScreenNames.CARD_TYPE_EDITOR, { mode: 'manage', name: 'custom' })
-          };
-        } else {
-          return {
-            title: 'Create Custom Cards',
-            variant: undefined,
-            onPress: () => (navigation as any).navigate(ScreenNames.CARD_TYPE_EDITOR, { mode: 'create', name: 'custom' })
-          };
-        }
+        return {
+          title: 'Create Custom Cards',
+          variant: undefined,
+          onPress: () => (navigation as any).navigate(ScreenNames.CARD_TYPE_EDITOR, { mode: 'create', name: 'custom' })
+        };
       }
     };
     
@@ -784,11 +781,21 @@ export const SettingsScreen: React.FC = () => {
         
         {/* World Bingo Cards Option */}
         <View style={styles.radioHorizontal}>
-          <TouchableOpacity style={styles.radioRow} onPress={() => selectCardTypeByName('default')}> 
+          <TouchableOpacity style={styles.radioRow} onPress={() => selectCardTypeByName('World Bingo')}> 
             <View style={[styles.radioOuter, { borderColor: theme.colors.border }]}>
-              {selectedCardTypeName === 'default' && <View style={[styles.radioInner, { backgroundColor: theme.colors.primary }]} />}
+              {(selectedCardTypeName === 'World Bingo' || selectedCardTypeName === 'default' || !selectedCardTypeName) && <View style={[styles.radioInner, { backgroundColor: theme.colors.primary }]} />}
             </View>
             <Text style={[styles.radioLabel, { color: theme.colors.text }]}>World Bingo</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {/* Africa Cartela Option */}
+        <View style={styles.radioHorizontal}>
+          <TouchableOpacity style={styles.radioRow} onPress={() => selectCardTypeByName('Africa Bingo')}> 
+            <View style={[styles.radioOuter, { borderColor: theme.colors.border }]}>
+              {(selectedCardTypeName === 'Africa Bingo' || selectedCardTypeName === 'africa') && <View style={[styles.radioInner, { backgroundColor: theme.colors.primary }]} />}
+            </View>
+            <Text style={[styles.radioLabel, { color: theme.colors.text }]}>Africa Bingo</Text>
           </TouchableOpacity>
         </View>
         

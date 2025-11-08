@@ -1,3 +1,5 @@
+import { Linking } from "react-native";
+
 export type FilterPeriod = 'today' | 'yesterday' | 'this_week' | 'this_month' | 'previous_month' | 'custom';
 
 export interface DateRange {
@@ -158,4 +160,9 @@ export const getPeriodOptions = (): Array<{ value: FilterPeriod; label: string; 
     { value: 'previous_month', label: 'Previous Month' },
     { value: 'custom', label: 'Custom Range' }
   ];
+};
+
+export const handlePhoneCall = (phoneNumber: string) => {
+  const cleanNumber = phoneNumber.replace(/\s/g, '');
+  Linking.openURL(`tel:${cleanNumber}`);
 };

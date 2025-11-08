@@ -21,9 +21,11 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withSequence,
+  withRepeat,
+  withTiming,
 } from 'react-native-reanimated';
 import LinearGradient from 'react-native-linear-gradient';
-import { ChevronDown, Edit3, LogOut, X } from 'lucide-react-native';
+import { ChevronDown, Edit3, LogOut, X, RefreshCw } from 'lucide-react-native';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -36,12 +38,14 @@ import StatusModal from '../components/ui/StatusModal';
 
 import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
+import { CoinSyncService } from '../services/coinSyncService';
 import { formatTime } from '../utils/gameHelpers';
 import { ReportStorageManager } from '../utils/reportStorage';
 import { apiClient } from '../api/client/base';
 import { API_ENDPOINTS } from '../api/config';
 import { ScreenNames } from '../constants/ScreenNames';
 import { restoreTabBar } from '../utils/tabBarStyles';
+import { transactionApiService } from '../api/services/transaction';
 
 const { width } = Dimensions.get('window');
 
@@ -82,6 +86,7 @@ export const ProfileScreen: React.FC = () => {
     totalPayout: 0,
     totalProfit: 0,
   });
+  const [currentDate, setCurrentDate] = useState('');
 
   // Modal states
   const [statusModal, setStatusModal] = useState<{
@@ -89,6 +94,7 @@ export const ProfileScreen: React.FC = () => {
     variant: 'success' | 'error';
     title?: string;
     message?: string;
+    showPhoneSupport?: boolean;
   }>({
     visible: false,
     variant: 'success',
@@ -96,6 +102,29 @@ export const ProfileScreen: React.FC = () => {
 
   const [showOptionsModal, setShowOptionsModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [isRefreshingCoins, setIsRefreshingCoins] = useState(false);
+  
+  // Animation for refresh button rotation
+  const refreshRotation = useSharedValue(0);
+  
+  const refreshAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ rotate: `${refreshRotation.value}deg` }],
+    };
+  });
+  
+  // Control rotation animation based on refresh state
+  useEffect(() => {
+    if (isRefreshingCoins) {
+      refreshRotation.value = withRepeat(
+        withTiming(360, { duration: 1000 }),
+        -1, // infinite repeat
+        false // don't reverse
+      );
+    } else {
+      refreshRotation.value = withTiming(0, { duration: 200 });
+    }
+  }, [isRefreshingCoins]);
   const [editProfileForm, setEditProfileForm] = useState({
     firstName: '',
     lastName: '',
@@ -105,8 +134,8 @@ export const ProfileScreen: React.FC = () => {
   const [editProfileErrors, setEditProfileErrors] = useState<{[key: string]: string}>({});
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
-  const showStatusModal = (variant: 'success' | 'error', title?: string, message?: string) => {
-    setStatusModal({ visible: true, variant, title, message });
+  const showStatusModal = (variant: 'success' | 'error', title?: string, message?: string, showPhoneSupport?: boolean) => {
+    setStatusModal({ visible: true, variant, title, message, showPhoneSupport });
   };
 
   const hideStatusModal = () => {
@@ -126,19 +155,22 @@ export const ProfileScreen: React.FC = () => {
             showStatusModal(
               'success',
               'Payment Successful! 🎉',
-              paymentMessage || `Your payment has been processed successfully.${amount ? `\n\nAmount: ${amount} coins` : ''}${transactionId ? `\nTransaction ID: ${transactionId}` : ''}`
+              paymentMessage || `Your payment has been processed successfully.${amount ? `\n\nAmount: ${amount} coins` : ''}${transactionId ? `\nTransaction ID: ${transactionId}` : ''}`,
+              false // No phone support needed for successful payments
             );
           } else if (paymentStatus === 'cancelled') {
             showStatusModal(
               'error',
               'Payment Cancelled',
-              paymentMessage || 'You have cancelled the payment. No charges were made.'
+              paymentMessage || 'You have cancelled the payment. No charges were made.',
+              true // Show phone support for payment issues
             );
           } else if (paymentStatus === 'failed') {
             showStatusModal(
               'error',
               'Payment Failed',
-              paymentMessage || 'Payment could not be processed. Please try again.'
+              paymentMessage || 'Payment could not be processed. Please try again.',
+              true // Show phone support for payment failures
             );
           }
         }, 300);
@@ -161,11 +193,23 @@ export const ProfileScreen: React.FC = () => {
     }, [navigation])
   );
 
+  // Format current date for display
+  const formatCurrentDate = () => {
+    const today = new Date();
+    return today.toLocaleDateString('en-US', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
   // Load today's game statistics
   const loadTodaysGameStats = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
       const userId = user?.userId; // Get userId from auth store
+      setCurrentDate(formatCurrentDate()); // Update current date display
       const todaysReport = await ReportStorageManager.getGameReportByDate(today, userId);
       
       if (todaysReport) {
@@ -211,10 +255,27 @@ export const ProfileScreen: React.FC = () => {
     }
   };
 
+  // Load stats on component mount and when screen is focused for real-time updates
   useEffect(() => {
     loadTodaysGameStats();
     loadTodaysReportStats();
   }, []);
+
+  // Refresh stats every time the screen is focused for real-time updates
+  useFocusEffect(
+    React.useCallback(() => {
+      loadTodaysGameStats();
+      loadTodaysReportStats();
+    }, [user?.userId]) // Reload when user changes
+  );
+
+  // Refresh stats when user coins change (after games, transactions, etc.)
+  useEffect(() => {
+    if (user) {
+      loadTodaysGameStats();
+      loadTodaysReportStats();
+    }
+  }, [userCoins, user?.userId]); // Trigger when coins or user changes
 
   const handleLogout = () => {
     Alert.alert(
@@ -288,6 +349,153 @@ export const ProfileScreen: React.FC = () => {
     navigation.navigate(ScreenNames.PAYMENT_WEBVIEW as never);
   };
 
+  const handleRefreshCoins = async () => {
+    const debugId = Math.random().toString(36).substr(2, 9);
+    console.log(`🔄 [${debugId}] ===== REFRESH COINS BUTTON PRESSED =====`);
+    console.log(`🔄 [${debugId}] Timestamp: ${new Date().toISOString()}`);
+    console.log(`🔄 [${debugId}] Current refresh state: ${isRefreshingCoins}`);
+    
+    if (isRefreshingCoins) {
+      console.log(`⚠️ [${debugId}] Refresh already in progress, ignoring click`);
+      return; // Prevent multiple simultaneous refreshes
+    }
+    
+    // Get current user state for debugging
+    const authStore = useAuthStore.getState();
+    const currentUserCoins = authStore.userCoins;
+    const userId = authStore.getUserId();
+    const isAuthenticated = authStore.isAuthenticated;
+    
+    console.log(`👤 [${debugId}] User state:`, {
+      userId,
+      isAuthenticated,
+      currentUserCoins,
+      isGuest: authStore.isGuest
+    });
+    
+    setIsRefreshingCoins(true);
+    console.log(`🔄 [${debugId}] Set refresh state to true`);
+    
+    try {
+      console.log(`🔄 [${debugId}] Starting coin sync service...`);
+      const result = await CoinSyncService.syncCoins();
+      console.log(`🔄 [${debugId}] Coin sync completed with result:`, result);
+      
+      if (result.success) {
+        console.log(`✅ [${debugId}] Sync successful, refreshing user coins in store...`);
+        
+        // Refresh user coins in the store
+        await useAuthStore.getState().loadCoins();
+        console.log(`💰 [${debugId}] Coins refreshed from local storage`);
+        
+        // Get updated coins for comparison
+        const newUserCoins = useAuthStore.getState().userCoins;
+        console.log(`💰 [${debugId}] Coins updated: ${currentUserCoins} → ${newUserCoins}`);
+        
+        // Check if coins increased and create transaction report
+        const coinIncrease = newUserCoins - currentUserCoins;
+        console.log(`💰 [${debugId}] Coin difference: ${coinIncrease}`);
+        
+        if (coinIncrease > 0) {
+          console.log(`📈 [${debugId}] Creating positive transaction report for coin increase: +${coinIncrease}`);
+          try {
+            await transactionApiService.createTransaction({
+              userId: userId,
+              type: 'payout', // Positive transaction (coins added to user's balance)
+              amount: coinIncrease,
+              description: `Coins retrieved from sync (+${coinIncrease.toFixed(2)} coins)`
+            });
+            console.log(`✅ [${debugId}] Transaction report created for +${coinIncrease} coins`);
+          } catch (transactionError) {
+            console.error(`❌ [${debugId}] Failed to create transaction report:`, transactionError);
+            // Don't show error to user, just log it since sync was successful
+          }
+        }
+        
+        showStatusModal(
+          'success',
+          '🪙 Coins Synced!',
+          result.message
+        );
+        
+        console.log(`✅ [${debugId}] Success modal shown`);
+      } else {
+        console.error(`❌ [${debugId}] Sync failed with result:`, result);
+        
+        // Check if login is required
+        if (result.requiresLogin) {
+          console.log(`🔐 [${debugId}] Login required, showing login alert...`);
+          Alert.alert(
+            '🔐 Login Required',
+            result.message || 'Please log in to sync your coins with the backend.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { 
+                text: 'Login', 
+                onPress: () => {
+                  console.log(`🔐 [${debugId}] User chose to login from sync error`);
+                  setPendingAuthScreen('Login');
+                  logoutSilent(); // This will navigate to auth
+                }
+              },
+            ]
+          );
+        } else {
+          showStatusModal(
+            'error',
+            '❌ Sync Failed',
+            result.error || 'Failed to sync coins with backend'
+          );
+        }
+        
+        console.log(`❌ [${debugId}] Error handling completed`);
+      }
+    } catch (error: any) {
+      console.error(`❌ [${debugId}] Exception during refresh:`, {
+        type: error.constructor?.name,
+        message: error.message,
+        stack: error.stack,
+        fullError: error
+      });
+      
+      // Check if this is an authentication error
+      const isAuthError = error.statusCode === 401 || 
+                         error.message?.includes('No token provided') ||
+                         error.message?.includes('Unauthorized');
+      
+      if (isAuthError) {
+        console.log(`🔐 [${debugId}] Auth error in exception, showing login alert...`);
+        Alert.alert(
+          '🔐 Login Required',
+          'Your session has expired. Please log in to sync your coins.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Login', 
+              onPress: () => {
+                console.log(`🔐 [${debugId}] User chose to login from exception`);
+                setPendingAuthScreen('Login');
+                logoutSilent();
+              }
+            },
+          ]
+        );
+      } else {
+        showStatusModal(
+          'error',
+          '❌ Sync Error',
+          'Unable to connect to server. Please check your internet connection.'
+        );
+      }
+      
+      console.log(`❌ [${debugId}] Exception handling completed`);
+    } finally {
+      setIsRefreshingCoins(false);
+      console.log(`🔄 [${debugId}] Set refresh state to false`);
+      console.log(`🔄 [${debugId}] ===== REFRESH COINS COMPLETED =====`);
+    }
+  };
+
   const handleInviteFriends = async () => {
     // If user is guest, exit guest mode to allow login/signup
     if (isGuest) {
@@ -310,7 +518,7 @@ export const ProfileScreen: React.FC = () => {
     
     try {
       const userId = user?.userId || user?.id;
-      const shareMessage = `I'm using World Bingo App! 🎯\nThis Bingo app is awesome — you should try it!\nUse my invite code ${userId} for 5% cashback on your first coin purchase.\n\nDownload now 👉\n\nhttps://myworldbingo.com/app`;
+      const shareMessage = `I'm using World Bingo App! 🎯\nThis Bingo app is awesome — you should try it!\n\n\nDownload now 👉\n\nhttps://myworldbingo.com/app`;
       
       await Share.share({
         message: shareMessage,
@@ -505,27 +713,54 @@ export const ProfileScreen: React.FC = () => {
               />
               <Text style={[styles.coinText, { color: theme.colors.text }]}>0 coins</Text>
             </View>
-            <TouchableOpacity 
-              style={[styles.buyCoinBtn, { backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: theme.colors.border }]} 
-              onPress={async () => {
-                Alert.alert(
-                  'Sign Up Required',
-                  'To purchase coins and manage your balance, please create an account or sign in.',
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    { 
-                      text: 'Sign Up', 
-                      onPress: async () => {
-                        setPendingAuthScreen('SignUp');
-                        await logoutSilent();
-                      }
-                    },
-                  ]
-                );
-              }}
-            >
-              <Text style={[styles.buyCoinBtnText, { color: '#fff' }]}>Buy coin</Text>
-            </TouchableOpacity>
+            <View style={styles.coinButtons}>
+              <TouchableOpacity 
+                style={[styles.buyCoinBtn, { backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: theme.colors.border }]} 
+                onPress={async () => {
+                  Alert.alert(
+                    'Sign Up Required',
+                    'To purchase coins and manage your balance, please create an account or sign in.',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { 
+                        text: 'Sign Up', 
+                        onPress: async () => {
+                          setPendingAuthScreen('SignUp');
+                          await logoutSilent();
+                        }
+                      },
+                    ]
+                  );
+                }}
+              >
+                <Text style={[styles.buyCoinBtnText, { color: '#fff' }]}>Buy coin</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.refreshBtn, { backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border }]} 
+                onPress={() => {
+                  console.log('🔄 Refresh button pressed by guest user - showing signup alert');
+                  Alert.alert(
+                    'Sign Up Required',
+                    'To sync coins with the backend, please create an account or sign in.',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { 
+                        text: 'Sign Up', 
+                        onPress: async () => {
+                          console.log('🔄 Guest user chose to sign up from refresh button');
+                          setPendingAuthScreen('SignUp');
+                          await logoutSilent();
+                        }
+                      },
+                    ]
+                  );
+                }}
+              >
+                <Animated.View style={refreshAnimatedStyle}>
+                  <RefreshCw size={16} color={theme.colors.text} />
+                </Animated.View>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       );
@@ -575,9 +810,28 @@ export const ProfileScreen: React.FC = () => {
             />
             <Text style={[styles.coinText, { color: theme.colors.text }]}>{userCoins.toFixed(0)} coins</Text>
           </View>
-          <TouchableOpacity style={[styles.buyCoinBtn, { backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: theme.colors.border }]} onPress={handleCoinPurchase}>
-            <Text style={[styles.buyCoinBtnText, { color: '#fff' }]}>Buy coin</Text>
-          </TouchableOpacity>
+          <View style={styles.coinButtons}>
+            <TouchableOpacity style={[styles.buyCoinBtn, { backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: theme.colors.border }]} onPress={handleCoinPurchase}>
+              <Text style={[styles.buyCoinBtnText, { color: '#fff' }]}>Buy coin</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.refreshBtn, { backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border }]} 
+              onPress={() => {
+                console.log('🔄 Refresh button pressed by authenticated user');
+                console.log('🔄 Current refresh state:', isRefreshingCoins);
+                console.log('🔄 Current user coins:', userCoins);
+                handleRefreshCoins();
+              }}
+              disabled={isRefreshingCoins}
+            >
+              <Animated.View style={refreshAnimatedStyle}>
+                <RefreshCw 
+                  size={16} 
+                  color={isRefreshingCoins ? theme.colors.textSecondary : theme.colors.text} 
+                />
+              </Animated.View>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
@@ -681,7 +935,10 @@ export const ProfileScreen: React.FC = () => {
       
       {/* Today's Statistics */}
       <View style={[styles.todayStatsCard, { backgroundColor: 'rgb(28, 42, 89)' }]}>
-        <Text style={[styles.todayStatsTitle, { color: theme.colors.text }]}>Daily Statistics</Text>
+        <View style={styles.statsHeaderContainer}>
+          <Text style={[styles.todayStatsTitle, { color: theme.colors.text }]}>Daily Statistics</Text>
+          <Text style={[styles.currentDateText, { color: theme.colors.textSecondary }]}>{currentDate}</Text>
+        </View>
         
         {/* First Row - 3 Items */}
         <View style={styles.statsRowThree}>
@@ -979,6 +1236,7 @@ export const ProfileScreen: React.FC = () => {
         variant={statusModal.variant}
         title={statusModal.title}
         message={statusModal.message}
+        showPhoneSupport={statusModal.showPhoneSupport}
         onDismiss={hideStatusModal}
       />
     </View>
@@ -1123,6 +1381,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  coinButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  refreshBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
   
   // Invitation Card
   newInvitationCard: {
@@ -1257,11 +1532,20 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     marginTop: 12,
   },
+  statsHeaderContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   todayStatsTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 4,
+  },
+  currentDateText: {
+    fontSize: 12,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   statsRowThree: {
     flexDirection: 'row',

@@ -6,6 +6,8 @@ import { Input } from '../../components/ui/Input';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { WORLD_BINGO_CARDS } from '../../data/worldbingodata';
+import { AFRICA_BINGO_CARDS } from '../../data/africabingodata';
+import { getCardTypeInfo, getDefaultLimitForCardType } from '../../utils/cardTypeManager';
 import Slider from '@react-native-community/slider';
 
 type CardRow = number[]; // 24 numbers
@@ -27,7 +29,8 @@ export const CardTypeEditorScreen: React.FC = () => {
   const route = useRoute<any>();
 
   const [name, setName] = useState('');
-  const isWorldBingo = route.params?.name === 'default';
+  const isWorldBingo = route.params?.name === 'default' || route.params?.name === 'World Bingo';
+  const isAfricaBingo = route.params?.name === 'africa' || route.params?.name === 'Africa Bingo';
   const isCustomCardType = route.params?.mode === 'create' || route.params?.name === 'custom';
   const MODE_CSV = 'csv' as const;
   const MODE_MANUAL = 'manual' as const;
@@ -75,7 +78,7 @@ export const CardTypeEditorScreen: React.FC = () => {
 
   // Generate cards dynamically based on worldBingoCardsLimit (same logic as PlayerCartelaSelectionScreen)
   const generateLimitedCards = useMemo(() => {
-    if (!isWorldBingo) {
+    if (!isWorldBingo && !isAfricaBingo) {
       // For custom cards, apply search filter
       if (searchNumber && searchNumber.trim() !== '') {
         const searchNum = parseInt(searchNumber.trim());
@@ -108,15 +111,20 @@ export const CardTypeEditorScreen: React.FC = () => {
     const generateCards = (count: number): number[][] => {
       const cardsList: number[][] = [];
       
-      // First, use the predefined World Bingo cards (up to 16)
-      const predefinedCount = Math.min(count, WORLD_BINGO_CARDS.length);
+      // Get the correct card type info using the manager
+      const cardTypeName = isAfricaBingo ? 'Africa Bingo' : 'World Bingo';
+      const cardTypeInfo = getCardTypeInfo(cardTypeName, customCardTypes);
+      const sourceCards = cardTypeInfo.cards;
+      
+      // First, use the predefined cards (up to available count)
+      const predefinedCount = Math.min(count, sourceCards.length);
       for (let i = 0; i < predefinedCount; i++) {
-        cardsList.push(WORLD_BINGO_CARDS[i]);
+        cardsList.push(sourceCards[i]);
       }
       
-      // If we need more than 16 cards, generate additional random cards
-      if (count > WORLD_BINGO_CARDS.length) {
-        const additionalCount = count - WORLD_BINGO_CARDS.length;
+      // If we need more cards than available, generate additional random cards
+      if (count > sourceCards.length) {
+        const additionalCount = count - sourceCards.length;
         for (let i = 0; i < additionalCount; i++) {
           cardsList.push(generateRandomCard());
         }
@@ -140,7 +148,7 @@ export const CardTypeEditorScreen: React.FC = () => {
     }
     
     return generatedCards;
-  }, [isWorldBingo, cards, worldBingoCardsLimit, searchNumber]);
+  }, [isWorldBingo, isAfricaBingo, cards, worldBingoCardsLimit, searchNumber]);
 
   // Pagination logic
   const itemsPerPage = 50;
@@ -225,7 +233,7 @@ export const CardTypeEditorScreen: React.FC = () => {
           <View style={[styles.cardNumberBadge, { backgroundColor: theme.colors.primary }]}>
             <Text style={[styles.cardNumberText, { color: '#fff' }]}>#{actualCardNumber}</Text>
           </View>
-          {!isWorldBingo && (
+          {!isWorldBingo && !isAfricaBingo && (
             <View style={{ flexDirection: 'row', gap: 8 }}>
               {idx > 0 && (
                 <Button title="↑" onPress={() => moveCard(idx, idx - 1)} size="sm" />
@@ -337,10 +345,19 @@ export const CardTypeEditorScreen: React.FC = () => {
       return;
     }
     if (route.params?.mode === 'manage' && route.params?.name) {
-      if (route.params.name === 'default') {
+      if (route.params.name === 'default' || route.params.name === 'World Bingo') {
         // For World Bingo, just set the name and don't show any edit options
         setName('World Bingo');
-        setOriginalName('default');
+        setOriginalName('World Bingo');
+        setCards([]);
+        setOriginalCards([]);
+        setMode(MODE_MANUAL);
+        setCurrentManual(Array(24).fill(null));
+        setEditIndex(null);
+      } else if (route.params.name === 'africa' || route.params.name === 'Africa Bingo') {
+        // For Africa Bingo, just set the name and don't show any edit options
+        setName('Africa Bingo');
+        setOriginalName('Africa Bingo');
         setCards([]);
         setOriginalCards([]);
         setMode(MODE_MANUAL);
@@ -571,7 +588,7 @@ export const CardTypeEditorScreen: React.FC = () => {
   const renderHeader = () => (
     <View style={[{ padding: 16 }]}>
 
-      {!isWorldBingo && (
+      {!isWorldBingo && !isAfricaBingo && (
         <View style={[{ backgroundColor: theme.colors.surface, borderRadius: 8, padding: 16 }]}>
           <View style={styles.modeRow}> 
           <TouchableOpacity style={[styles.modeBtn, { backgroundColor: mode === MODE_CSV ? theme.colors.primary : 'transparent', borderColor: mode === MODE_CSV ? theme.colors.primary : 'transparent' }]} onPress={() => setMode(MODE_CSV)}>
@@ -584,7 +601,7 @@ export const CardTypeEditorScreen: React.FC = () => {
         </View>
       )}
 
-      {!isWorldBingo && (
+      {!isWorldBingo && !isAfricaBingo && (
         mode === MODE_CSV ? (
           <View style={[{ backgroundColor: theme.colors.surface, borderRadius: 8, padding: 16 }]}>
             <View style={styles.section}>
@@ -713,12 +730,12 @@ export const CardTypeEditorScreen: React.FC = () => {
         )
       )}
 
-      {/* Display Limit Control for World Bingo Cards */}
-      {isWorldBingo && (
+      {/* Display Limit Control for World Bingo and Africa Cards */}
+      {(isWorldBingo || isAfricaBingo) && (
         <View style={[styles.section, { backgroundColor: theme.colors.surface, borderRadius: 8, padding: 16, marginBottom: 16 }]}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Display Limit</Text>
           <Text style={[styles.sectionDescription, { color: theme.colors.textSecondary, marginBottom: 12 }]}>
-            Control how many World Bingo cards are displayed to improve performance. Higher numbers may cause the app to slow down.
+            Control how many {isAfricaBingo ? 'Africa Bingo' : 'World Bingo'} cards are displayed to improve performance. Maximum for this card type: {getCardTypeInfo(isAfricaBingo ? 'Africa Bingo' : 'World Bingo', customCardTypes).maxLimit}.
           </Text>
           
           <View style={styles.sliderWithButtonsContainer}>
@@ -894,7 +911,7 @@ export const CardTypeEditorScreen: React.FC = () => {
         )}
 
         {/* Save Button for Custom Cards */}
-        {!isWorldBingo && (
+        {!isWorldBingo && !isAfricaBingo && (
           <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
             <Button title="Save Cartela" onPress={submit} disabled={!canSubmit} />
           </View>
@@ -917,11 +934,17 @@ export const CardTypeEditorScreen: React.FC = () => {
             : totalPages > 1 
               ? `World Bingo Cards (Page ${currentPage} of ${totalPages}) - ${paginatedCards.length} of ${generateLimitedCards.length} total`
               : `World Bingo Cards (${generateLimitedCards.length} of ${worldBingoCardsLimit} limit)`
-          : searchNumber
-            ? `Card ${searchNumber} ${generateLimitedCards.length > 0 ? '(found)' : '(not found)'}`
-            : totalPages > 1
-              ? `Cards in this Cartela (Page ${currentPage} of ${totalPages}) - ${paginatedCards.length} of ${cards.length} total`
-              : `Cards in this Cartela (${cards.length})`
+          : isAfricaBingo
+            ? searchNumber 
+              ? `Africa Bingo Card ${searchNumber} ${generateLimitedCards.length > 0 ? '(found)' : '(not found)'}`
+              : totalPages > 1 
+                ? `Africa Bingo Cards (Page ${currentPage} of ${totalPages}) - ${paginatedCards.length} of ${generateLimitedCards.length} total`
+                : `Africa Bingo Cards (${generateLimitedCards.length} of ${worldBingoCardsLimit} limit)`
+            : searchNumber
+              ? `Card ${searchNumber} ${generateLimitedCards.length > 0 ? '(found)' : '(not found)'}`
+              : totalPages > 1
+                ? `Cards in this Cartela (Page ${currentPage} of ${totalPages}) - ${paginatedCards.length} of ${cards.length} total`
+                : `Cards in this Cartela (${cards.length})`
         }
       </Text>
     </View>
@@ -930,7 +953,7 @@ export const CardTypeEditorScreen: React.FC = () => {
   const renderListHeader = () => (
     <View style={[{ padding: 16, backgroundColor: theme.colors.background }]}>
       <Text style={[styles.title, { color: theme.colors.text }]}>
-        {isWorldBingo ? 'World Bingo Cards' : 'Custom Cards'}
+        {isWorldBingo ? 'World Bingo Cards' : isAfricaBingo ? 'Africa Bingo Cards' : 'Custom Cards'}
       </Text>
       {renderHeader()}
     </View>

@@ -155,7 +155,6 @@ export const StarterScreen: React.FC = () => {
     const userId = user?.userId || user?.id;
     const shareMessage = `I'm using World Bingo App! 🎯
 This Bingo app is awesome — you should try it!
-Use my invite code ${userId} for 5% cashback on your first coin purchase.
 
 Download now 👉
 

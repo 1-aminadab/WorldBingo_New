@@ -16,8 +16,10 @@ import {
 import { Download, CheckCircle, AlertCircle } from 'lucide-react-native';
 import { useGameTheme } from './ThemeProvider';
 import RNFS from 'react-native-fs';
-import { installApk } from '../../utils/ApkInstaller';
+import { installApk, installApkWithConflictHandling, getPackageInfo, uninstallCurrentApp } from '../../utils/ApkInstaller';
 import { useVersionStore } from '../../store/versionStore';
+import { fileApiService } from '../../api/services';
+import { getAppVersion, isUpdateNeeded, logAppVersion } from '../../utils/appVersion';
 
 interface UpdateModalProps {
   onClose?: () => void;
@@ -32,8 +34,8 @@ interface UpdateInfo {
 }
 
 const UpdateModal: React.FC<UpdateModalProps> = ({ onClose }) => {
-  // Get current app version (you might want to get this from your app config)
-  const localVersion = '1.0.0';
+  // Get current app version from package.json (bundled with app)
+  const localVersion = getAppVersion();
   const forceShowForTesting = false; // Set to false in production
   
   const [showModal, setShowModal] = useState(false);
@@ -46,7 +48,7 @@ const UpdateModal: React.FC<UpdateModalProps> = ({ onClose }) => {
 
   const { theme } = useGameTheme();
   const { width, height } = Dimensions.get('window');
-  const { dismissUpdateModal, completeUpdate } = useVersionStore();
+  const { dismissUpdateModal, completeUpdate, clearVersionCache } = useVersionStore();
   
   // Animation values
   const overlayOpacity = useRef(new Animated.Value(0)).current;
@@ -57,64 +59,78 @@ const UpdateModal: React.FC<UpdateModalProps> = ({ onClose }) => {
   // Fetch update information from API
   const fetchUpdateInfo = async (): Promise<UpdateInfo | null> => {
     try {
+      console.log('🔍 [UPDATE] Starting to fetch update info from backend...');
+      console.log('🔍 [UPDATE] URL:', 'https://storage.googleapis.com/bingo-app-console/app-release.json');
+      
       const response = await fetch('https://storage.googleapis.com/bingo-app-console/app-release.json');
+      
+      console.log('🔍 [UPDATE] Response status:', response.status);
+      console.log('🔍 [UPDATE] Response headers:', Object.fromEntries(response.headers.entries()));
+      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+      
       const data: UpdateInfo = await response.json();
-      console.log('Fetched update info:', data);
+      
+      console.log('✅ [UPDATE] Fetched update info successfully:', data);
+      console.log('✅ [UPDATE] APK URL from backend:', data.apk);
+      console.log('✅ [UPDATE] Version:', data.version);
+      console.log('✅ [UPDATE] Forced update:', data.forced);
+      
       return data;
     } catch (error) {
-      console.error('Failed to fetch update info:', error);
+      console.error('❌ [UPDATE] Failed to fetch update info:', error);
       setError('Failed to check for updates');
       return null;
     }
   };
 
-  // Version comparison logic
-  const compareVersions = (current: string, latest: string): number => {
-    const currentParts = current.split('.').map(Number);
-    const latestParts = latest.split('.').map(Number);
-
-    for (let i = 0; i < Math.max(currentParts.length, latestParts.length); i++) {
-      const currentPart = currentParts[i] || 0;
-      const latestPart = latestParts[i] || 0;
-
-      if (currentPart < latestPart) return -1;
-      if (currentPart > latestPart) return 1;
-    }
-    return 0;
-  };
+  // Log app version info on component mount
+  React.useEffect(() => {
+    logAppVersion();
+  }, []);
 
   // Check for updates using fetched data
   const checkForUpdates = async () => {
+    console.log('🚀 [UPDATE] Starting update check process...');
+    console.log('🚀 [UPDATE] Local app version:', localVersion);
+    console.log('🚀 [UPDATE] Force show for testing:', forceShowForTesting);
+    
     setIsLoading(true);
     const updateData = await fetchUpdateInfo();
     
     if (!updateData) {
+      console.log('❌ [UPDATE] No update data received, stopping update check');
       setIsLoading(false);
       return;
     }
     
+    console.log('📦 [UPDATE] Setting update info in state:', updateData);
     setUpdateInfo(updateData);
     
     // For testing UI - always show modal when forceShowForTesting is true
     if (forceShowForTesting) {
+      console.log('🧪 [UPDATE] Force showing modal for testing');
       setShowModal(true);
       showModalWithAnimation();
       setIsLoading(false);
       return;
     }
     
-    const versionComparison = compareVersions(localVersion, updateData.version);
+    const needsUpdate = isUpdateNeeded(updateData.version);
     
-    if (versionComparison < 0) {
+    if (needsUpdate) {
       // Update needed - show modal
+      console.log('✅ [UPDATE] Update needed, showing modal');
       setShowModal(true);
       showModalWithAnimation();
+    } else {
+      console.log('ℹ️ [UPDATE] No update needed - app is up to date');
     }
     
     setIsLoading(false);
+    console.log('🏁 [UPDATE] Update check process completed');
   };
 
   // Show modal with animations
@@ -141,8 +157,14 @@ const UpdateModal: React.FC<UpdateModalProps> = ({ onClose }) => {
     ]).start();
   };
 
-  // Hide modal with animations
+  // Hide modal with animations - prevent hiding for forced updates
   const hideModalWithAnimation = () => {
+    // Never hide forced update modal
+    if (updateInfo?.forced) {
+      console.log('🔒 [MODAL] Cannot hide forced update modal');
+      return;
+    }
+    
     Animated.parallel([
       Animated.timing(overlayOpacity, {
         toValue: 0,
@@ -171,6 +193,33 @@ const UpdateModal: React.FC<UpdateModalProps> = ({ onClose }) => {
     // Check for updates when component mounts (app launch)
     checkForUpdates();
   }, []);
+
+  // Check if app was actually updated (for forced updates)
+  useEffect(() => {
+    if (updateInfo?.forced && showModal) {
+      const checkIfUpdated = () => {
+        const currentAppVersion = getAppVersion();
+        console.log('🔍 [VERSION CHECK] Current app version:', currentAppVersion);
+        console.log('🔍 [VERSION CHECK] Required version:', updateInfo.version);
+        
+        // Only hide modal if the current version is greater than or equal to required version
+        if (!isUpdateNeeded(updateInfo.version)) {
+          console.log('✅ [VERSION CHECK] App has been updated successfully - allowing modal to close');
+          setShowModal(false);
+          completeUpdate();
+          clearVersionCache();
+        } else {
+          console.log('⏳ [VERSION CHECK] App still needs update - keeping modal open');
+        }
+      };
+
+      // Check immediately and then every 2 seconds
+      checkIfUpdated();
+      const interval = setInterval(checkIfUpdated, 2000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [updateInfo, showModal, completeUpdate, clearVersionCache]);
 
   const [downloadedFilePath, setDownloadedFilePath] = useState<string>('');
 
@@ -204,17 +253,28 @@ const UpdateModal: React.FC<UpdateModalProps> = ({ onClose }) => {
     }
   };
 
-  // Download APK file
+  // Download APK file with comprehensive logging
   const handleUpdate = async () => {
+    console.log('🚀 [UPDATE] ===== STARTING UPDATE DOWNLOAD PROCESS =====');
+    
     if (!updateInfo?.apk) {
+      console.log('❌ [UPDATE] No APK URL available in updateInfo:', updateInfo);
       Alert.alert('Error', 'Download URL not available');
       return;
     }
 
+    console.log('📦 [UPDATE] Update info:', updateInfo);
+    console.log('📦 [UPDATE] APK URL:', updateInfo.apk);
+
     try {
+      console.log('🔐 [UPDATE] Requesting storage permissions...');
+      
       // Request permissions first
       const hasPermission = await requestStoragePermission();
+      console.log('🔐 [UPDATE] Storage permission granted:', hasPermission);
+      
       if (!hasPermission) {
+        console.log('❌ [UPDATE] Storage permission denied');
         Alert.alert(
           'Permission Denied',
           'Storage permission is required to download the update.',
@@ -222,21 +282,91 @@ const UpdateModal: React.FC<UpdateModalProps> = ({ onClose }) => {
         return;
       }
 
+      console.log('📥 [UPDATE] Starting download process...');
+      console.log('📥 [UPDATE] Setting UI state: downloading=true, progress=0');
+      
       setIsDownloading(true);
       setDownloadProgress(0);
       progressWidth.setValue(0);
 
+      // Use RNFS for reliable React Native download with progress tracking
+      console.log('🔽 [UPDATE] Starting RNFS download (simple approach)...');
+      
+      // Try multiple download paths to find one that works
+      // Prioritize app internal directories where we have guaranteed write access
+      const possiblePaths = [
+        RNFS.DocumentDirectoryPath,  // App's internal document directory (most reliable)
+        RNFS.CachesDirectoryPath,    // App's cache directory  
+        RNFS.ExternalDirectoryPath,  // App's external directory
+        RNFS.DownloadDirectoryPath,  // System download directory (least reliable)
+      ];
+
+      console.log('🔽 [UPDATE] Checking available download paths:', possiblePaths);
+
+      let downloadDir = null;
+      for (const path of possiblePaths) {
+        try {
+          if (path && path !== null && path !== undefined) {
+            console.log(`🔍 [UPDATE] Testing path: ${path}`);
+            
+            const dirExists = await RNFS.exists(path);
+            console.log(`🔽 [UPDATE] Path ${path} exists: ${dirExists}`);
+            
+            if (!dirExists) {
+              console.log(`🔽 [UPDATE] Creating directory: ${path}`);
+              await RNFS.mkdir(path);
+              console.log(`✅ [UPDATE] Directory created successfully: ${path}`);
+            }
+            
+            // Test write access with a unique filename
+            const testFile = `${path}/test-write-${Date.now()}.tmp`;
+            console.log(`🧪 [UPDATE] Testing write access with file: ${testFile}`);
+            
+            await RNFS.writeFile(testFile, 'test-content', 'utf8');
+            console.log(`✅ [UPDATE] Write test successful`);
+            
+            await RNFS.unlink(testFile);
+            console.log(`✅ [UPDATE] Cleanup successful`);
+            
+            downloadDir = path;
+            console.log(`✅ [UPDATE] Using download directory: ${downloadDir}`);
+            break;
+          } else {
+            console.log(`❌ [UPDATE] Path is null/undefined: ${path}`);
+          }
+        } catch (error) {
+          console.log(`❌ [UPDATE] Path ${path} not accessible:`, error.message);
+          console.log(`❌ [UPDATE] Full error:`, error);
+        }
+      }
+
+      if (!downloadDir) {
+        throw new Error('No accessible download directory found');
+      }
+      
       // Define download path
-      const downloadDest = `${RNFS.DownloadDirectoryPath}/WorldBingo-update.apk`;
+      const downloadDest = `${downloadDir}/WorldBingo-update.apk`;
+      console.log('🔽 [UPDATE] Final download destination:', downloadDest);
       
       // Delete old APK if exists
       const fileExists = await RNFS.exists(downloadDest);
+      console.log('🔽 [UPDATE] File exists at destination:', fileExists);
+      
       if (fileExists) {
+        console.log('🔽 [UPDATE] Removing existing file...');
         await RNFS.unlink(downloadDest);
       }
 
-      // Download options
-      const options = {
+      // Skip backend logging for now to avoid fetch issues
+      console.log('📊 [UPDATE] Skipping backend logging to avoid fetch issues...');
+      console.log('📊 [UPDATE] Download details for manual logging:', {
+        url: updateInfo.apk,
+        filename: `WorldBingo-${updateInfo.version}.apk`,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Download options for RNFS
+      const downloadOptions = {
         fromUrl: updateInfo.apk,
         toFile: downloadDest,
         background: true,
@@ -244,6 +374,8 @@ const UpdateModal: React.FC<UpdateModalProps> = ({ onClose }) => {
         progress: (res: any) => {
           const progress = (res.bytesWritten / res.contentLength) * 100;
           const clampedProgress = Math.min(progress, 100);
+          
+          console.log(`📥 [UPDATE] RNFS Download progress: ${clampedProgress.toFixed(1)}% (${(res.bytesWritten / (1024 * 1024)).toFixed(2)}MB / ${(res.contentLength / (1024 * 1024)).toFixed(2)}MB)`);
           
           setDownloadProgress(clampedProgress);
           
@@ -256,11 +388,40 @@ const UpdateModal: React.FC<UpdateModalProps> = ({ onClose }) => {
         },
       };
 
-      // Start download
-      const result = await RNFS.downloadFile(options).promise;
+      console.log('🔽 [UPDATE] Starting RNFS download with options:', downloadOptions);
+
+      // Start download using RNFS
+      console.log('🚀 [UPDATE] Starting RNFS download...');
+      const result = await RNFS.downloadFile(downloadOptions).promise;
+
+      console.log('🔽 [UPDATE] RNFS download result:', result);
+      console.log('🔽 [UPDATE] Result status code:', result.statusCode);
+      console.log('🔽 [UPDATE] Result job ID:', result.jobId);
+      console.log('🔽 [UPDATE] Result bytes written:', result.bytesWritten);
 
       if (result.statusCode === 200) {
-        console.log('Download completed successfully:', downloadDest);
+        console.log('✅ [UPDATE] Download completed successfully:', downloadDest);
+        
+        // Ensure progress is at 100%
+        setDownloadProgress(100);
+        Animated.timing(progressWidth, {
+          toValue: 100,
+          duration: 300,
+          useNativeDriver: false,
+        }).start();
+
+        // Get file stats
+        const fileStats = await RNFS.stat(downloadDest);
+        console.log('📊 [UPDATE] Downloaded file stats:', {
+          path: downloadDest,
+          size: `${(fileStats.size / (1024 * 1024)).toFixed(2)} MB`,
+          version: updateInfo.version,
+        });
+
+        // Use FileProvider for installation directly from internal storage
+        console.log('📱 [UPDATE] Using direct installation from internal storage with FileProvider...');
+        console.log('📱 [UPDATE] Installation path:', downloadDest);
+        
         setDownloadedFilePath(downloadDest);
         setIsDownloading(false);
         setIsInstallReady(true);
@@ -268,12 +429,17 @@ const UpdateModal: React.FC<UpdateModalProps> = ({ onClose }) => {
         throw new Error(`Download failed with status code: ${result.statusCode}`);
       }
 
-    } catch (error) {
-      console.error('Download error:', error);
+    } catch (error: any) {
+      console.error('❌ APK download error:', error);
       setIsDownloading(false);
+      
+      // Reset progress bar
+      setDownloadProgress(0);
+      progressWidth.setValue(0);
+      
       Alert.alert(
         'Download Failed',
-        'Failed to download the update. Please check your internet connection and try again.',
+        `Failed to download the update: ${error.message || 'Unknown error'}. Please check your internet connection and try again.`,
         [{ text: 'OK' }]
       );
     }
@@ -291,7 +457,7 @@ const UpdateModal: React.FC<UpdateModalProps> = ({ onClose }) => {
         return;
       }
 
-      console.log('Installing APK from:', downloadedFilePath);
+      console.log('📱 [INSTALL] Installing APK from:', downloadedFilePath);
 
       // Check if file exists
       const fileExists = await RNFS.exists(downloadedFilePath);
@@ -300,45 +466,147 @@ const UpdateModal: React.FC<UpdateModalProps> = ({ onClose }) => {
         return;
       }
 
-      // Use the native module to install the APK
+      // Get current package info for debugging (optional)
+      try {
+        const packageInfo = await getPackageInfo();
+        console.log('📱 [INSTALL] Current app info:', packageInfo);
+      } catch (e) {
+        console.log('📱 [INSTALL] Could not get package info (non-critical):', e.message);
+      }
+
+      // Try direct installation first
+      console.log('📱 [INSTALL] Attempting direct installation...');
       await installApk(downloadedFilePath);
       
-      // Close modal after triggering install and mark update as completed
-      setTimeout(() => {
-        hideModalWithAnimation();
-        completeUpdate(); // Mark update as completed to hide floating button
-        onClose?.();
-      }, 500);
+      // For forced updates, NEVER close the modal - only close for non-forced updates
+      if (!updateInfo?.forced) {
+        setTimeout(() => {
+          hideModalWithAnimation();
+          completeUpdate(); // Mark update as completed to hide floating button
+          
+          // Clear any cached version data to ensure fresh version check on next app launch
+          clearVersionCache();
+          console.log('✅ [INSTALL] Installation triggered successfully');
+          console.log('✅ [INSTALL] Version cache cleared for fresh detection on restart');
+          console.log('✅ [INSTALL] Update will be effective after app restart');
+          
+          onClose?.();
+        }, 500);
+      } else {
+        console.log('🔒 [INSTALL] Forced update - keeping modal open until app restarts');
+        // For forced updates, the modal will only close when the app restarts with the new version
+        // The UpdateGuard will check the version and hide the modal only if version is updated
+      }
 
     } catch (error: any) {
-      console.error('Installation error:', error);
+      console.error('❌ [INSTALL] Installation error:', error);
       
-      // Check if it's a permission error
-      if (error.message && error.message.includes('permission')) {
+      // For forced updates, NEVER close the modal even on error
+      if (updateInfo?.forced) {
+        console.log('🔒 [INSTALL] Forced update installation failed - keeping modal open');
+      }
+      
+      // Check for common installation issues
+      const errorMessage = error.message || 'Unknown error';
+      
+      if (errorMessage.includes('conflict') || 
+          errorMessage.includes('existing package') ||
+          errorMessage.includes('signatures do not match') ||
+          errorMessage.includes('version') ||
+          errorMessage.includes('incompatible')) {
+        // Package conflict or version incompatibility issue
+        Alert.alert(
+          'Installation Conflict',
+          updateInfo?.forced 
+            ? 'Cannot install because of a version or compatibility conflict. You must resolve this to continue using the app.\n\nThis usually happens when:\n• App was installed from a different source\n• Different signing keys are used\n• Version incompatibility\n\nSolutions:'
+            : 'Cannot install because of a version or compatibility conflict.\n\nThis usually happens when:\n• App was installed from a different source\n• Different signing keys are used\n• Version incompatibility\n\nSolutions:',
+          [
+            {
+              text: 'Uninstall & Reinstall',
+              onPress: () => handleUninstallAndReinstall(),
+            },
+            {
+              text: 'Manual Install Guide',
+              onPress: () => showManualInstallInstructions(),
+            },
+            ...(updateInfo?.forced ? [] : [{ text: 'Cancel', style: 'cancel' as const }])
+          ]
+        );
+      } else if (errorMessage.includes('permission')) {
+        // Permission issue
         Alert.alert(
           'Permission Required',
-          error.message,
+          updateInfo?.forced 
+            ? 'Permission to install apps is required to continue using the app. Please grant permission and try again.'
+            : 'Please grant permission to install apps from unknown sources, then try again.',
           [{ text: 'OK' }]
         );
       } else {
+        // Generic installation error
         Alert.alert(
-          'Installation Error',
-          'Could not start installation. Please manually install the APK from your Downloads folder (WorldBingo-update.apk).',
+          'Installation Failed',
+          updateInfo?.forced
+            ? `Critical update installation failed. You must install this update to continue using the app.\n\nError: ${errorMessage}\n\nPlease try the manual installation method.`
+            : `Could not install the update automatically.\n\nError: ${errorMessage}\n\nYou can install manually using the downloaded APK file.`,
           [
             {
-              text: 'Open Downloads',
-              onPress: async () => {
-                try {
-                  // Try to open file manager to Downloads folder
-                  await Linking.openURL('content://com.android.externalstorage.documents/root/primary/Download');
-                } catch (e) {
-                  console.log('Could not open file manager:', e);
-                }
-              }
+              text: 'Manual Install Guide',
+              onPress: () => showManualInstallInstructions(),
             },
-            { text: 'OK' }
+            ...(updateInfo?.forced ? [] : [{ text: 'OK' }])
           ]
         );
+      }
+    }
+  };
+
+  const handleUninstallAndReinstall = () => {
+    Alert.alert(
+      'Uninstall Current App',
+      'This will uninstall the current version of the app. After uninstalling, you can manually install the new APK from your Downloads folder.\n\nNote: You will lose any unsaved data.',
+      [
+        {
+          text: 'Uninstall',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await uninstallCurrentApp();
+            } catch (error) {
+              console.error('Uninstall failed:', error);
+              showManualInstallInstructions();
+            }
+          },
+        },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  const showManualInstallInstructions = () => {
+    Alert.alert(
+      'Manual Installation Guide',
+      `Follow these steps to install manually:\n\n1. Go to Settings > Apps > World Bingo\n2. Tap "Uninstall" to remove current version\n3. Open your file manager\n4. Navigate to the downloaded APK file\n5. Tap the APK file to install\n\n📁 File saved at:\n${downloadedFilePath}`,
+      [
+        {
+          text: 'Try Opening File',
+          onPress: () => openDownloadsFolder(),
+        },
+        { text: 'Got It' }
+      ]
+    );
+  };
+
+  const openDownloadsFolder = async () => {
+    try {
+      // Try to open file manager to Downloads folder
+      await Linking.openURL('content://com.android.externalstorage.documents/root/primary/Download');
+    } catch (e) {
+      console.log('Could not open file manager:', e);
+      // Fallback - try to open the file directly
+      try {
+        await Linking.openURL(`file://${downloadedFilePath}`);
+      } catch (e2) {
+        console.log('Could not open file directly:', e2);
       }
     }
   };
@@ -349,6 +617,70 @@ const UpdateModal: React.FC<UpdateModalProps> = ({ onClose }) => {
       dismissUpdateModal(); // Hide modal but keep update available for floating button
       onClose?.();
     }
+    // For forced updates, do nothing - modal cannot be closed
+  };
+
+  // Helper function to view download logs (for debugging)
+  const viewDownloadLogs = async () => {
+    try {
+      const logsResponse = await fileApiService.getDownloadLogs({
+        limit: 10, // Get last 10 downloads
+      });
+      
+      if (logsResponse.success && logsResponse.data?.logs) {
+        console.log('📋 Recent download logs:', logsResponse.data.logs);
+        console.log('📊 Download statistics:', fileApiService.getDownloadStatistics());
+        
+        // You could show this in a modal or export it
+        Alert.alert(
+          'Download Logs',
+          `Found ${logsResponse.data.logs.length} recent downloads. Check console for details.`,
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Failed to get download logs:', error);
+    }
+  };
+
+  // Test function for APK download (for development/testing)
+  const testApkDownload = async () => {
+    const testUrl = 'https://storage.googleapis.com/bingo-app-console/app-release.apk';
+    
+    try {
+      console.log('🧪 Testing APK download with logging...');
+      
+      const downloadResponse = await fileApiService.downloadFile({
+        url: testUrl,
+        filename: 'test-download.apk',
+        onProgress: (progress: number, downloadedBytes: number, totalBytes: number) => {
+          console.log(`🧪 Test progress: ${progress.toFixed(1)}% (${(downloadedBytes / (1024 * 1024)).toFixed(2)}MB / ${(totalBytes / (1024 * 1024)).toFixed(2)}MB)`);
+        },
+      });
+      
+      if (downloadResponse.success) {
+        console.log('✅ Test download successful:', downloadResponse);
+        
+        // Show download statistics
+        const stats = fileApiService.getDownloadStatistics();
+        console.log('📊 Download statistics after test:', stats);
+        
+        Alert.alert(
+          'Test Successful',
+          `APK download test completed successfully!\n\nFile size: ${(downloadResponse.data?.file?.size || 0 / (1024 * 1024)).toFixed(2)} MB\n\nCheck console for detailed logs.`,
+          [{ text: 'OK' }]
+        );
+      } else {
+        throw new Error(downloadResponse.message || 'Test download failed');
+      }
+    } catch (error: any) {
+      console.error('❌ Test download failed:', error);
+      Alert.alert(
+        'Test Failed',
+        `APK download test failed: ${error.message}`,
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   if (!showModal || !updateInfo) return null;
@@ -358,7 +690,7 @@ const UpdateModal: React.FC<UpdateModalProps> = ({ onClose }) => {
       visible={showModal}
       transparent
       statusBarTranslucent
-      onRequestClose={!updateInfo?.forced ? handleLater : undefined}
+      onRequestClose={updateInfo?.forced ? () => {} : handleLater}
     >
       <StatusBar backgroundColor="rgba(0,0,0,0.8)" barStyle="light-content" />
       

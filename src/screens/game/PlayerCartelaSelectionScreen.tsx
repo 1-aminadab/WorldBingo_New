@@ -11,6 +11,9 @@ import {
   ActivityIndicator,
   Image,
   Animated,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
 } from 'react-native';
 
 import { styles as globalStyles } from './number-list-style';
@@ -22,7 +25,7 @@ import { Check, GroupIcon, LucideGroup, PersonStanding, X, ArrowLeft, Users, Use
 import { useTheme } from '../../components/ui/ThemeProvider';
 import { useSettingsStore } from '../../store/settingsStore';
 import { audioManager } from '../../utils/audioManager';
-import { WORLD_BINGO_CARDS } from '../../data/worldbingodata';
+import { getCardTypeInfo, getDefaultLimitForCardType } from '../../utils/cardTypeManager';
 import { useAuthStore } from '../../store/authStore';
 import { useGameReportStore } from '../../store/gameReportStore';
 import { transactionApiService } from '../../api/services/transaction';
@@ -74,7 +77,7 @@ const PlayerCartelaSelectionScreen = () => {
       };
     }, [navigation, theme])
   );
-  const { customCardTypes, selectedCardTypeName, rtpPercentage, lastEnteredAmount, setLastEnteredAmount, worldBingoCardsLimit, getMaxCardsForSelectedType, setWorldBingoCardsLimit, selectedVoice, forceRefreshWorldBingoCards } = useSettingsStore();
+  const { customCardTypes, selectedCardTypeName, rtpPercentage, lastEnteredAmount, setLastEnteredAmount, worldBingoCardsLimit, getMaxCardsForSelectedType, setWorldBingoCardsLimit, selectedVoice, forceRefreshWorldBingoCards, resetLimitToMax } = useSettingsStore();
   console.log('custom card ====================================');
   console.log(customCardTypes);
   console.log('====================================');
@@ -102,10 +105,34 @@ const PlayerCartelaSelectionScreen = () => {
   const [medebAmount, setMedebAmount] = useState<string>('');
   const [insufficientCoinsModalVisible, setInsufficientCoinsModalVisible] = useState(false);
   const [requiredCoins, setRequiredCoins] = useState(0);
+  const [cardTypeInfo, setCardTypeInfo] = useState(() => getCardTypeInfo(selectedCardTypeName, customCardTypes));
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const keyboardAnimatedValue = useRef(new Animated.Value(0)).current;
 
   console.log('Group Selected Numbers:', Array.from(groupSelectedNumbers));
   console.log('Single Selected Numbers:', Array.from(singleSelectedNumbers));
   console.log('Current Selection Mode:', selectionMode);
+
+  // Update card limit when card type changes
+  useEffect(() => {
+    const currentCardTypeInfo = getCardTypeInfo(selectedCardTypeName, customCardTypes);
+    const currentMaxCards = currentCardTypeInfo.maxLimit;
+    const defaultLimit = getDefaultLimitForCardType(selectedCardTypeName);
+    
+    console.log('🔄 Card type changed:', {
+      selectedCardTypeName,
+      currentMaxCards,
+      defaultLimit,
+      currentLimit: worldBingoCardsLimit
+    });
+
+    // If current limit exceeds what's available for this card type, reset it
+    if (worldBingoCardsLimit > currentMaxCards) {
+      console.log('🔧 Resetting limit from', worldBingoCardsLimit, 'to', Math.min(defaultLimit, currentMaxCards));
+      setWorldBingoCardsLimit(Math.min(defaultLimit, currentMaxCards));
+    }
+  }, [selectedCardTypeName, customCardTypes]);
 
   const handleNumberSelect = useCallback((num: any) => {
     // Check if number is disabled (selected in other mode)
@@ -135,94 +162,45 @@ const PlayerCartelaSelectionScreen = () => {
     });
   }, [selectionMode, groupSelectedNumbers, singleSelectedNumbers]);
 
-  // Populate selectedArray from settings with limit
+  // Populate selectedArray from settings with correct card type
   useEffect(() => {
     const loadCards = async () => {
       setIsLoading(true);
-      console.log('=== LOADING CARDS ===');
-      console.log('WORLD_BINGO_CARDS.length (direct import):', WORLD_BINGO_CARDS.length);
-      console.log('customCardTypes length:', customCardTypes.length);
+      console.log('=== LOADING CARDS DYNAMICALLY ===');
       console.log('selectedCardTypeName:', selectedCardTypeName);
       console.log('worldBingoCardsLimit:', worldBingoCardsLimit);
-      console.log('🔍 DEBUGGING CARD LIMITS:');
-      console.log('  - Store worldBingoCardsLimit:', worldBingoCardsLimit);
-      console.log('  - Store getMaxCardsForSelectedType():', getMaxCardsForSelectedType());
-      console.log('🔍 DEBUGGING CUSTOM CARD TYPES:');
-      console.log('  - customCardTypes:', customCardTypes);
-      console.log('  - customCardTypes details:', customCardTypes.map(c => ({ name: c.name, cardCount: c.cards?.length || 0 })));
       
-      // ALWAYS use direct WORLD_BINGO_CARDS for reliable behavior
-      // This ensures we always have access to the full dataset regardless of store state
-      console.log('🎯 USING DIRECT WORLD_BINGO_CARDS for reliable card loading');
-      console.log('Direct WORLD_BINGO_CARDS length:', WORLD_BINGO_CARDS.length);
-      console.log('Requested limit:', worldBingoCardsLimit);
+      // Get the correct card type info
+      const currentCardTypeInfo = getCardTypeInfo(selectedCardTypeName, customCardTypes);
+      setCardTypeInfo(currentCardTypeInfo);
       
-      const limitToUse = Math.min(worldBingoCardsLimit, WORLD_BINGO_CARDS.length);
-      const limitedCards = WORLD_BINGO_CARDS.slice(0, limitToUse);
+      console.log('🃏 Card Type Info:', {
+        name: currentCardTypeInfo.name,
+        maxLimit: currentCardTypeInfo.maxLimit,
+        cardsLength: currentCardTypeInfo.cards.length,
+        requestedLimit: worldBingoCardsLimit
+      });
+      
+      // Apply the limit
+      const limitToUse = Math.min(worldBingoCardsLimit, currentCardTypeInfo.maxLimit);
+      const limitedCards = currentCardTypeInfo.cards.slice(0, limitToUse);
       
       setTimeout(() => {
         setSelectedArray(limitedCards);
         setIsLoading(false);
-        console.log('🎯 DIRECT LOAD RESULT:');
-        console.log(`  - Setting selectedArray with ${limitedCards.length} cards from direct import`);
-        console.log(`  - Used limit: ${limitToUse} (worldBingoCardsLimit: ${worldBingoCardsLimit}, available: ${WORLD_BINGO_CARDS.length})`);
+        console.log('🎯 DYNAMIC LOAD RESULT:');
+        console.log(`  - Card Type: ${currentCardTypeInfo.name}`);
+        console.log(`  - Setting selectedArray with ${limitedCards.length} cards`);
+        console.log(`  - Used limit: ${limitToUse} (requested: ${worldBingoCardsLimit}, max available: ${currentCardTypeInfo.maxLimit})`);
         console.log('  - Cards will be numbered 1 through', limitedCards.length);
-        console.log('  - First 5 cards sample:', limitedCards.slice(0, 5));
       }, 0);
       
-      // Also try to refresh the store in the background for future use
+      // Refresh store in background if needed
       if (customCardTypes.length === 0 || 
           !customCardTypes.find(c => c.name === 'default') ||
           customCardTypes.find(c => c.name === 'default')?.cards?.length < 100) {
         console.log('🔄 Background: Refreshing store data for future use');
         forceRefreshWorldBingoCards();
-      }
-      
-      return; // Always use direct approach for now
-      
-      if (customCardTypes.length > 0) {
-        // Get the selected card type
-        let selectedCardType = customCardTypes.find(c => c.name === selectedCardTypeName);
-        console.log('Found selectedCardType:', selectedCardType);
-        
-        // Fallback: if no card type found and we're looking for 'default', try to find any World Bingo type
-        if (!selectedCardType && (selectedCardTypeName === 'default' || selectedCardTypeName === 'World Bingo')) {
-          selectedCardType = customCardTypes.find(c => c.name === 'default') || customCardTypes[0];
-          console.log('Fallback: Using card type:', selectedCardType?.name);
-        }
-        
-        if (selectedCardType && selectedCardType.cards && selectedCardType.cards.length > 0) {
-          const maxCards = selectedCardType.cards.length;
-          console.log('✅ Found valid selectedCardType with', maxCards, 'cards');
-          console.log('🔍 BEFORE LIMIT LOGIC:');
-          console.log('  - maxCards (from data):', maxCards);
-          console.log('  - worldBingoCardsLimit (from store):', worldBingoCardsLimit);
-          console.log('  - Math.min(worldBingoCardsLimit, maxCards):', Math.min(worldBingoCardsLimit, maxCards));
-          
-          // Apply the worldBingoCardsLimit - ensure we show all requested cards up to the limit
-          const limitToUse = Math.min(worldBingoCardsLimit, maxCards);
-          const limitedCards = selectedCardType.cards.slice(0, limitToUse);
-          
-          // Use setTimeout to prevent blocking the UI
-          setTimeout(() => {
-            setSelectedArray(limitedCards);
-            setIsLoading(false);
-            console.log('🎯 FINAL RESULT:');
-            console.log(`  - Setting selectedArray with ${limitedCards.length} cards (limited from ${maxCards})`);
-            console.log(`  - Used limit: ${limitToUse} (worldBingoCardsLimit: ${worldBingoCardsLimit}, maxCards: ${maxCards})`);
-            console.log('  - First few cards:', limitedCards.slice(0, 5).map((_, i) => i + 1));
-          }, 0);
-        } else {
-          console.log('ERROR: Could not find valid selectedCardType with name:', selectedCardTypeName);
-          console.log('Available card types:', customCardTypes.map(c => ({ name: c.name, cardCount: c.cards?.length || 0 })));
-          console.log('Will show empty state with helpful message');
-          setSelectedArray([]);
-          setIsLoading(false);
-        }
-      } else {
-        console.log('ERROR: No customCardTypes available - settings may not be initialized');
-        setSelectedArray([]);
-        setIsLoading(false);
       }
     };
     
@@ -246,6 +224,43 @@ const PlayerCartelaSelectionScreen = () => {
     
     return () => backHandler.remove();
   }, [navigation]);
+
+  // Keyboard listeners
+  useEffect(() => {
+    const keyboardWillShow = (e: any) => {
+      const newHeight = e.endCoordinates.height;
+      // Adjust the offset to position slightly higher above keyboard
+      const adjustedHeight = Platform.OS === 'ios' ? newHeight + 10 : newHeight;
+      setKeyboardHeight(newHeight);
+      setIsKeyboardVisible(true);
+      Animated.timing(keyboardAnimatedValue, {
+        toValue: adjustedHeight,
+        duration: Platform.OS === 'ios' ? e.duration || 250 : 250,
+        useNativeDriver: false,
+      }).start();
+    };
+
+    const keyboardWillHide = () => {
+      setKeyboardHeight(0);
+      setIsKeyboardVisible(false);
+      Animated.timing(keyboardAnimatedValue, {
+        toValue: 0,
+        duration: Platform.OS === 'ios' ? 250 : 250,
+        useNativeDriver: false,
+      }).start();
+    };
+
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const keyboardShowListener = Keyboard.addListener(showEvent, keyboardWillShow);
+    const keyboardHideListener = Keyboard.addListener(hideEvent, keyboardWillHide);
+
+    return () => {
+      keyboardShowListener.remove();
+      keyboardHideListener.remove();
+    };
+  }, []);
 
   useEffect(() => {
     console.log('🎨 FILTERING LOGIC:');
@@ -391,24 +406,7 @@ const PlayerCartelaSelectionScreen = () => {
       // In a real app, you might want to refund the coins or handle this differently
     }
 
-    // Create game report using the old working system at game START
-    try {
-      const userId = getUserId();
-      await ReportStorageManager.addGameEntry({
-        cardsSold: totalSelected,
-        collectedAmount: houseAmount,
-        rtpPercentage: rtpPercentage || 60,
-        gameDurationMinutes: 0, // Game just started
-        totalNumbersCalled: 0, // Game just started
-        pattern: 'Game Started', // Temporary pattern name
-        winnerFound: false, // Game just started, no winner yet
-        userId: userId || undefined
-      });
-      console.log('✅ Game report created at START using ReportStorageManager');
-    } catch (error) {
-      console.error('❌ Failed to create game report at START:', error);
-      // Don't block game start if report creation fails
-    }
+    // Report will be created when game ends with actual game data
 
     // Save the entered amount for future use
     setLastEnteredAmount(medeb);
@@ -571,30 +569,15 @@ const PlayerCartelaSelectionScreen = () => {
       if (scrollDelta > 0) {
         // Scrolling down/swiping up - hide pagination
         setShowBottomPagination(false);
-        Animated.timing(paginationAnimValue, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }).start();
       } else if (!isAtBottom) {
         // Scrolling up/swiping down - show pagination only if not at bottom
         setShowBottomPagination(true);
-        Animated.timing(paginationAnimValue, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }).start();
       }
     }
     
     // Hide pagination if at bottom
     if (isAtBottom) {
       setShowBottomPagination(false);
-      Animated.timing(paginationAnimValue, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
     }
     
     setLastScrollY(scrollY);
@@ -689,7 +672,7 @@ const PlayerCartelaSelectionScreen = () => {
           </TouchableOpacity>
           
           <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={{fontSize: 17, color: theme.colors.text}}>Wrold Bingo</Text>
+            <Text style={{fontSize: 17, color: theme.colors.text}}>{selectedCardTypeName || 'World Bingo'}</Text>
             {/* <Image 
               source={require('../../assets/images/world-Bingo-Logo.png')}
               style={{ width: 60, height: 30 }}
@@ -894,27 +877,43 @@ const PlayerCartelaSelectionScreen = () => {
         )}
       </View>
 
-      {/* Enhanced Bottom Pagination Component */}
-      {filteredArray.length > itemsPerPageBottom && showBottomPagination && (
-        <Animated.View style={{
-          flexDirection: 'row',
-          justifyContent: 'center',
-          alignItems: 'center',
-          paddingVertical: 4,
-          paddingHorizontal: 12,
-          backgroundColor: 'rgb(0, 42, 81)',
-          borderTopWidth: 1,
-          borderTopColor: theme.colors.border || theme.colors.textSecondary + '20',
-          gap: 4,
-          opacity: paginationAnimValue,
-          overflow: 'hidden',
-          transform: [{
-            translateY: paginationAnimValue.interpolate({
-              inputRange: [0, 1],
-              outputRange: [20, 0]
-            })
-          }]
-        }}>
+      {/* Bottom Section: Medeb Input and Start Game */}
+      <Animated.View 
+        style={{ 
+          position: 'absolute',
+          bottom: keyboardAnimatedValue,
+          left: 0,
+          right: 0,
+          zIndex: 15,
+          paddingBottom: Platform.OS === 'ios' ? 20 : 0, // Add bottom padding for safe area
+        }}
+      >
+        {/* Enhanced Bottom Pagination Component - Positioned above input */}
+        {filteredArray.length > itemsPerPageBottom && showBottomPagination && (
+          <View style={{
+            marginBottom: 0,
+            opacity: showBottomPagination ? 1 : 0,
+          }}>
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'center',
+              alignItems: 'center',
+              paddingVertical: 8,
+              paddingHorizontal: 12,
+              backgroundColor: 'rgb(0, 42, 81)',
+              borderTopWidth: 1,
+              borderTopColor: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: 12,
+              gap: 6,
+              shadowColor: '#000',
+              shadowOffset: {
+                width: 0,
+                height: -2,
+              },
+              shadowOpacity: 0.25,
+              shadowRadius: 3.84,
+              elevation: 5,
+            }}>
           {/* First Page Button */}
           <TouchableOpacity
             onPress={goToFirstPage}
@@ -970,7 +969,7 @@ const PlayerCartelaSelectionScreen = () => {
                 paddingHorizontal: 8,
                 paddingVertical: 6,
                 borderRadius: 4,
-                backgroundColor: pageNum === currentPageBottom ? theme.colors.primary : theme.colors.background,
+                backgroundColor: pageNum === currentPageBottom ? theme.colors.primary : 'rgba(28, 42, 89, 0.8)',
                 minWidth: 32,
                 borderWidth: 1,
                 borderColor: pageNum === currentPageBottom ? theme.colors.primary : theme.colors.border || theme.colors.textSecondary + '30'
@@ -1032,8 +1031,91 @@ const PlayerCartelaSelectionScreen = () => {
               ≫
             </Text>
           </TouchableOpacity>
-        </Animated.View>
-      )}
+            </View>
+          </View>
+        )}
+
+        <View style={{ 
+          padding: 16, 
+          paddingVertical:5,
+          backgroundColor: 'rgb(28, 42, 89)',
+          borderTopWidth: 1,
+          borderTopColor: 'rgba(255, 255, 255, 0.1)',
+          shadowColor: '#000',
+          shadowOffset: {
+            width: 0,
+            height: -2,
+          },
+          shadowOpacity: 0.25,
+          shadowRadius: 3.84,
+          elevation: 5,
+        }}>
+          <View style={{ 
+            flexDirection: 'row', 
+            alignItems: 'center', 
+            gap: 12, 
+            justifyContent: 'center'
+          }}>
+            <TextInput
+              style={{
+                height: 42,
+                paddingHorizontal: 14,
+                borderRadius: 10,
+                backgroundColor: 'rgb(0, 20, 60)',
+                fontSize: 16,
+                color: theme.colors.text,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+                width: 140,
+                shadowColor: '#000',
+                shadowOffset: {
+                  width: 0,
+                  height: 1,
+                },
+                shadowOpacity: 0.2,
+                shadowRadius: 1.41,
+                elevation: 2,
+              }}
+              placeholder="Enter amount"
+              placeholderTextColor={theme.colors.textSecondary}
+              value={medebAmount}
+              onChangeText={setMedebAmount}
+              keyboardType="numeric"
+              returnKeyType="done"
+            />
+            
+            <TouchableOpacity
+              style={{
+                backgroundColor: (getTotalSelectedCount() >= 2 && parseFloat(medebAmount) > 0) ? theme.colors.primary : '#888888',
+                paddingVertical: 12,
+                paddingHorizontal: 20,
+                borderRadius: 10,
+                flex: 1,
+                minWidth: 180,
+                shadowColor: '#000',
+                shadowOffset: {
+                  width: 0,
+                  height: 2,
+                },
+                shadowOpacity: 0.25,
+                shadowRadius: 3.84,
+                elevation: 5,
+              }}
+              onPress={handleStartPlay}
+              disabled={getTotalSelectedCount() < 2 || parseFloat(medebAmount) <= 0}
+            >
+              <Text style={{ 
+                fontSize: 16, 
+                fontWeight: '600', 
+                color: (getTotalSelectedCount() >= 2 && parseFloat(medebAmount) > 0) ? theme.colors.text : '#FFFFFF',
+                textAlign: 'center' 
+              }}>
+                Start Game
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Animated.View>
 
 
       <SelectedNumbersModal
@@ -1065,64 +1147,8 @@ const PlayerCartelaSelectionScreen = () => {
         onBuyCoin={handleBuyCoin}
       />
 
-      {/* Bottom Section: Medeb Input and Start Game */}
-      <View style={{ 
-        padding: 16, 
-        backgroundColor: 'rgb(28, 42, 89)',
-        borderTopWidth: 0,
-        borderTopColor: 'transparent',
-      }}>
-        <View style={{ 
-          flexDirection: 'row', 
-          alignItems: 'center', 
-          gap: 12, 
-          justifyContent: 'center'
-        }}>
-          <TextInput
-            style={{
-              height: 42,
-              paddingHorizontal: 14,
-              borderRadius: 10,
-              backgroundColor: 'rgb(0, 20, 60)',
-              fontSize: 16,
-              color: theme.colors.text,
-              borderWidth: 1,
-              borderColor: theme.colors.border,
-              width: 140,
-            }}
-            placeholder="Enter amount"
-            placeholderTextColor={theme.colors.textSecondary}
-            value={medebAmount}
-            onChangeText={setMedebAmount}
-            keyboardType="numeric"
-          />
-          
-          <TouchableOpacity
-            style={{
-              backgroundColor: (getTotalSelectedCount() >= 2 && parseFloat(medebAmount) > 0) ? theme.colors.primary : '#888888',
-              paddingVertical: 12,
-              paddingHorizontal: 20,
-              borderRadius: 10,
-              flex: 1,
-              minWidth: 180,
-            }}
-            onPress={handleStartPlay}
-            disabled={getTotalSelectedCount() < 2 || parseFloat(medebAmount) <= 0}
-          >
-            <Text style={{ 
-              fontSize: 16, 
-              fontWeight: '600', 
-              color: (getTotalSelectedCount() >= 2 && parseFloat(medebAmount) > 0) ? theme.colors.text : '#FFFFFF',
-              textAlign: 'center' 
-            }}>
-              Start Game
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
       {/* Loading Overlay */}
-      <LoadingOverlay visible={isLoading} message="Starting Game" />
+      <LoadingOverlay visible={isLoading} message={`Starting ${cardTypeInfo.displayName} Game`} />
     </View>
   );
 };

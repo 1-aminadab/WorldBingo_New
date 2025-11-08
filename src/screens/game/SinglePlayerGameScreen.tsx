@@ -20,7 +20,7 @@ import { audioQueue } from '../../utils/audioQueue';
 import { useGameReportStore } from '../../store/gameReportStore';
 import { transactionApiService } from '../../api/services/transaction';
 import { useAuthStore } from '../../store/authStore';
-import { WORLD_BINGO_CARDS } from '../../data/worldbingodata';
+import { getCardArrayForGame } from '../../utils/cardTypeManager';
 import { reportApiService } from '../../api/services/report';
 import { NumberAnnouncementService } from '../../services/numberAnnouncementService';
 import { audioService } from '../../services/audioService';
@@ -116,6 +116,8 @@ export const SinglePlayerGameScreen: React.FC = () => {
   const [userClickedNumbers, setUserClickedNumbers] = useState<Set<number>>(new Set());
   const [isEndingGame, setIsEndingGame] = useState(false);
   const [reportsCreated, setReportsCreated] = useState(false);
+  const [gameStartReportCreated, setGameStartReportCreated] = useState(false);
+  const [gameReportId, setGameReportId] = useState<string | null>(null);
   const canCheck = useMemo(() => true, []); // Always allow checking, validation happens in submitCheck
 
   const ballPulse = useSharedValue(0);
@@ -124,7 +126,12 @@ export const SinglePlayerGameScreen: React.FC = () => {
     transform: [{ scale: 1 + 0.05 * ballPulse.value + 0.1 * ballBounce.value }] 
   }));
 
-  const derashShown = gameDerashValue > 0 ? gameDerashValue : Math.round(((derashAmount ?? 0) * (rtpPercentage ?? 0)) / 100);
+  // Calculate profit display using same logic as game end
+  const totalCardsSoldForDisplay = singleSelectedNumbers.length;
+  const effectiveMedebAmountForDisplay = gameMedebAmount > 0 ? gameMedebAmount : (medebAmount ?? 0);
+  const totalCollectedAmountForDisplay = effectiveMedebAmountForDisplay * totalCardsSoldForDisplay;
+  const effectiveRtpPercentageForDisplay = totalCardsSoldForDisplay <= 4 ? 100 : (rtpPercentage ?? 60);
+  const profitShown = Math.round(totalCollectedAmountForDisplay * (100 - effectiveRtpPercentageForDisplay) / 100);
 
   // Extract player cartela data from route params
   useEffect(() => {
@@ -149,39 +156,58 @@ export const SinglePlayerGameScreen: React.FC = () => {
     }
   }, [route.params]);
 
-  // Create initial game report when game starts (once we have the game data)
+  // Create game report when game starts
   useEffect(() => {
-    if (singleSelectedNumbers.length > 0 && gameMedebAmount > 0 && !reportsCreated) {
-      const createInitialReport = async () => {
-        try {
-          const totalCards = singleSelectedNumbers.length;
-          const totalPayin = gameMedebAmount * totalCards;
-          
-          console.log('🎮 SinglePlayer: Creating game report at START using ReportStorageManager');
-          
-          // Use the old working ReportStorageManager system
-          const userId = useAuthStore.getState().getUserId();
-          await ReportStorageManager.addGameEntry({
-            cardsSold: totalCards,
-            collectedAmount: totalPayin,
-            rtpPercentage: rtpPercentage || 60,
-            gameDurationMinutes: 0, // Game just started
-            totalNumbersCalled: 0, // Game just started
-            pattern: 'Game Started', // Temporary pattern name
-            winnerFound: false, // Game just started, no winner yet
-            userId: userId || undefined
-          });
-          
-          console.log('✅ SinglePlayer: Game report created at START using ReportStorageManager');
-          setReportsCreated(true);
-        } catch (error) {
-          console.error('❌ SinglePlayer: Failed to create game report at START:', error);
-        }
-      };
-      
-      createInitialReport();
+    // Create game start report after route params are loaded
+    if (singleSelectedNumbers.length > 0 && !gameStartReportCreated) {
+      createGameStartReport();
     }
-  }, [singleSelectedNumbers, gameMedebAmount, reportsCreated, rtpPercentage]);
+  }, [singleSelectedNumbers, gameStartReportCreated]);
+
+  // Create complete game report when game starts with all necessary data
+  const createGameStartReport = async () => {
+    if (gameStartReportCreated) return;
+    
+    try {
+      const totalCardsSold = singleSelectedNumbers.length;
+      const effectiveMedebAmount = gameMedebAmount > 0 ? gameMedebAmount : (medebAmount ?? 0);
+      const totalCollectedAmount = effectiveMedebAmount * totalCardsSold;
+      const patternDisplayName = getPatternDisplayName(patternCategory, selectedPattern, classicLinesTarget);
+      const effectiveRtpPercentage = totalCardsSold <= 4 ? 100 : (rtpPercentage ?? 60);
+      
+      console.log('🎮 Creating COMPLETE SinglePlayer game report at START using ReportStorageManager');
+      const userId = useAuthStore.getState().getUserId();
+      console.log('🎮 Complete SinglePlayer game START report data:', {
+        cardsSold: totalCardsSold,
+        collectedAmount: totalCollectedAmount,
+        rtpPercentage: effectiveRtpPercentage,
+        pattern: patternDisplayName,
+        gameStatus: 'started',
+        gameMode: 'single_player',
+        userId: userId || undefined
+      });
+      
+      // Create complete report with all necessary data at start
+      const reportId = await ReportStorageManager.addGameEntry({
+        cardsSold: totalCardsSold,
+        collectedAmount: totalCollectedAmount,
+        rtpPercentage: effectiveRtpPercentage,
+        gameDurationMinutes: 0, // Will be updated when game ends
+        totalNumbersCalled: 0, // Will be updated when game ends
+        pattern: patternDisplayName,
+        winnerFound: false, // Will be updated when game ends
+        userId: userId || undefined,
+        gameStatus: 'started',
+        gameMode: 'single_player'
+      });
+      
+      console.log('✅ COMPLETE SinglePlayer game START report created successfully with ID:', reportId);
+      setGameReportId(reportId); // Store the ID for later updates
+      setGameStartReportCreated(true);
+    } catch (error) {
+      console.error('❌ Error creating complete SinglePlayer game start report:', error);
+    }
+  };
 
   // Pause background music when entering game, resume when leaving
   useEffect(() => {
@@ -332,11 +358,13 @@ export const SinglePlayerGameScreen: React.FC = () => {
     
     // Calculate game data for reporting
     const totalCardsSold = singleSelectedNumbers.length;
-    const totalCollectedAmount = gameMedebAmount * totalCardsSold;
+    const effectiveMedebAmount = gameMedebAmount > 0 ? gameMedebAmount : (medebAmount ?? 0);
+    const totalCollectedAmount = effectiveMedebAmount * totalCardsSold;
     const patternDisplayName = getPatternDisplayName(patternCategory, selectedPattern, classicLinesTarget);
     
-    // Only create reports if they haven't been created yet
+    // Only update existing report if it hasn't been updated yet
     if (!reportsCreated) {
+      if (gameReportId) {
       try {
         const gameId = `game_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         // Apply RTP only if more than 4 cards/players, otherwise 100% payout
@@ -344,16 +372,27 @@ export const SinglePlayerGameScreen: React.FC = () => {
         console.log(`🎰 RTP Logic: ${totalCardsSold} cards/players - ${totalCardsSold <= 4 ? '100% payout (4 or less)' : `${effectiveRtpPercentage}% RTP applied (more than 4)`}`);
         const payout = bingoFound ? (totalCollectedAmount * effectiveRtpPercentage / 100) : 0;
         
-        // Update game report with payout (report was already created at game start)
-        console.log('🎮 Updating game report with payout:', {
-          totalPayout: payout
+        // Update existing game report with completion data
+        console.log('🎮 Updating existing SinglePlayer game report with COMPLETION data using ReportStorageManager');
+        const userId = useAuthStore.getState().getUserId();
+        
+        console.log('🎮 SinglePlayer game COMPLETION update data:', {
+          reportId: gameReportId,
+          gameDurationMinutes: durationMinutes,
+          totalNumbersCalled: calledNumbers.length,
+          winnerFound: bingoFound,
+          gameStatus: 'completed',
+          userId: userId || undefined
         });
         
-        await updateGameReportOnEnd({
-          totalPayout: payout
-        });
+        await ReportStorageManager.updateGameEntry(gameReportId, {
+          gameDurationMinutes: durationMinutes,
+          totalNumbersCalled: calledNumbers.length,
+          winnerFound: bingoFound,
+          gameStatus: 'completed'
+        }, userId || undefined);
         
-        console.log('✅ Game report updated with payout successfully');
+        console.log('✅ Existing SinglePlayer game report UPDATED with completion data successfully');
 
         // Record payout transaction if user won and there's a payout
         if (user?.id && payout > 0) {
@@ -384,8 +423,11 @@ export const SinglePlayerGameScreen: React.FC = () => {
       } catch (error) {
         console.error('❌ Error saving game report to backend:', error);
       }
+      } else {
+        console.warn('⚠️ No gameReportId found, cannot update report - report was not created at start');
+      }
     } else {
-      console.log('📊 Reports already created, skipping report creation');
+      console.log('📊 Reports already created, skipping report update');
     }
     
     // Calculate profit amount based on effective RTP (100% for 4 or less cards, otherwise configured RTP)
@@ -398,7 +440,7 @@ export const SinglePlayerGameScreen: React.FC = () => {
       
       (navigation as any).navigate(ScreenNames.GAME_SUMMARY, {
         totalDrawn: calledNumbers.length,
-        derashShownBirr: derashShown,
+        derashShownBirr: profitShown,
         medebBirr: medebAmount ?? 0,
         durationSeconds: duration,
         history: calledNumbers,
@@ -421,8 +463,12 @@ export const SinglePlayerGameScreen: React.FC = () => {
   };
 
   const submitCheck = (cardIndex: number) => {
-    // Use WORLD_BINGO_CARDS directly to match what was used in selection screen
-    const availableCards = WORLD_BINGO_CARDS;
+    // Get the correct card data using the card type manager
+    const availableCards = getCardArrayForGame(
+      gameSelectedCardTypeName || selectedCardTypeName, 
+      gameCustomCardTypes,
+      customCardTypes
+    );
     
     if (cardIndex < 1 || cardIndex > availableCards.length) {
       setPreviewError(`Card ${cardIndex} does not exist (1..${availableCards.length})`);
@@ -530,17 +576,18 @@ export const SinglePlayerGameScreen: React.FC = () => {
   };
   
   const checkForBingo = () => {
-    // Check all selected cards for bingo
-    const cardTypes = gameCustomCardTypes.length > 0 ? gameCustomCardTypes : customCardTypes;
-    const cartela = cardTypes.length > 0 ? cardTypes[0] : null;
-    
-    if (!cartela) return;
+    // Get the correct card data using the card type manager
+    const availableCards = getCardArrayForGame(
+      gameSelectedCardTypeName || selectedCardTypeName, 
+      gameCustomCardTypes,
+      customCardTypes
+    );
     
     for (const cardNumber of singleSelectedNumbers) {
       const cardIndex = cardNumber - 1;
-      if (cardIndex >= cartela.cards.length) continue;
+      if (cardIndex >= availableCards.length) continue;
       
-      const numbers24 = cartela.cards[cardIndex];
+      const numbers24 = availableCards[cardIndex];
       const gridNumbers: (number | null)[][] = Array(5).fill(null).map(() => Array(5).fill(null));
       let p = 0;
       for (let r = 0; r < 5; r++) {
@@ -638,13 +685,13 @@ export const SinglePlayerGameScreen: React.FC = () => {
               <View style={styles.profitEntryItem}>
                 <Text style={[styles.profitEntryLabel, { color: theme.colors.text }]}>Profit: </Text>
                 <Text style={[styles.profitEntryValue, { color: theme.colors.text }]}>
-                  {derashShown} Birr
+                  {profitShown} Birr
                 </Text>
               </View>
               <View style={styles.profitEntryItem}>
-                <Text style={[styles.profitEntryLabel, { color: theme.colors.text }]}>Entry Fee: </Text>
+                <Text style={[styles.profitEntryLabel, { color: theme.colors.text }]}>Total Players: </Text>
                 <Text style={[styles.profitEntryValue, { color: theme.colors.text }]}>
-                  {gameMedebAmount > 0 ? gameMedebAmount : (medebAmount ?? 0)} Birr
+                  {totalCardsSoldForDisplay}
                 </Text>
               </View>
             </View>
@@ -792,7 +839,11 @@ export const SinglePlayerGameScreen: React.FC = () => {
                 <View key={cardNumber} style={styles.cardWrapper}>
                   <BingoGrid
                     cardIndex={cardNumber - 1}
-                    cardTypes={gameCustomCardTypes.length > 0 ? gameCustomCardTypes : customCardTypes}
+                    cards={getCardArrayForGame(
+                      gameSelectedCardTypeName || selectedCardTypeName, 
+                      gameCustomCardTypes,
+                      customCardTypes
+                    )}
                     calledNumbers={calledNumbers}
                     userClickedNumbers={userClickedNumbers}
                     onNumberClick={handleNumberClick}

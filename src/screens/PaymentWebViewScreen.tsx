@@ -13,6 +13,8 @@ import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navig
 import { useTheme } from '../components/ui/ThemeProvider';
 import { useAuthStore } from '../store/authStore';
 import { setTabBarVisibility, restoreTabBar } from '../utils/tabBarStyles';
+import { LoadingAnimation } from '../components/ui/LoadingAnimation';
+import StatusModal from '../components/ui/StatusModal';
 
 const PAYMENT_BASE_URL = 'https://payment.myworldbingo.com/';
 
@@ -31,6 +33,7 @@ export const PaymentWebViewScreen: React.FC = () => {
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
   const [currentUrl, setCurrentUrl] = useState('');
+  const [status, setStatus] = useState<{visible: boolean; variant: 'success'|'error'; title?: string; message?: string}>({visible:false, variant:'success'});
 
   // Get user ID from auth store
   const userId = useAuthStore((state) => state.getUserId());
@@ -79,16 +82,19 @@ export const PaymentWebViewScreen: React.FC = () => {
       switch (data.type) {
         case 'payment_success':
           console.log('✅ Payment Success:', data);
-          Alert.alert(
-            'Payment Successful',
-            `Transaction completed successfully!\nAmount: ${data.amount || 'N/A'}`,
-            [
-              {
-                text: 'OK',
-                onPress: () => navigation.goBack(),
-              },
-            ]
-          );
+          setStatus({
+            visible: true,
+            variant: 'success',
+            title: 'Payment Successful',
+            message: `Transaction completed successfully!\nAmount: ${data.amount || 'N/A'}`
+          });
+          // Navigate back after modal closes
+          setTimeout(() => {
+            setStatus((s) => ({ ...s, visible: false }));
+            setTimeout(() => {
+              navigation.goBack();
+            }, 300);
+          }, 3000);
           break;
 
         case 'payment_failed':
@@ -181,15 +187,15 @@ export const PaymentWebViewScreen: React.FC = () => {
         barStyle={isDark ? 'light-content' : 'dark-content'} 
       />
 
-      {/* Loading Indicator */}
-      {loading && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
-            Loading payment page...
-          </Text>
-        </View>
-      )}
+      {/* Loading Animation */}
+      <LoadingAnimation
+        visible={loading}
+        message="Loading payment page..."
+        size="medium"
+        overlay={true}
+        backgroundColor="rgba(28, 42, 89, 0.9)"
+        textColor={theme.colors.text}
+      />
 
       {/* WebView */}
       <WebView
@@ -216,6 +222,23 @@ export const PaymentWebViewScreen: React.FC = () => {
           true; // Required for injection
         `}
       />
+      
+      {/* StatusModal for payment feedback with phone support */}
+      <StatusModal 
+        visible={status.visible} 
+        variant={status.variant} 
+        title={status.title} 
+        message={status.message} 
+        showPhoneSupport={true}
+        onDismiss={() => {
+          setStatus((s) => ({ ...s, visible: false }));
+          if (status.variant === 'success') {
+            setTimeout(() => {
+              navigation.goBack();
+            }, 300);
+          }
+        }}
+      />
     </SafeAreaView>
   );
 };
@@ -223,19 +246,6 @@ export const PaymentWebViewScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  loadingContainer: {
-    position: 'absolute',
-    top: '50%',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
   },
   webView: {
     flex: 1,

@@ -11,14 +11,15 @@ export const API_ENDPOINTS = {
     VERIFY_OTP: '/api/v1/auth/verify-otp',
     REGISTER: '/api/v1/auth/register',
     FORGOT_PASSWORD: '/api/v1/auth/forgot-password',
+    VERIFY_RESET_OTP: '/api/v1/auth/verify-reset-otp',
     RESET_PASSWORD: '/api/v1/auth/reset-password',
+    CHANGE_PASSWORD: '/api/v1/auth/change-password',
     REFRESH_TOKEN: '/api/v1/auth/refresh-token',
     LOGOUT: '/api/v1/auth/logout',
   },
   USER: {
     PROFILE: '/api/v1/user/profile',
     UPDATE_PROFILE: '/api/v1/user/profile',
-    CHANGE_PASSWORD: '/api/v1/user/change-password',
   },
   GAME: {
     CREATE: '/api/v1/game/create',
@@ -42,6 +43,16 @@ export const API_ENDPOINTS = {
     UPDATE: '/api/v1/transaction',
     DELETE: '/api/v1/transaction',
     GET_BY_DATE_RANGE: '/api/v1/transaction/range',
+  },
+  COIN: {
+    GET_BALANCE: '/api/v1/coin/',
+    SETTLE: '/api/v1/coin/settle',
+  },
+  FILE: {
+    DOWNLOAD: '/api/v1/file/download',
+    UPLOAD: '/api/v1/file/upload',
+    LIST: '/api/v1/file/list',
+    DELETE: '/api/v1/file/delete',
   },
 } as const;
 

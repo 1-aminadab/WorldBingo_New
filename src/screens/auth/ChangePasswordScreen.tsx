@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
@@ -16,6 +15,8 @@ import { useTheme } from '../../components/ui/ThemeProvider';
 import BlueButton from '../../components/ui/BlueButton';
 import AuthField from '../../components/ui/AuthField';
 import BlurBackground from '../../components/ui/BlurBackground';
+import { LoadingOverlay } from '../../components/ui/LoadingOverlay';
+import StatusModal from '../../components/ui/StatusModal';
 import { useAuthStore } from '../../store/authStore';
 import { ScreenNames } from '../../constants/ScreenNames';
 
@@ -24,24 +25,30 @@ export const ChangePasswordScreen: React.FC = () => {
   const route = useRoute();
   const { t } = useTranslation();
   const { theme } = useTheme();
-  const { changePassword, isLoading } = useAuthStore();
+  const { resetPassword, isLoading } = useAuthStore();
 
-  const { token } = route.params as { token: string };
+  const { phoneNumber, otp } = route.params as { phoneNumber: string; otp: string };
   const [formData, setFormData] = useState({
     newPassword: '',
     confirmPassword: '',
   });
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [status, setStatus] = useState<{visible: boolean; variant: 'success'|'error'; title?: string; message?: string}>({visible:false, variant:'success'});
 
   const validateForm = (): boolean => {
     const newErrors: {[key: string]: string} = {};
 
+    // Validate new password
     if (!formData.newPassword.trim()) {
       newErrors.newPassword = 'New password is required';
-    } else if (formData.newPassword.length < 6) {
-      newErrors.newPassword = 'Password must be at least 6 characters';
+    } else if (formData.newPassword.length < 4) {
+      newErrors.newPassword = 'Password must be at least 4 characters';
+    } else if (formData.newPassword.length > 20) {
+      newErrors.newPassword = 'Password must be less than 20 characters';
     }
 
+    // Validate confirm password
     if (!formData.confirmPassword.trim()) {
       newErrors.confirmPassword = 'Please confirm your password';
     } else if (formData.newPassword !== formData.confirmPassword) {
@@ -52,35 +59,87 @@ export const ChangePasswordScreen: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Real-time validation for better UX
+  const validateField = (field: string, value: string) => {
+    const newErrors = { ...errors };
+
+    if (field === 'newPassword') {
+      if (!value.trim()) {
+        newErrors.newPassword = 'New password is required';
+      } else if (value.length < 4) {
+        newErrors.newPassword = 'Password must be at least 4 characters';
+      } else if (value.length > 20) {
+        newErrors.newPassword = 'Password must be less than 20 characters';
+      } else {
+        delete newErrors.newPassword;
+      }
+
+      // Re-validate confirm password if it exists
+      if (formData.confirmPassword && value !== formData.confirmPassword) {
+        newErrors.confirmPassword = 'Passwords do not match';
+      } else if (formData.confirmPassword && value === formData.confirmPassword) {
+        delete newErrors.confirmPassword;
+      }
+    }
+
+    if (field === 'confirmPassword') {
+      if (!value.trim()) {
+        newErrors.confirmPassword = 'Please confirm your password';
+      } else if (formData.newPassword !== value) {
+        newErrors.confirmPassword = 'Passwords do not match';
+      } else {
+        delete newErrors.confirmPassword;
+      }
+    }
+
+    setErrors(newErrors);
+  };
+
   const handleChangePassword = async () => {
     if (!validateForm()) return;
 
+    setStatus((s)=>({ ...s, visible:false }));
+    setIsSubmitting(true);
+
     try {
-      const success = await changePassword(token, formData.newPassword);
-      if (success) {
-        Alert.alert(
-          'Success',
-          'Password changed successfully',
-          [
-            {
-              text: 'OK',
-              onPress: () => navigation.navigate(ScreenNames.LOGIN as never),
-            },
-          ]
-        );
+      const result = await resetPassword(phoneNumber, formData.newPassword, formData.confirmPassword);
+      if (result.success) {
+        setStatus({ 
+          visible: true, 
+          variant: 'success', 
+          title: 'Password Changed Successfully', 
+          message: 'Your password has been updated. You can now login with your new password.' 
+        });
+        // Close modal and navigate to login after 2 seconds
+        setTimeout(() => {
+          setStatus((s)=>({ ...s, visible:false }));
+          setTimeout(() => {
+            navigation.navigate(ScreenNames.LOGIN as never);
+          }, 300); // Small delay to let modal close animation complete
+        }, 2000);
       } else {
-        Alert.alert('Error', 'Failed to change password');
+        setStatus({ 
+          visible: true, 
+          variant: 'error', 
+          title: 'Password Change Failed', 
+          message: result.message || 'Failed to change password. Please try again.' 
+        });
       }
     } catch (error) {
-      Alert.alert('Error', 'An error occurred');
+      setStatus({ 
+        visible: true, 
+        variant: 'error', 
+        title: 'Error', 
+        message: 'An error occurred while changing password. Please try again.' 
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const updateFormData = (key: string, value: string) => {
     setFormData(prev => ({ ...prev, [key]: value }));
-    if (errors[key]) {
-      setErrors(prev => ({ ...prev, [key]: '' }));
-    }
+    validateField(key, value);
   };
 
   const goBack = () => {
@@ -109,12 +168,21 @@ export const ChangePasswordScreen: React.FC = () => {
       >
         <View style={styles.content}>
           <View style={styles.formContainer}>
+            {/* Title and Description */}
+            <View style={styles.headerContainer}>
+              <Text style={styles.title}>Create New Password</Text>
+              <Text style={styles.description}>
+                Please enter a new password for your account
+              </Text>
+            </View>
+
             <AuthField
               label="New Password*"
               placeholder="Enter new password"
               value={formData.newPassword}
               onChangeText={(value) => updateFormData('newPassword', value)}
               secureTextEntry
+              error={errors.newPassword}
             />
 
             <AuthField
@@ -123,16 +191,31 @@ export const ChangePasswordScreen: React.FC = () => {
               value={formData.confirmPassword}
               onChangeText={(value) => updateFormData('confirmPassword', value)}
               secureTextEntry
+              error={errors.confirmPassword}
             />
 
             <BlueButton
-              title={isLoading ? 'Changing...' : 'Change Password'}
+              title={(isLoading || isSubmitting) ? 'Changing...' : 'Change Password'}
               onPress={handleChangePassword}
-              disabled={isLoading}
+              disabled={isLoading || isSubmitting || !formData.newPassword.trim() || !formData.confirmPassword.trim() || Object.keys(errors).length > 0}
+            />
+
+            <StatusModal 
+              visible={status.visible} 
+              variant={status.variant} 
+              title={status.title} 
+              message={status.message} 
+              onDismiss={() => setStatus((s)=>({ ...s, visible:false }))} 
             />
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Loading Overlay */}
+      <LoadingOverlay 
+        visible={isLoading || isSubmitting} 
+        message="Changing password..." 
+      />
     </View>
   );
 };
@@ -173,5 +256,24 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     width: '100%',
+  },
+  headerContainer: {
+    marginBottom: 32,
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#ffffff',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  description: {
+    fontSize: 16,
+    fontWeight: '400',
+    color: 'rgba(255,255,255,0.7)',
+    textAlign: 'center',
+    lineHeight: 24,
+    paddingHorizontal: 8,
   },
 });

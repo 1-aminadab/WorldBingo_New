@@ -25,6 +25,7 @@ interface LandscapeGameUIProps {
   gameMedebAmount: number;
   medebAmount: number;
   derashShown: string;
+  totalCollectedAmount: number;
   singleSelectedNumbers: number[];
 
   // Pattern info
@@ -63,6 +64,7 @@ export const LandscapeGameUI: React.FC<LandscapeGameUIProps> = ({
   gameMedebAmount,
   medebAmount,
   derashShown,
+  totalCollectedAmount,
   singleSelectedNumbers,
   patternCategory,
   selectedPattern,
@@ -99,6 +101,7 @@ export const LandscapeGameUI: React.FC<LandscapeGameUIProps> = ({
             gameMedebAmount={gameMedebAmount}
             medebAmount={medebAmount}
             numPlayers={numPlayers}
+            totalCollectedAmount={totalCollectedAmount}
             isLandscape={true}
             showPlayers={false}
           />

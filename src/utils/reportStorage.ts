@@ -48,11 +48,18 @@ export class ReportStorageManager {
   static async saveGameReports(reports: GameReport[], userId?: string): Promise<void> {
     try {
       const key = this.getGameReportsKey(userId);
-      console.log('💾 Saving', reports.length, 'game reports for user:', userId);
+      console.log('💾 [ReportStorageManager] Saving', reports.length, 'game reports for user:', userId);
+      console.log('💾 [ReportStorageManager] Storage key:', key);
+      console.log('💾 [ReportStorageManager] Reports being saved:', reports.map(r => ({
+        date: r.date,
+        totalGames: r.totalGames,
+        userId: r.userId,
+        gamesCount: r.games.length
+      })));
       await AsyncStorage.setItem(key, JSON.stringify(reports));
-      console.log('✅ Game reports saved successfully for user:', userId);
+      console.log('✅ [ReportStorageManager] Game reports saved successfully for user:', userId);
     } catch (error) {
-      console.error('❌ Error saving game reports for user:', userId, error);
+      console.error('❌ [ReportStorageManager] Error saving game reports for user:', userId, error);
     }
   }
 
@@ -71,10 +78,16 @@ export class ReportStorageManager {
     pattern: string;
     winnerFound: boolean;
     userId?: string; // Add userId to game data
-  }): Promise<void> {
+    gameStatus?: 'started' | 'completed'; // Track if this is a start or completion report
+    gameMode?: 'single_player' | 'multi_player'; // Track game mode
+  }): Promise<string> {
     const userId = gameData.userId;
+    console.log('📊 [ReportStorageManager] Adding game entry for userId:', userId);
+    console.log('📊 [ReportStorageManager] Game data:', JSON.stringify(gameData, null, 2));
     const reports = await this.getGameReports(userId);
+    console.log('📊 [ReportStorageManager] Existing reports count:', reports.length);
     const todayDate = this.getTodayDateString();
+    console.log('📊 [ReportStorageManager] Today date:', todayDate);
     
     let todaysReport = reports.find(report => report.date === todayDate);
     
@@ -106,7 +119,9 @@ export class ReportStorageManager {
       gameDurationMinutes: gameData.gameDurationMinutes,
       totalNumbersCalled: gameData.totalNumbersCalled,
       pattern: gameData.pattern,
-      winnerFound: gameData.winnerFound
+      winnerFound: gameData.winnerFound,
+      gameStatus: gameData.gameStatus,
+      gameMode: gameData.gameMode
     };
 
     todaysReport.games.push(gameEntry);
@@ -115,11 +130,58 @@ export class ReportStorageManager {
     todaysReport.totalCollectedAmount += gameData.collectedAmount;
     todaysReport.totalProfit += profitAmount;
 
+    console.log('📊 [ReportStorageManager] Updated today\'s report:', {
+      date: todaysReport.date,
+      totalGames: todaysReport.totalGames,
+      totalCollectedAmount: todaysReport.totalCollectedAmount,
+      totalProfit: todaysReport.totalProfit,
+      gamesCount: todaysReport.games.length,
+      userId: todaysReport.userId
+    });
+    console.log('📊 [ReportStorageManager] Latest game entry:', gameEntry);
+
     await this.saveGameReports(reports, userId);
+    console.log('📊 [ReportStorageManager] Game entry saved successfully!');
     
     // Note: Profit is calculated and stored in the game report
     // but we don't create a profit transaction here since that would
     // represent house profit, not player transactions
+    
+    // Return the game entry ID for tracking
+    return gameEntry.id;
+  }
+
+  static async updateGameEntry(gameEntryId: string, updateData: {
+    gameDurationMinutes?: number;
+    totalNumbersCalled?: number;
+    winnerFound?: boolean;
+    gameStatus?: 'started' | 'completed';
+  }, userId?: string): Promise<void> {
+    console.log('📊 [ReportStorageManager] Updating game entry:', gameEntryId, 'for userId:', userId);
+    console.log('📊 [ReportStorageManager] Update data:', JSON.stringify(updateData, null, 2));
+    
+    const reports = await this.getGameReports(userId);
+    
+    for (const report of reports) {
+      const gameIndex = report.games.findIndex(game => game.id === gameEntryId);
+      if (gameIndex !== -1) {
+        // Update the game entry
+        const existingGame = report.games[gameIndex];
+        report.games[gameIndex] = {
+          ...existingGame,
+          ...updateData
+        };
+        
+        console.log('📊 [ReportStorageManager] Updated game entry:', report.games[gameIndex]);
+        
+        // Save the updated reports
+        await this.saveGameReports(reports, userId);
+        console.log('📊 [ReportStorageManager] Game entry updated successfully!');
+        return;
+      }
+    }
+    
+    console.warn('📊 [ReportStorageManager] Game entry not found for update:', gameEntryId);
   }
 
   static async getGameReportByDate(date: string, userId?: string): Promise<GameReport | null> {

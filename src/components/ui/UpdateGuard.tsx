@@ -21,10 +21,11 @@ export const UpdateGuard: React.FC<UpdateGuardProps> = ({ children }) => {
     // Check for updates when component mounts
     checkForUpdates();
 
-    // Handle back button for force updates
+    // Handle back button for force updates - completely block it
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
       if (isForceUpdate && isUpdateAvailable) {
-        // Prevent back button from working during force update
+        // Completely prevent back button from working during force update
+        console.log('🚫 Back button blocked due to forced update');
         return true;
       }
       return false;
@@ -33,23 +34,30 @@ export const UpdateGuard: React.FC<UpdateGuardProps> = ({ children }) => {
     return () => backHandler.remove();
   }, [isForceUpdate, isUpdateAvailable, checkForUpdates]);
 
-  // Show update modal if update is available and not dismissed (only for initial show)
+  // For forced updates, always show the modal regardless of dismissal state
+  if (isForceUpdate && isUpdateAvailable) {
+    return (
+      <>
+        <View style={[styles.forceUpdateOverlay, { backgroundColor: theme.colors.background }]}>
+          <View style={styles.forceUpdateContent}>
+            <AlertTriangle size={48} color="#EF4444" />
+            <Text style={[styles.forceUpdateTitle, { color: theme.colors.text }]}>
+              Update Required
+            </Text>
+            <Text style={[styles.forceUpdateMessage, { color: theme.colors.textSecondary }]}>
+              A critical update is available. Please update to continue using the app.
+            </Text>
+          </View>
+        </View>
+        <UpdateModal visible={true} />
+      </>
+    );
+  }
+
+  // Show update modal if update is available and not dismissed (for non-forced updates)
   if (isUpdateAvailable && versionInfo && !isUpdateDismissed) {
     return (
       <>
-        {isForceUpdate && (
-          <View style={[styles.forceUpdateOverlay, { backgroundColor: theme.colors.background }]}>
-            <View style={styles.forceUpdateContent}>
-              <AlertTriangle size={48} color="#EF4444" />
-              <Text style={[styles.forceUpdateTitle, { color: theme.colors.text }]}>
-                Update Required
-              </Text>
-              <Text style={[styles.forceUpdateMessage, { color: theme.colors.textSecondary }]}>
-                A critical update is available. Please update to continue using the app.
-              </Text>
-            </View>
-          </View>
-        )}
         <UpdateModal visible={isUpdateAvailable} />
         {/* Always show floating button when update is available */}
         {shouldShowFloatingButton && (

@@ -68,8 +68,16 @@ export const GameReport: React.FC = () => {
     try {
       const userId = user?.userId || user?.id; // Get userId from auth store (handle both formats)
       console.log('🎮 Loading game reports for user:', userId);
+      console.log('🎮 User object for reports:', user);
+      console.log('🎮 Available user IDs - userId:', user?.userId, 'id:', user?.id);
       const gameData = await ReportStorageManager.getGameReports(userId);
       console.log('🎮 Loaded game reports:', gameData.length);
+      console.log('🎮 Report details:', gameData.map(r => ({
+        date: r.date,
+        totalGames: r.totalGames,
+        userId: r.userId,
+        id: r.id
+      })));
       setAllGameReports(gameData.sort((a, b) => b.date.localeCompare(a.date)));
     } catch (error) {
       console.error('Error loading game reports:', error);
@@ -116,9 +124,9 @@ export const GameReport: React.FC = () => {
 
     const daysCount = getDaysCount(dateRange);
     const averageRTP = stats.totalGames > 0 ? stats.totalRTP / stats.totalGames : 0;
-    const payinAmount = stats.totalRevenue; // Total money collected without RTP consideration
-    const payoutAmount = stats.totalRevenue * (averageRTP / 100); // Total money paid out based on RTP
+    const payinAmount = stats.totalRevenue; // Total money collected (payin)
     const profitAmount = stats.totalProfit; // Use the already calculated profit from reports
+    const payoutAmount = payinAmount - profitAmount; // Payout = Payin - Profit
     
     setSummaryStats({
       totalGames: stats.totalGames,
@@ -163,6 +171,9 @@ export const GameReport: React.FC = () => {
     });
   };
 
+  console.log('====================================');
+  console.log();
+  console.log('====================================');
   const renderGameEntry = (entry: GameReportEntry) => (
     <View style={[{ backgroundColor: theme.colors.surface, borderRadius: 8, padding: 16 }]}>
       <View style={styles.sessionHeader}>
@@ -247,7 +258,7 @@ export const GameReport: React.FC = () => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ArrowLeft size={24} color="white" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{summaryStats.dateRange}</Text>
+        <Text style={styles.headerTitle}>Game Report Statistics</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -284,11 +295,11 @@ export const GameReport: React.FC = () => {
           <View style={[styles.primaryStatCard, { backgroundColor: '#10B981' }]}>
             <View style={styles.statRow}>
               <View style={styles.statIconContainer}>
-                <Users size={20} color="white" />
+                <TrendingUp size={20} color="white" />
               </View>
               <View style={styles.statContent}>
-                <Text style={styles.primaryStatValue}>{formatNumber(summaryStats.totalCardsSold)}</Text>
-                <Text style={styles.primaryStatLabel}>Total Players</Text>
+                <Text style={styles.primaryStatValue}>{formatCurrency(summaryStats.totalCardsSold).replace('Birr', '')}</Text>
+                <Text style={styles.primaryStatLabel}>Cards Sold</Text>
               </View>
             </View>
           </View>
@@ -306,17 +317,17 @@ export const GameReport: React.FC = () => {
           </View>
           
           <View style={[styles.secondaryStatCard, { backgroundColor: theme.colors.surface }]}>
-            <Target size={16} color="#EF4444" />
+            <TrendingUp size={16} color="#F59E0B" />
             <View style={styles.secondaryStatContent}>
               <Text style={[styles.secondaryStatValue, { color: theme.colors.text }]}>{formatCurrency(summaryStats.payoutAmount)}</Text>
               <Text style={[styles.secondaryStatLabel, { color: theme.colors.textSecondary }]}>Payout</Text>
             </View>
           </View>
-          
+
           <View style={[styles.secondaryStatCard, { backgroundColor: theme.colors.surface }]}>
-            <TrendingUp size={16} color="#10B981" />
+            <Target size={16} color="rgb(68, 117, 239)" />
             <View style={styles.secondaryStatContent}>
-              <Text style={[styles.secondaryStatValue, { color: theme.colors.text }]}>{formatCurrency(summaryStats.profitAmount)}</Text>
+              <Text style={[styles.secondaryStatValue, { color: theme.colors.text }]}>{formatCurrency(summaryStats.totalProfit)}</Text>
               <Text style={[styles.secondaryStatLabel, { color: theme.colors.textSecondary }]}>Profit</Text>
             </View>
           </View>
@@ -331,10 +342,7 @@ export const GameReport: React.FC = () => {
                 <Trophy size={20} color={theme.colors.primary} />
                 <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Game Reports</Text>
               </View>
-              <View style={styles.counterItem}>
-                <Users size={16} color={theme.colors.primary} />
-                <Text style={[styles.counterText, { color: theme.colors.text }]}>{filteredReports.reduce((sum, r) => sum + r.totalCardsSold, 0)}</Text>
-              </View>
+            
             </View>
             
             {filteredReports.map(report => (
@@ -342,18 +350,20 @@ export const GameReport: React.FC = () => {
                 <View style={[styles.dateBanner, { backgroundColor: theme.colors.primary + '15', borderLeftColor: theme.colors.primary }]}>
                   <Text style={[styles.dateText, { color: theme.colors.text }]}>{formatDate(report.date)}</Text>
                   <View style={styles.dateSummary}>
-                    <View style={styles.dateMetric}>
+                    {/* <View style={styles.dateMetric}>
                       <Gamepad2 size={12} color={theme.colors.textSecondary} />
                       <Text style={[styles.dateMetricText, { color: theme.colors.textSecondary }]}>{report.totalGames}</Text>
-                    </View>
+                    </View> */}
                     <View style={styles.dateMetric}>
                       <Users size={12} color={theme.colors.primary} />
                       <Text style={[styles.dateMetricText, { color: theme.colors.textSecondary }]}>{formatNumber(report.totalCardsSold)}</Text>
                     </View>
-                    <View style={styles.dateMetric}>
+                    {/* <View style={styles.dateMetric}>
                       <DollarSign size={12} color="#10B981" />
-                      <Text style={[styles.dateMetricText, { color: theme.colors.textSecondary }]}>{formatCurrency(report.totalProfit)}</Text>
-                    </View>
+                      <Text style={[styles.dateMetricText, { color: theme.colors.textSecondary }]}>
+                        {formatCurrency(report.totalCollectedAmount)}
+                      </Text>
+                    </View> */}
                   </View>
                 </View>
                 
@@ -718,7 +728,8 @@ const styles = StyleSheet.create({
   },
   secondaryStatContent: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    marginLeft: 4,
   },
   secondaryStatValue: {
     fontSize: 14,
@@ -742,6 +753,7 @@ const styles = StyleSheet.create({
   sectionTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
   },
   counterItem: {
@@ -852,6 +864,10 @@ const styles = StyleSheet.create({
   gameAmount: {
     fontSize: 12,
     fontWeight: '700',
+  },
+  gamePayout: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   gameProfit: {
     fontSize: 11,

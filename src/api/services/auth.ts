@@ -9,8 +9,12 @@ import {
   RegisterResponse,
   ForgotPasswordRequest,
   ForgotPasswordResponse,
+  VerifyResetOtpRequest,
+  VerifyResetOtpResponse,
   ResetPasswordRequest,
   ResetPasswordResponse,
+  ChangePasswordRequest,
+  ChangePasswordResponse,
   ApiResponse,
 } from '../types';
 
@@ -67,7 +71,7 @@ export class AuthApiService {
   }
 
   /**
-   * Verify OTP after login or registration
+   * Verify OTP after login or registration (not for password reset)
    */
   async verifyOtp(otpData: VerifyOtpRequest): Promise<VerifyOtpResponse> {
     try {
@@ -174,7 +178,35 @@ export class AuthApiService {
   }
 
   /**
-   * Reset password with OTP
+   * Verify reset OTP for forgot password flow and open a 10-minute window to set a new password
+   */
+  async verifyResetOtp(data: VerifyResetOtpRequest): Promise<VerifyResetOtpResponse> {
+    try {
+      const response = await apiClient.post<void>(
+        API_ENDPOINTS.AUTH.VERIFY_RESET_OTP,
+        data
+      );
+
+      // Check statusCode instead of success field (200-299 are successful)
+      const isSuccess = response.statusCode && response.statusCode >= 200 && response.statusCode < 300;
+
+      return {
+        success: isSuccess || false,
+        message: response.message,
+        statusCode: response.statusCode,
+      };
+    } catch (error: any) {
+      console.error('Verify reset OTP error:', error);
+      return {
+        success: false,
+        message: error.message || 'OTP verification failed',
+        statusCode: error.statusCode || 500,
+      };
+    }
+  }
+
+  /**
+   * Set a new password during the open reset window (must be called within 10 minutes of verifyResetOtp)
    */
   async resetPassword(data: ResetPasswordRequest): Promise<ResetPasswordResponse> {
     try {
@@ -196,6 +228,34 @@ export class AuthApiService {
       return {
         success: false,
         message: error.message || 'Password reset failed',
+        statusCode: error.statusCode || 500,
+      };
+    }
+  }
+
+  /**
+   * Change the user's current password (authenticated endpoint)
+   */
+  async changePassword(data: ChangePasswordRequest): Promise<ChangePasswordResponse> {
+    try {
+      const response = await apiClient.post<void>(
+        API_ENDPOINTS.AUTH.CHANGE_PASSWORD,
+        data
+      );
+
+      // Check statusCode instead of success field (200-299 are successful)
+      const isSuccess = response.statusCode && response.statusCode >= 200 && response.statusCode < 300;
+
+      return {
+        success: isSuccess || false,
+        message: response.message,
+        statusCode: response.statusCode,
+      };
+    } catch (error: any) {
+      console.error('Change password error:', error);
+      return {
+        success: false,
+        message: error.message || 'Password change failed',
         statusCode: error.statusCode || 500,
       };
     }

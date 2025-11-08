@@ -1,11 +1,10 @@
 import { VersionInfo, UpdateType } from '../store/versionStore';
 import { Platform, Linking } from 'react-native';
+import { getAppVersion } from '../utils/appVersion';
 
-// Get current app version from package.json or app config
+// Get current app version from package.json (bundled with app)
 const getCurrentVersion = (): string => {
-  // In a real app, you would get this from your app's version info
-  // For now, we'll use a placeholder
-  return '1.0.0';
+  return getAppVersion();
 };
 
 // API endpoints

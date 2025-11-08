@@ -1,6 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { Modal, View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
-import { CheckCircle2, XCircle, X } from 'lucide-react-native';
+import { CheckCircle2, XCircle, X, Phone } from 'lucide-react-native';
+import { handlePhoneCall } from '../../utils/dateUtils';
+import { useTheme } from './ThemeProvider';
 
 type StatusVariant = 'success' | 'error';
 
@@ -11,6 +13,7 @@ interface StatusModalProps {
   message?: string;
   onDismiss?: () => void;
   autoHideMs?: number;
+  showPhoneSupport?: boolean; // Only show for web/payment related issues
 }
 
 export const StatusModal: React.FC<StatusModalProps> = ({
@@ -20,9 +23,11 @@ export const StatusModal: React.FC<StatusModalProps> = ({
   message,
   onDismiss,
   autoHideMs,
+  showPhoneSupport = false,
 }) => {
   const scale = useRef(new Animated.Value(0.9)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+  const { theme } = useTheme();
 
   useEffect(() => {
     if (visible) {
@@ -61,7 +66,37 @@ export const StatusModal: React.FC<StatusModalProps> = ({
           {!!message && (
             <Text style={styles.message}>{message}</Text>
           )}
-
+          
+          {/* Only show phone support for web/payment related issues */}
+          {showPhoneSupport && (
+            <>
+              <View style={{width:'100%', height:1, backgroundColor:'rgba(255, 255, 255, 0.23)', marginVertical:10}}/>
+              <View style={{marginBottom: 10, gap:10, alignItems:'center'}}>
+                <Text style={{ color: 'white' }}>
+                  እርዳታ ከፈለጉ በዚ ስልክ ይደውሉ
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                  <TouchableOpacity
+                    onPress={() => handlePhoneCall('0977791828')}
+                    style={[styles.phoneButton, { borderColor: theme.colors.primary }]}
+                  >
+                    <Text style={[styles.phoneText, { color: theme.colors.primary, gap:10 }]}>
+                      <Phone color={'white'} size={13}/> {" "}0977791828
+                    </Text>
+                  </TouchableOpacity>
+                  <Text style={{ color: 'white' }}>|</Text>
+                  <TouchableOpacity
+                    onPress={() => handlePhoneCall('0940883535')}
+                    style={[styles.phoneButton, { borderColor: theme.colors.primary }]}
+                  >
+                    <Text style={[styles.phoneText, { color: theme.colors.primary }]}>
+                    <Phone color={'white'} size={13}/> {" "}0940883535
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </>
+          )}
           {onDismiss && (
             <TouchableOpacity style={styles.closeBtn} onPress={onDismiss}>
               <X size={18} color="#6c757d" />
@@ -136,6 +171,20 @@ const styles = StyleSheet.create({
     color: '#adb5bd',
     fontWeight: '600',
     marginLeft: 6,
+  },
+  phoneButton: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  phoneText: {
+    fontSize: 14,
+    fontWeight: '600',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });
 

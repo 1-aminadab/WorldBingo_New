@@ -6,7 +6,8 @@ import { DrawnNumber, BingoLetter } from '../../types';
 
 interface BingoGridProps {
   cardIndex: number;
-  cardTypes: any[];
+  cardTypes?: any[]; // Legacy prop for backward compatibility
+  cards?: number[][]; // New prop for direct card data
   calledNumbers: DrawnNumber[];
   userClickedNumbers: Set<number>;
   onNumberClick: (number: number) => void;
@@ -17,6 +18,7 @@ interface BingoGridProps {
 export const BingoGrid: React.FC<BingoGridProps> = ({
   cardIndex,
   cardTypes,
+  cards,
   calledNumbers,
   userClickedNumbers,
   onNumberClick,
@@ -25,13 +27,27 @@ export const BingoGrid: React.FC<BingoGridProps> = ({
 }) => {
   const { theme } = useGameTheme();
 
-  const cartela = cardTypes.length > 0 ? cardTypes[0] : null;
+  // Use direct cards prop if provided, otherwise fall back to legacy cardTypes prop
+  let gameCards: number[][];
   
-  if (!cartela || !cartela.cards || cardIndex >= cartela.cards.length) {
+  if (cards && cards.length > 0) {
+    gameCards = cards;
+  } else if (cardTypes && cardTypes.length > 0) {
+    // Legacy support: assume first cardType has cards property
+    const cartela = cardTypes[0];
+    if (!cartela || !cartela.cards || !Array.isArray(cartela.cards)) {
+      return null;
+    }
+    gameCards = cartela.cards;
+  } else {
     return null;
   }
   
-  const numbers24 = cartela.cards[cardIndex];
+  if (cardIndex >= gameCards.length) {
+    return null;
+  }
+  
+  const numbers24 = gameCards[cardIndex];
   
   const gridNumbers: (number | null)[][] = Array(5).fill(null).map(() => Array(5).fill(null));
   let p = 0;

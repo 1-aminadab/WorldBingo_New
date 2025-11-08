@@ -57,13 +57,11 @@ export const ForgotPasswordScreen: React.FC = () => {
       const fullPhoneNumber = `${countryCode}${phoneNumber}`;
       const result = await forgotPassword(fullPhoneNumber);
       if (result.success) {
-        setStatus({ visible: true, variant: 'success', title: 'Code sent', message: 'Check your phone for the reset code' });
-        setTimeout(() => {
-          navigation.navigate(ScreenNames.OTP_VERIFICATION as never, { 
-            phoneNumber: fullPhoneNumber,
-            type: 'password_reset'
-          });
-        }, 2000);
+        // Navigate directly to OTP verification without showing success modal
+        navigation.navigate(ScreenNames.OTP_VERIFICATION as never, { 
+          phoneNumber: fullPhoneNumber,
+          type: 'password_reset'
+        });
       } else {
         setStatus({ visible: true, variant: 'error', title: 'Failed', message: result.message || 'Failed to send reset code' });
       }
@@ -123,6 +121,14 @@ export const ForgotPasswordScreen: React.FC = () => {
 
           {/* Form */}
           <View style={styles.formContainer}>
+            {/* Title and Description */}
+            <View style={styles.headerContainer}>
+              <Text style={styles.title}>Reset Password</Text>
+              <Text style={styles.description}>
+                Enter your phone number and we'll send you a verification code to reset your password
+              </Text>
+            </View>
+
             <PhoneField
               label="Phone Number*"
               placeholder="Enter your phone number"
@@ -191,6 +197,25 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     width: '100%',
+  },
+  headerContainer: {
+    marginBottom: 32,
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#ffffff',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  description: {
+    fontSize: 16,
+    fontWeight: '400',
+    color: 'rgba(255,255,255,0.7)',
+    textAlign: 'center',
+    lineHeight: 24,
+    paddingHorizontal: 8,
   },
   inputGroup: {
     marginBottom: 24,

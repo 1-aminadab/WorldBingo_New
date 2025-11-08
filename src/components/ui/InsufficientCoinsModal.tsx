@@ -6,9 +6,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  Linking,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import { X } from 'lucide-react-native';
+import { Phone, PhoneCall, X } from 'lucide-react-native';
 import { useTheme } from './ThemeProvider';
 
 const { width } = Dimensions.get('window');
@@ -30,6 +31,11 @@ export const InsufficientCoinsModal: React.FC<InsufficientCoinsModalProps> = ({
 }) => {
   const { theme } = useTheme();
   const shortageAmount = requiredAmount - currentBalance;
+
+  const handlePhoneCall = (phoneNumber: string) => {
+    const cleanNumber = phoneNumber.replace(/\s/g, '');
+    Linking.openURL(`tel:${cleanNumber}`);
+  };
 
   return (
     <Modal
@@ -102,8 +108,32 @@ export const InsufficientCoinsModal: React.FC<InsufficientCoinsModalProps> = ({
 
           {/* Suggestion */}
           <Text style={[styles.suggestion, { color: theme.colors.textSecondary }]}>
-            💡 Buy more coins or reduce the number of cards/entry amount.
+            💡 Buy more coins and enjoy the game.
           </Text>
+          <View style={{marginBottom: 10, gap:10, alignItems:'center'}}>
+            <Text style={{ color: 'white' }}>
+              እርዳታ ከፈለጉ በዚ ስልክ ይደውሉ
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => handlePhoneCall('0977791828')}
+                style={[styles.phoneButton, { borderColor: theme.colors.primary }]}
+              >
+                <Text style={[styles.phoneText, { color: theme.colors.primary, gap:10 }]}>
+                  <Phone color={'white'} size={13}/> {" "}0977791828
+                </Text>
+              </TouchableOpacity>
+              <Text style={{ color: 'white' }}>|</Text>
+              <TouchableOpacity
+                onPress={() => handlePhoneCall('0940883535')}
+                style={[styles.phoneButton, { borderColor: theme.colors.primary }]}
+              >
+                <Text style={[styles.phoneText, { color: theme.colors.primary }]}>
+                <Phone color={'white'} size={13}/> {" "}0940883535
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
           {/* Action Buttons */}
           <View style={styles.buttonContainer}>
@@ -219,7 +249,7 @@ const styles = StyleSheet.create({
   suggestion: {
     fontSize: 12,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 3,
     lineHeight: 18,
   },
   buttonContainer: {

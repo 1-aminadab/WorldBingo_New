@@ -20,6 +20,8 @@ import UpdateModal from './src/components/ui/UpdateModal';
 import { useFirebaseAuth } from './src/hooks/useFirebaseAuth';
 import { useAuthToast } from './src/hooks/useAuthToast';
 import { useReportInitialization } from './src/hooks/useReportInitialization';
+import { logAppVersion } from './src/utils/appVersion';
+import { useVersionStore } from './src/store/versionStore';
 import './src/i18n';
 import Orientation from 'react-native-orientation-locker';
 import KeepAwake from 'react-native-keep-awake';
@@ -36,6 +38,20 @@ const AppContent = () => {
   
   // Initialize report data on app start
   useReportInitialization();
+  
+  // Log app version on startup
+  useEffect(() => {
+    const handleAppStartup = () => {
+      try {
+        // Log current version
+        logAppVersion();
+      } catch (error) {
+        console.error('❌ [VERSION] Error during startup version check:', error);
+      }
+    };
+    
+    handleAppStartup();
+  }, []);
   
   return (
     <>

@@ -30,7 +30,7 @@ export const OTPVerificationScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { theme } = useTheme();
-  const { verifyOtp, forgotPassword, isLoading } = useAuthStore();
+  const { verifyOtp, verifyResetOtp, forgotPassword, isLoading } = useAuthStore();
   const { showSuccess, showError } = useToast();
 
   const { phoneNumber, type = 'verification' } = route.params as { phoneNumber: string; type?: string };
@@ -107,18 +107,25 @@ export const OTPVerificationScreen: React.FC = () => {
     setIsValidating(true);
 
     try {
-      const result = await verifyOtp(phoneNumber, otpString);
+      // Use different API endpoints based on verification type
+      const result = type === 'password_reset' 
+        ? await verifyResetOtp(phoneNumber, otpString)
+        : await verifyOtp(phoneNumber, otpString);
+        
       if (result.success) {
         setStatus({ visible: true, variant: 'success', title: 'Verified', message: 'Redirecting...' });
         setTimeout(() => {
-          if (type === 'password_reset') {
-            navigation.navigate(ScreenNames.CHANGE_PASSWORD as never, { 
-              phoneNumber, 
-              otp: otpString 
-            });
-          } else {
-            navigation.navigate(ScreenNames.MAIN as never);
-          }
+          setStatus((s)=>({ ...s, visible:false }));
+          setTimeout(() => {
+            if (type === 'password_reset') {
+              navigation.navigate(ScreenNames.CHANGE_PASSWORD as never, { 
+                phoneNumber, 
+                otp: otpString 
+              });
+            } else {
+              navigation.navigate(ScreenNames.MAIN as never);
+            }
+          }, 300); // Small delay to let modal close animation complete
         }, 1500);
       } else {
         setStatus({ visible: true, variant: 'error', title: 'Invalid code', message: result.message || 'Please try again' });
@@ -138,7 +145,7 @@ export const OTPVerificationScreen: React.FC = () => {
       if (result.success) {
         showSuccess('New verification code sent!');
         setResendCooldown(60); // 60 second cooldown
-        setOtp(['', '', '', '', '', '']); // Clear current OTP
+        setOtp(Array(OTP_LENGTH).fill('')); // Clear current OTP
         inputRefs.current[0]?.focus();
       } else {
         showError('Failed to resend code. Please try again.');
@@ -200,6 +207,19 @@ export const OTPVerificationScreen: React.FC = () => {
 
           {/* Form */}
           <View style={styles.formContainer}>
+            {/* Title and Description */}
+            <View style={styles.headerContainer}>
+              <Text style={styles.title}>
+                {type === 'password_reset' ? 'Reset Password' : 'Verify Your Phone'}
+              </Text>
+              <Text style={styles.description}>
+                {type === 'password_reset' 
+                  ? `Enter the 4-digit code sent to ${phoneNumber}`
+                  : `We've sent a 4-digit verification code to ${phoneNumber}`
+                }
+              </Text>
+            </View>
+
             {/* OTP Input */}
             <View style={styles.otpContainer}>
               {otp.map((digit, index) => (
@@ -304,6 +324,25 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     width: '100%',
+  },
+  headerContainer: {
+    marginBottom: 32,
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#ffffff',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  description: {
+    fontSize: 16,
+    fontWeight: '400',
+    color: 'rgba(255,255,255,0.7)',
+    textAlign: 'center',
+    lineHeight: 24,
+    paddingHorizontal: 8,
   },
   otpContainer: {
     flexDirection: 'row',

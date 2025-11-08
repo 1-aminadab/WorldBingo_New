@@ -217,6 +217,8 @@ export interface GameReportEntry {
   totalNumbersCalled: number;
   pattern: string;
   winnerFound: boolean;
+  gameStatus?: 'started' | 'completed'; // Track if this is a start or completion report
+  gameMode?: 'single_player' | 'multi_player'; // Track game mode
 }
 
 export interface CashReport {

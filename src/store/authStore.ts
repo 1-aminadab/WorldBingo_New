@@ -21,7 +21,8 @@ interface AuthStore extends AuthState {
   verifyOtp: (phoneNumber: string, otp: string) => Promise<{ success: boolean; message?: string }>;
   register: (fullName: string, phoneNumber: string, password: string, confirmPassword: string, promoCode?: string) => Promise<{ success: boolean; requiresOtp?: boolean; message?: string; statusCode?: number; status?: string }>;
   forgotPassword: (phoneNumber: string) => Promise<{ success: boolean; message?: string }>;
-  resetPassword: (phoneNumber: string, otp: string, newPassword: string) => Promise<{ success: boolean; message?: string }>;
+  verifyResetOtp: (phoneNumber: string, otp: string) => Promise<{ success: boolean; message?: string }>;
+  resetPassword: (phoneNumber: string, newPassword: string, confirmPassword: string) => Promise<{ success: boolean; message?: string }>;
   
   // Common methods
   loginAsGuest: () => Promise<void>;
@@ -229,10 +230,32 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      resetPassword: async (phoneNumber: string, otp: string, newPassword: string) => {
+      verifyResetOtp: async (phoneNumber: string, otp: string) => {
         set({ isLoading: true, error: null });
         try {
-          const result = await authApiService.resetPassword({ phoneNumber, otp, newPassword });
+          const result = await authApiService.verifyResetOtp({ phoneNumber, otp });
+          set({ isLoading: false });
+          
+          if (result.success) {
+            toastContext?.showSuccess('OTP verified successfully', 'Verification Successful');
+          } else {
+            set({ error: result.message });
+            toastContext?.showError(result.message || 'OTP verification failed', 'Verification Failed');
+          }
+          
+          return { success: result.success, message: result.message };
+        } catch (error) {
+          const handledError = errorHandler.handleError(error);
+          set({ isLoading: false, error: handledError.message });
+          toastContext?.showError(handledError.message, 'Verification Error');
+          return { success: false, message: handledError.message };
+        }
+      },
+
+      resetPassword: async (phoneNumber: string, newPassword: string, confirmPassword: string) => {
+        set({ isLoading: true, error: null });
+        try {
+          const result = await authApiService.resetPassword({ phoneNumber, newPassword, confirmPassword });
           set({ isLoading: false });
           
           if (result.success) {
