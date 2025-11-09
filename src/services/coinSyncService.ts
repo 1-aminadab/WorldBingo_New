@@ -198,7 +198,7 @@ export class CoinSyncService {
         success: true,
         message: backendCoins > 0 
           ? `Successfully synced ${backendCoins} coins from backend and settled ${settledAmount} coins`
-          : `No new coins found on backend. Settled ${settledAmount} coins to ensure clean state`,
+          : `No new coins to add. Your balance is already up to date.`,
         localBefore,
         backendCoins,
         localAfter,

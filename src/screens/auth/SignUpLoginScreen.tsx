@@ -14,7 +14,7 @@ import {
   Image,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft, Eye, EyeOff } from 'lucide-react-native';
+import { ArrowLeft, Eye, EyeOff, ChevronDown, Globe } from 'lucide-react-native';
 import { useTheme } from '../../components/ui/ThemeProvider';
 import AuthField from '../../components/ui/AuthField';
 import PhoneField from '../../components/ui/PhoneField';
@@ -30,6 +30,124 @@ import BlurBackground from '../../components/ui/BlurBackground';
 
 const { width, height } = Dimensions.get('window');
 
+// Language normalization
+const translations = {
+  en: {
+    welcomeBack: 'Welcome Back',
+    joinWorldBingo: 'Join World Bingo',
+    signInToAccount: 'Please sign in to your account',
+    createAccountStart: 'Create your account and start playing',
+    phoneNumber: 'Phone Number*',
+    phoneNumberPlaceholder: '(e.g. 912345678)',
+    password: 'Password*',
+    passwordPlaceholder: 'Enter your password',
+    forgotPassword: 'Forgot Password?',
+    login: 'Login',
+    signUp: 'Sign Up',
+    firstName: 'First Name*',
+    firstNamePlaceholder: 'First name',
+    lastName: 'Last Name*',
+    lastNamePlaceholder: 'Last name',
+    confirmPassword: 'Confirm Password*',
+    confirmPasswordPlaceholder: 'Confirm your password',
+    promoCode: 'Promo Code (Optional)',
+    promoCodePlaceholder: 'Enter promo code',
+    or: 'OR',
+    continueAsGuest: 'Continue as Guest',
+    // Validation messages
+    missingPhoneNumber: 'Missing phone number',
+    enterPhoneNumber: 'Please enter your phone number',
+    missingPassword: 'Missing password',
+    enterPassword: 'Please enter your password',
+    weakPassword: 'Weak password',
+    passwordMinLength: 'Password must be at least 6 characters',
+    firstNameRequired: 'First name required',
+    enterFirstName: 'Please enter your first name',
+    lastNameRequired: 'Last name required',
+    enterLastName: 'Please enter your last name',
+    phoneNumberRequired: 'Phone number required',
+    passwordRequired: 'Password required',
+    passwordsDoNotMatch: 'Passwords do not match',
+    reenterPasswords: 'Please re-enter matching passwords',
+    // Success messages
+    otpSent: 'OTP sent',
+    checkPhoneForCode: 'Check your phone for the code',
+    welcomeBackMsg: 'Welcome back',
+    loginSuccessful: 'Login successful! Redirecting...',
+    accountCreated: 'Account created',
+    redirecting: 'Redirecting...',
+    // Error messages
+    loginFailed: 'Login failed',
+    invalidCredentials: 'Invalid credentials',
+    loginError: 'Login error',
+    loginErrorOccurred: 'An error occurred during login',
+    signUpFailed: 'Sign up failed',
+    signUpTryAgain: 'Please try again',
+    signUpError: 'Sign up error',
+    signUpErrorOccurred: 'An error occurred during sign up',
+    // Loading messages
+    signingIn: 'Signing in...',
+    signingUp: 'Signing up...',
+  },
+  am: {
+    welcomeBack: 'እንኳን ደህና መጡ',
+    joinWorldBingo: 'ወርልድ ቢንጎ ተቀላቀሉ',
+    signInToAccount: 'እባክዎ ወደ መለያዎ ይግቡ',
+    createAccountStart: 'መለያዎን ይፍጠሩ እና መጫወት ይጀምሩ',
+    phoneNumber: 'ስልክ ቁጥር*',
+    phoneNumberPlaceholder: '(ምሳሌ 912345678)',
+    password: 'የይለፍ ቃል*',
+    passwordPlaceholder: 'የይለፍ ቃልዎን ያስገቡ',
+    forgotPassword: 'የይለፍ ቃል ረሳህ?',
+    login: 'ግባ',
+    signUp: 'ተመዝገብ',
+    firstName: 'የመጀመሪያ ስም*',
+    firstNamePlaceholder: 'የመጀመሪያ ስም',
+    lastName: 'የአባት ስም*',
+    lastNamePlaceholder: 'የአባት ስም',
+    confirmPassword: 'የይለፍ ቃል አረጋግጥ*',
+    confirmPasswordPlaceholder: 'የይለፍ ቃልዎን ያረጋግጡ',
+    promoCode: 'ፕሮሞ ኮድ (አማራጭ)',
+    promoCodePlaceholder: 'ፕሮሞ ኮድ ያስገቡ',
+    or: 'ወይም',
+    continueAsGuest: 'እንደ እንግዳ ይቀጥሉ',
+    // Validation messages
+    missingPhoneNumber: 'ስልክ ቁጥር የለም',
+    enterPhoneNumber: 'እባክዎ ስልክ ቁጥርዎን ያስገቡ',
+    missingPassword: 'የይለፍ ቃል የለም',
+    enterPassword: 'እባክዎ የይለፍ ቃልዎን ያስገቡ',
+    weakPassword: 'ደካማ የይለፍ ቃል',
+    passwordMinLength: 'የይለፍ ቃሉ ቢያንስ 6 ቁምፊዎች መሆን አለበት',
+    firstNameRequired: 'የመጀመሪያ ስም ያስፈልጋል',
+    enterFirstName: 'እባክዎ የመጀመሪያ ስምዎን ያስገቡ',
+    lastNameRequired: 'የአባት ስም ያስፈልጋል',
+    enterLastName: 'እባክዎ የአባት ስምዎን ያስገቡ',
+    phoneNumberRequired: 'ስልክ ቁጥር ያስፈልጋል',
+    passwordRequired: 'የይለፍ ቃል ያስፈልጋል',
+    passwordsDoNotMatch: 'የይለፍ ቃሎች አይዛመዱም',
+    reenterPasswords: 'እባክዎ የሚዛመዱ የይለፍ ቃሎችን እንደገና ያስገቡ',
+    // Success messages
+    otpSent: 'ኦቲፒ ተልኳል',
+    checkPhoneForCode: 'ስልክዎን ለኮዱ ይመልከቱ',
+    welcomeBackMsg: 'እንኳን ደህና መጡ',
+    loginSuccessful: 'መግባት ተሳክቷል! ሪዳይሬክት ላይ...',
+    accountCreated: 'መለያ ተፈጠረ',
+    redirecting: 'ሪዳይሬክት ላይ...',
+    // Error messages
+    loginFailed: 'መግባት አልተሳካም',
+    invalidCredentials: 'የተሳሳተ መታወቂያ',
+    loginError: 'የመግቢያ ስህተት',
+    loginErrorOccurred: 'በመግባት ወቅት ስህተት ተከስቷል',
+    signUpFailed: 'መመዝገብ አልተሳካም',
+    signUpTryAgain: 'እባክዎ እንደገና ይሞክሩ',
+    signUpError: 'የመመዝገቢያ ስህተት',
+    signUpErrorOccurred: 'በመመዝገብ ወቅት ስህተት ተከስቷል',
+    // Loading messages
+    signingIn: 'ግብ ላይ...',
+    signingUp: 'መመዝገብ ላይ...',
+  }
+};
+
 interface SignUpLoginScreenProps {
   isLogin?: boolean;
 }
@@ -43,6 +161,13 @@ export const SignUpLoginScreen: React.FC<SignUpLoginScreenProps> = ({ isLogin = 
   
   // Get isLogin from route params or props
   const isLoginParam = (route.params as any)?.isLogin ?? isLogin;
+  
+  // Language state
+  const [currentLanguage, setCurrentLanguage] = useState<'en' | 'am'>('en');
+  const [dropdownVisible, setDropdownVisible] = useState(false);
+  
+  // Get current translation
+  const t = translations[currentLanguage];
   
   // Tab state
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>(isLoginParam ? 'login' : 'signup');
@@ -75,17 +200,22 @@ export const SignUpLoginScreen: React.FC<SignUpLoginScreenProps> = ({ isLogin = 
     }).start();
   };
 
+  const toggleLanguage = (lang: 'en' | 'am') => {
+    setCurrentLanguage(lang);
+    setDropdownVisible(false);
+  };
+
   const validateLoginForm = (): boolean => {
     if (!phoneNumber.trim()) {
-      setStatus({ visible: true, variant: 'error', title: 'Missing phone number', message: 'Please enter your phone number' });
+      setStatus({ visible: true, variant: 'error', title: t.missingPhoneNumber, message: t.enterPhoneNumber });
       return false;
     }
     if (!password.trim()) {
-      setStatus({ visible: true, variant: 'error', title: 'Missing password', message: 'Please enter your password' });
+      setStatus({ visible: true, variant: 'error', title: t.missingPassword, message: t.enterPassword });
       return false;
     }
     if (password.length < 6) {
-      setStatus({ visible: true, variant: 'error', title: 'Weak password', message: 'Password must be at least 6 characters' });
+      setStatus({ visible: true, variant: 'error', title: t.weakPassword, message: t.passwordMinLength });
       return false;
     }
     return true;
@@ -93,27 +223,27 @@ export const SignUpLoginScreen: React.FC<SignUpLoginScreenProps> = ({ isLogin = 
 
   const validateSignUpForm = (): boolean => {
     if (!signupData.firstName.trim()) {
-      setStatus({ visible: true, variant: 'error', title: 'First name required', message: 'Please enter your first name' });
+      setStatus({ visible: true, variant: 'error', title: t.firstNameRequired, message: t.enterFirstName });
       return false;
     }
     if (!signupData.lastName.trim()) {
-      setStatus({ visible: true, variant: 'error', title: 'Last name required', message: 'Please enter your last name' });
+      setStatus({ visible: true, variant: 'error', title: t.lastNameRequired, message: t.enterLastName });
       return false;
     }
     if (!signupData.phoneNumber.trim()) {
-      setStatus({ visible: true, variant: 'error', title: 'Phone number required', message: 'Please enter your phone number' });
+      setStatus({ visible: true, variant: 'error', title: t.phoneNumberRequired, message: t.enterPhoneNumber });
       return false;
     }
     if (!signupData.password.trim()) {
-      setStatus({ visible: true, variant: 'error', title: 'Password required', message: 'Please enter your password' });
+      setStatus({ visible: true, variant: 'error', title: t.passwordRequired, message: t.enterPassword });
       return false;
     }
     if (signupData.password.length < 6) {
-      setStatus({ visible: true, variant: 'error', title: 'Weak password', message: 'Password must be at least 6 characters' });
+      setStatus({ visible: true, variant: 'error', title: t.weakPassword, message: t.passwordMinLength });
       return false;
     }
     if (signupData.password !== signupData.confirmPassword) {
-      setStatus({ visible: true, variant: 'error', title: 'Passwords do not match', message: 'Please re-enter matching passwords' });
+      setStatus({ visible: true, variant: 'error', title: t.passwordsDoNotMatch, message: t.reenterPasswords });
       return false;
     }
     return true;
@@ -130,17 +260,17 @@ export const SignUpLoginScreen: React.FC<SignUpLoginScreenProps> = ({ isLogin = 
       const result = await login(fullPhoneNumber, password);
       if (result.success) {
         if (result.requiresOtp) {
-          setStatus({ visible: true, variant: 'success', title: 'OTP sent', message: 'Check your phone for the code' });
+          setStatus({ visible: true, variant: 'success', title: t.otpSent, message: t.checkPhoneForCode });
           setTimeout(() => (navigation as any).navigate(ScreenNames.OTP_VERIFICATION, { phoneNumber: fullPhoneNumber }), 1200);
         } else {
-          setStatus({ visible: true, variant: 'success', title: 'Welcome back', message: 'Login successful! Redirecting...' });
+          setStatus({ visible: true, variant: 'success', title: t.welcomeBackMsg, message: t.loginSuccessful });
           setTimeout(() => navigation.navigate(ScreenNames.MAIN as never), 1200);
         }
       } else {
-        setStatus({ visible: true, variant: 'error', title: 'Login failed', message: result.message || 'Invalid credentials' });
+        setStatus({ visible: true, variant: 'error', title: t.loginFailed, message: result.message || t.invalidCredentials });
       }
     } catch (error) {
-      setStatus({ visible: true, variant: 'error', title: 'Login error', message: 'An error occurred during login' });
+      setStatus({ visible: true, variant: 'error', title: t.loginError, message: t.loginErrorOccurred });
     } finally {
       setIsValidating(false);
     }
@@ -158,17 +288,17 @@ export const SignUpLoginScreen: React.FC<SignUpLoginScreenProps> = ({ isLogin = 
       const result = await register(fullName, fullPhoneNumber, signupData.password, signupData.confirmPassword, signupData.promoCode);
       if (result.success) {
         if (result.requiresOtp) {
-          setStatus({ visible: true, variant: 'success', title: 'OTP sent', message: 'Check your phone for the code' });
+          setStatus({ visible: true, variant: 'success', title: t.otpSent, message: t.checkPhoneForCode });
           setTimeout(() => (navigation as any).navigate(ScreenNames.OTP_VERIFICATION, { phoneNumber: fullPhoneNumber }), 1200);
         } else {
-          setStatus({ visible: true, variant: 'success', title: 'Account created', message: 'Redirecting...' });
+          setStatus({ visible: true, variant: 'success', title: t.accountCreated, message: t.redirecting });
           setTimeout(() => navigation.navigate(ScreenNames.MAIN as never), 1200);
         }
       } else {
-        setStatus({ visible: true, variant: 'error', title: 'Sign up failed', message: result.message || 'Please try again' });
+        setStatus({ visible: true, variant: 'error', title: t.signUpFailed, message: result.message || t.signUpTryAgain });
       }
     } catch (error) {
-      setStatus({ visible: true, variant: 'error', title: 'Sign up error', message: 'An error occurred during sign up' });
+      setStatus({ visible: true, variant: 'error', title: t.signUpError, message: t.signUpErrorOccurred });
     } finally {
       setIsValidating(false);
     }
@@ -199,7 +329,7 @@ export const SignUpLoginScreen: React.FC<SignUpLoginScreenProps> = ({ isLogin = 
 
   const renderLoadingOverlay = () => {
     if (isLoading || isValidating) {
-      const message = activeTab === 'login' ? 'Signing in...' : 'Signing up...';
+      const message = activeTab === 'login' ? t.signingIn : t.signingUp;
       return (
         <LoadingOverlay
           visible={true}
@@ -209,6 +339,48 @@ export const SignUpLoginScreen: React.FC<SignUpLoginScreenProps> = ({ isLogin = 
     }
     return null;
   };
+
+  const renderLanguageDropdown = () => (
+    <View style={styles.languageDropdownContainer}>
+      <TouchableOpacity
+        style={styles.languageButton}
+        onPress={() => setDropdownVisible(!dropdownVisible)}
+      >
+        <Globe size={16} color="#ffffff" />
+        <Text style={styles.languageButtonText}>
+          {currentLanguage === 'en' ? 'EN' : 'አማ'}
+        </Text>
+        <ChevronDown 
+          size={14} 
+          color="#ffffff" 
+          style={{ 
+            transform: [{ rotate: dropdownVisible ? '180deg' : '0deg' }] 
+          }} 
+        />
+      </TouchableOpacity>
+      
+      {dropdownVisible && (
+        <View style={styles.dropdown}>
+          <TouchableOpacity
+            style={[styles.dropdownItem, currentLanguage === 'en' && styles.dropdownItemActive]}
+            onPress={() => toggleLanguage('en')}
+          >
+            <Text style={[styles.dropdownItemText, currentLanguage === 'en' && styles.dropdownItemTextActive]}>
+              English
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.dropdownItem, currentLanguage === 'am' && styles.dropdownItemActive]}
+            onPress={() => toggleLanguage('am')}
+          >
+            <Text style={[styles.dropdownItemText, currentLanguage === 'am' && styles.dropdownItemTextActive]}>
+              አማርኛ
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -230,6 +402,11 @@ export const SignUpLoginScreen: React.FC<SignUpLoginScreenProps> = ({ isLogin = 
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
+        {/* Language Dropdown at the very top */}
+        {/* <View style={styles.topLanguageContainer}>
+          {renderLanguageDropdown()}
+        </View> */}
+
         <ScrollView 
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -246,12 +423,12 @@ export const SignUpLoginScreen: React.FC<SignUpLoginScreenProps> = ({ isLogin = 
             </View>
             <View style={styles.welcomeContainer}>
               <Text style={styles.title}>
-                {activeTab === 'login' ? 'Welcome Back' : 'Join World Bingo'}
+                {activeTab === 'login' ? t.welcomeBack : t.joinWorldBingo}
               </Text>
               <Text style={styles.subtitle}>
                 {activeTab === 'login' 
-                  ? 'Please sign in to your account'
-                  : 'Create your account and start playing'
+                  ? t.signInToAccount
+                  : t.createAccountStart
                 }
               </Text>
             </View>
@@ -263,23 +440,23 @@ export const SignUpLoginScreen: React.FC<SignUpLoginScreenProps> = ({ isLogin = 
               // Sign In Form
               <>
                 <PhoneField
-                  label="Phone Number*"
-                  placeholder="Enter your phone number"
+                  label={t.phoneNumber}
+                  placeholder={t.phoneNumberPlaceholder}
                   value={phoneNumber}
                   onChangeText={setPhoneNumber}
                   onChangeCountryCode={setCountryCode}
                 />
 
                 <AuthField
-                  label="Password*"
-                  placeholder="Enter your password"
+                  label={t.password}
+                  placeholder={t.passwordPlaceholder}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
                 />
 
                 <TouchableOpacity onPress={navigateToForgotPassword} style={styles.forgotPassword}>
-                  <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                  <Text style={styles.forgotPasswordText}>{t.forgotPassword}</Text>
                 </TouchableOpacity>
 
                 {/* Tab Buttons */}
@@ -305,7 +482,7 @@ export const SignUpLoginScreen: React.FC<SignUpLoginScreenProps> = ({ isLogin = 
                       <Text style={[
                         styles.tabButtonText,
                         activeTab === 'login' && styles.activeTabText
-                      ]}>Login</Text>
+                      ]}>{t.login}</Text>
                     </TouchableOpacity>
                   </Animated.View>
                   
@@ -330,7 +507,7 @@ export const SignUpLoginScreen: React.FC<SignUpLoginScreenProps> = ({ isLogin = 
                       <Text style={[
                         styles.tabButtonText,
                         activeTab === 'signup' && styles.activeTabText
-                      ]}>Sign Up</Text>
+                      ]}>{t.signUp}</Text>
                     </TouchableOpacity>
                   </Animated.View>
                 </View>
@@ -340,15 +517,15 @@ export const SignUpLoginScreen: React.FC<SignUpLoginScreenProps> = ({ isLogin = 
               <>
                 <View style={styles.row}>
                   <AuthField
-                    label="First Name*"
-                    placeholder="First name"
+                    label={t.firstName}
+                    placeholder={t.firstNamePlaceholder}
                     value={signupData.firstName}
                     onChangeText={(value) => updateSignupData('firstName', value)}
                     containerStyle={{ flex: 1, marginRight: 8 }}
                   />
                   <AuthField
-                    label="Last Name*"
-                    placeholder="Last name"
+                    label={t.lastName}
+                    placeholder={t.lastNamePlaceholder}
                     value={signupData.lastName}
                     onChangeText={(value) => updateSignupData('lastName', value)}
                     containerStyle={{ flex: 1, marginLeft: 8 }}
@@ -356,32 +533,32 @@ export const SignUpLoginScreen: React.FC<SignUpLoginScreenProps> = ({ isLogin = 
                 </View>
 
                 <PhoneField
-                  label="Phone Number*"
-                  placeholder="Enter your phone number"
+                  label={t.phoneNumber}
+                  placeholder={t.phoneNumberPlaceholder}
                   value={signupData.phoneNumber}
                   onChangeText={(value) => updateSignupData('phoneNumber', value)}
                   onChangeCountryCode={setCountryCode}
                 />
 
                 <AuthField
-                  label="Password*"
-                  placeholder="Enter your password"
+                  label={t.password}
+                  placeholder={t.passwordPlaceholder}
                   value={signupData.password}
                   onChangeText={(value) => updateSignupData('password', value)}
                   secureTextEntry
                 />
 
                 <AuthField
-                  label="Confirm Password*"
-                  placeholder="Confirm your password"
+                  label={t.confirmPassword}
+                  placeholder={t.confirmPasswordPlaceholder}
                   value={signupData.confirmPassword}
                   onChangeText={(value) => updateSignupData('confirmPassword', value)}
                   secureTextEntry
                 />
 
                 <AuthField
-                  label="Promo Code (Optional)"
-                  placeholder="Enter promo code"
+                  label={t.promoCode}
+                  placeholder={t.promoCodePlaceholder}
                   value={signupData.promoCode}
                   onChangeText={(value) => updateSignupData('promoCode', value)}
                 />
@@ -409,7 +586,7 @@ export const SignUpLoginScreen: React.FC<SignUpLoginScreenProps> = ({ isLogin = 
                       <Text style={[
                         styles.tabButtonText,
                         activeTab === 'login' && styles.activeTabText
-                      ]}>Login</Text>
+                      ]}>{t.login}</Text>
                     </TouchableOpacity>
                   </Animated.View>
                   
@@ -434,7 +611,7 @@ export const SignUpLoginScreen: React.FC<SignUpLoginScreenProps> = ({ isLogin = 
                       <Text style={[
                         styles.tabButtonText,
                         activeTab === 'signup' && styles.activeTabText
-                      ]}>Sign Up</Text>
+                      ]}>{t.signUp}</Text>
                     </TouchableOpacity>
                   </Animated.View>
                 </View>
@@ -445,7 +622,7 @@ export const SignUpLoginScreen: React.FC<SignUpLoginScreenProps> = ({ isLogin = 
 
             <View style={styles.orDivider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.orText}>OR</Text>
+              <Text style={styles.orText}>{t.or}</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -453,7 +630,7 @@ export const SignUpLoginScreen: React.FC<SignUpLoginScreenProps> = ({ isLogin = 
               style={styles.guestButton}
               onPress={handleGuestLogin}
             >
-              <Text style={styles.guestButtonText}>Continue as Guest</Text>
+              <Text style={styles.guestButtonText}>{t.continueAsGuest}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -478,11 +655,17 @@ const styles = StyleSheet.create({
   keyboardAvoid: {
     flex: 1,
   },
+  topLanguageContainer: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 40,
+    right: 24,
+    zIndex: 1000,
+  },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingTop: 80,
+    paddingTop: 120,
     paddingBottom: 40,
   },
   header: {
@@ -646,5 +829,60 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#ffffff',
+  },
+  // Language dropdown styles
+  languageDropdownContainer: {
+    position: 'relative',
+    zIndex: 1000,
+  },
+  languageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    gap: 6,
+  },
+  languageButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  dropdown: {
+    position: 'absolute',
+    top: '100%',
+    right: 0,
+    marginTop: 4,
+    backgroundColor: '#2a2a2a',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+    minWidth: 120,
+  },
+  dropdownItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  dropdownItemActive: {
+    backgroundColor: 'rgba(123,196,255,0.2)',
+  },
+  dropdownItemText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  dropdownItemTextActive: {
+    color: '#7BC4FF',
+    fontWeight: '600',
   },
 });

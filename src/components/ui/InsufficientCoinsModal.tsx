@@ -11,6 +11,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import { Phone, PhoneCall, X } from 'lucide-react-native';
 import { useTheme } from './ThemeProvider';
+import { handlePhoneCall } from '../../utils/dateUtils';
 
 const { width } = Dimensions.get('window');
 
@@ -32,10 +33,7 @@ export const InsufficientCoinsModal: React.FC<InsufficientCoinsModalProps> = ({
   const { theme } = useTheme();
   const shortageAmount = requiredAmount - currentBalance;
 
-  const handlePhoneCall = (phoneNumber: string) => {
-    const cleanNumber = phoneNumber.replace(/\s/g, '');
-    Linking.openURL(`tel:${cleanNumber}`);
-  };
+
 
   return (
     <Modal

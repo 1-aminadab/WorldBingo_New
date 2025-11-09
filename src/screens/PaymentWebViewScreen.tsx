@@ -14,7 +14,6 @@ import { useTheme } from '../components/ui/ThemeProvider';
 import { useAuthStore } from '../store/authStore';
 import { setTabBarVisibility, restoreTabBar } from '../utils/tabBarStyles';
 import { LoadingAnimation } from '../components/ui/LoadingAnimation';
-import StatusModal from '../components/ui/StatusModal';
 
 const PAYMENT_BASE_URL = 'https://payment.myworldbingo.com/';
 
@@ -33,7 +32,7 @@ export const PaymentWebViewScreen: React.FC = () => {
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
   const [currentUrl, setCurrentUrl] = useState('');
-  const [status, setStatus] = useState<{visible: boolean; variant: 'success'|'error'; title?: string; message?: string}>({visible:false, variant:'success'});
+  const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Get user ID from auth store
   const userId = useAuthStore((state) => state.getUserId());
@@ -49,8 +48,12 @@ export const PaymentWebViewScreen: React.FC = () => {
       return () => {
         // Show tab bar again when leaving
         restoreTabBar(navigation);
+        // Clean up loading timeout if it exists
+        if (loadingTimeout) {
+          clearTimeout(loadingTimeout);
+        }
       };
-    }, [navigation])
+    }, [navigation, loadingTimeout])
   );
 
   console.log('💳 Payment WebView Initialized ====================================');
@@ -82,42 +85,35 @@ export const PaymentWebViewScreen: React.FC = () => {
       switch (data.type) {
         case 'payment_success':
           console.log('✅ Payment Success:', data);
-          setStatus({
-            visible: true,
-            variant: 'success',
-            title: 'Payment Successful',
-            message: `Transaction completed successfully!\nAmount: ${data.amount || 'N/A'}`
+          // Navigate back to profile with success status
+          (navigation as any).navigate('ProfileMain', {
+            paymentStatus: 'success',
+            paymentMessage: 'Transaction completed successfully!',
+            amount: data.amount || null,
+            transactionId: data.transactionId || 'TXN_UNKNOWN'
           });
-          // Navigate back after modal closes
-          setTimeout(() => {
-            setStatus((s) => ({ ...s, visible: false }));
-            setTimeout(() => {
-              navigation.goBack();
-            }, 300);
-          }, 3000);
           break;
 
         case 'payment_failed':
           console.log('❌ Payment Failed:', data);
-          Alert.alert(
-            'Payment Failed',
-            data.message || 'Payment was not completed. Please try again.',
-            [{ text: 'OK' }]
-          );
+          // Navigate back to profile with failed status
+          (navigation as any).navigate('ProfileMain', {
+            paymentStatus: 'failed',
+            paymentMessage: data.message || 'Payment was not completed. Please try again.',
+            amount: data.amount || null,
+            transactionId: data.transactionId || null
+          });
           break;
 
         case 'payment_cancelled':
           console.log('🚫 Payment Cancelled:', data);
-          Alert.alert(
-            'Payment Cancelled',
-            'You have cancelled the payment.',
-            [
-              {
-                text: 'OK',
-                onPress: () => navigation.goBack(),
-              },
-            ]
-          );
+          // Navigate back to profile with cancelled status
+          (navigation as any).navigate('ProfileMain', {
+            paymentStatus: 'cancelled',
+            paymentMessage: 'Payment was cancelled',
+            amount: data.amount || null,
+            transactionId: data.transactionId || null
+          });
           break;
 
         case 'close_webview':
@@ -136,25 +132,56 @@ export const PaymentWebViewScreen: React.FC = () => {
   const handleLoadStart = () => {
     console.log('⏳ WebView loading started');
     setLoading(true);
+    
+    // Clear any existing timeout
+    if (loadingTimeout) {
+      clearTimeout(loadingTimeout);
+    }
+    
+    // Set a timeout to handle cases where the page takes too long to load
+    const timeout = setTimeout(() => {
+      console.log('⏰ Loading timeout reached');
+      setLoading(false);
+      
+      // Navigate back to profile with timeout error
+      (navigation as any).navigate('ProfileMain', {
+        paymentStatus: 'failed',
+        paymentMessage: 'Payment page took too long to load. Please check your internet connection and try again.',
+        amount: null,
+        transactionId: null
+      });
+    }, 30000); // 30 second timeout
+    
+    setLoadingTimeout(timeout);
   };
 
   const handleLoadEnd = () => {
     console.log('✅ WebView loading completed');
     setLoading(false);
+    
+    // Clear the loading timeout since loading completed successfully
+    if (loadingTimeout) {
+      clearTimeout(loadingTimeout);
+      setLoadingTimeout(null);
+    }
   };
 
   const handleError = (syntheticEvent: any) => {
     const { nativeEvent } = syntheticEvent;
     console.error('❌ WebView error:', nativeEvent);
     
-    Alert.alert(
-      'Error Loading Page',
-      'Failed to load the payment page. Please check your internet connection and try again.',
-      [
-        { text: 'Retry', onPress: () => webViewRef.current?.reload() },
-        { text: 'Cancel', onPress: () => navigation.goBack() },
-      ]
-    );
+    // Stop loading immediately when error occurs
+    setLoading(false);
+    
+    // Navigate back to profile with error parameters
+    setTimeout(() => {
+      (navigation as any).navigate('ProfileMain', {
+        paymentStatus: 'failed',
+        paymentMessage: 'Failed to load the payment page. Please check your internet connection and try again.',
+        amount: null,
+        transactionId: null
+      });
+    }, 100);
   };
 
   const handleGoBack = () => {
@@ -221,23 +248,6 @@ export const PaymentWebViewScreen: React.FC = () => {
           };
           true; // Required for injection
         `}
-      />
-      
-      {/* StatusModal for payment feedback with phone support */}
-      <StatusModal 
-        visible={status.visible} 
-        variant={status.variant} 
-        title={status.title} 
-        message={status.message} 
-        showPhoneSupport={true}
-        onDismiss={() => {
-          setStatus((s) => ({ ...s, visible: false }));
-          if (status.variant === 'success') {
-            setTimeout(() => {
-              navigation.goBack();
-            }, 300);
-          }
-        }}
       />
     </SafeAreaView>
   );

@@ -95,6 +95,8 @@ export const ProfileScreen: React.FC = () => {
     title?: string;
     message?: string;
     showPhoneSupport?: boolean;
+    showTryAgain?: boolean;
+    onTryAgain?: () => void;
   }>({
     visible: false,
     variant: 'success',
@@ -134,8 +136,15 @@ export const ProfileScreen: React.FC = () => {
   const [editProfileErrors, setEditProfileErrors] = useState<{[key: string]: string}>({});
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
-  const showStatusModal = (variant: 'success' | 'error', title?: string, message?: string, showPhoneSupport?: boolean) => {
-    setStatusModal({ visible: true, variant, title, message, showPhoneSupport });
+  const showStatusModal = (
+    variant: 'success' | 'error', 
+    title?: string, 
+    message?: string, 
+    showPhoneSupport?: boolean, 
+    showTryAgain?: boolean, 
+    onTryAgain?: () => void
+  ) => {
+    setStatusModal({ visible: true, variant, title, message, showPhoneSupport, showTryAgain, onTryAgain });
   };
 
   const hideStatusModal = () => {
@@ -155,8 +164,8 @@ export const ProfileScreen: React.FC = () => {
             showStatusModal(
               'success',
               'Payment Successful! 🎉',
-              paymentMessage || `Your payment has been processed successfully.${amount ? `\n\nAmount: ${amount} coins` : ''}${transactionId ? `\nTransaction ID: ${transactionId}` : ''}`,
-              false // No phone support needed for successful payments
+              paymentMessage || `Payment successful! Amount: ${amount ? `${amount}` : 'N/A'} Transaction ID: ${transactionId || 'TXN_UNKNOWN'}`,
+              true // Show phone support for successful payments
             );
           } else if (paymentStatus === 'cancelled') {
             showStatusModal(
@@ -166,12 +175,33 @@ export const ProfileScreen: React.FC = () => {
               true // Show phone support for payment issues
             );
           } else if (paymentStatus === 'failed') {
-            showStatusModal(
-              'error',
-              'Payment Failed',
-              paymentMessage || 'Payment could not be processed. Please try again.',
-              true // Show phone support for payment failures
+            // Check if it's a connection error
+            const isConnectionError = paymentMessage && (
+              paymentMessage.includes('internet connection') ||
+              paymentMessage.includes('Failed to load') ||
+              paymentMessage.includes('took too long to load')
             );
+            
+            if (isConnectionError) {
+              showStatusModal(
+                'error',
+                'Connection Error',
+                'Please check your internet connection and try again.',
+                false, // No phone support for connection errors
+                true,  // Show try again button
+                () => {
+                  hideStatusModal();
+                  handleCoinPurchase(); // Try again by reopening payment page
+                }
+              );
+            } else {
+              showStatusModal(
+                'error',
+                'Payment Failed',
+                paymentMessage || 'Payment could not be processed. Please try again.',
+                true // Show phone support for payment failures
+              );
+            }
           }
         }, 300);
 
@@ -1237,6 +1267,8 @@ export const ProfileScreen: React.FC = () => {
         title={statusModal.title}
         message={statusModal.message}
         showPhoneSupport={statusModal.showPhoneSupport}
+        showTryAgain={statusModal.showTryAgain}
+        onTryAgain={statusModal.onTryAgain}
         onDismiss={hideStatusModal}
       />
     </View>

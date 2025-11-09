@@ -14,6 +14,8 @@ interface StatusModalProps {
   onDismiss?: () => void;
   autoHideMs?: number;
   showPhoneSupport?: boolean; // Only show for web/payment related issues
+  showTryAgain?: boolean; // Show try again button for connection errors
+  onTryAgain?: () => void; // Try again callback
 }
 
 export const StatusModal: React.FC<StatusModalProps> = ({
@@ -24,11 +26,12 @@ export const StatusModal: React.FC<StatusModalProps> = ({
   onDismiss,
   autoHideMs,
   showPhoneSupport = false,
+  showTryAgain = false,
+  onTryAgain,
 }) => {
   const scale = useRef(new Animated.Value(0.9)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   const { theme } = useTheme();
-
   useEffect(() => {
     if (visible) {
       Animated.parallel([
@@ -66,19 +69,19 @@ export const StatusModal: React.FC<StatusModalProps> = ({
           {!!message && (
             <Text style={styles.message}>{message}</Text>
           )}
-          
+
           {/* Only show phone support for web/payment related issues */}
           {showPhoneSupport && (
             <>
               <View style={{width:'100%', height:1, backgroundColor:'rgba(255, 255, 255, 0.23)', marginVertical:10}}/>
               <View style={{marginBottom: 10, gap:10, alignItems:'center'}}>
                 <Text style={{ color: 'white' }}>
-                  እርዳታ ከፈለጉ በዚ ስልክ ይደውሉ
+                 {isSuccess ? 'በ 20 ደቂቃ ባለው ወስጥ ሪፍራሸ ኪያረጉ ካልገባ በዚ ስልክ ያደውሉ' : 'እርዳታ ከፈለጉ በዚ ስልክ ይደውሉ'}
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
                   <TouchableOpacity
                     onPress={() => handlePhoneCall('0977791828')}
-                    style={[styles.phoneButton, { borderColor: theme.colors.primary }]}
+                    style={[styles.phoneButton]}
                   >
                     <Text style={[styles.phoneText, { color: theme.colors.primary, gap:10 }]}>
                       <Phone color={'white'} size={13}/> {" "}0977791828
@@ -87,7 +90,7 @@ export const StatusModal: React.FC<StatusModalProps> = ({
                   <Text style={{ color: 'white' }}>|</Text>
                   <TouchableOpacity
                     onPress={() => handlePhoneCall('0940883535')}
-                    style={[styles.phoneButton, { borderColor: theme.colors.primary }]}
+                    style={[styles.phoneButton]}
                   >
                     <Text style={[styles.phoneText, { color: theme.colors.primary }]}>
                     <Phone color={'white'} size={13}/> {" "}0940883535
@@ -97,12 +100,23 @@ export const StatusModal: React.FC<StatusModalProps> = ({
               </View>
             </>
           )}
-          {onDismiss && (
+          {/* Try Again and Close buttons for connection errors */}
+          {showTryAgain && onTryAgain && onDismiss ? (
+            <View style={styles.buttonRow}>
+              <TouchableOpacity style={styles.tryAgainBtn} onPress={onTryAgain}>
+                <Text style={styles.tryAgainText}>Try Again</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.closeBtn} onPress={onDismiss}>
+                <X size={18} color="#6c757d" />
+                <Text style={styles.closeText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          ) : onDismiss ? (
             <TouchableOpacity style={styles.closeBtn} onPress={onDismiss}>
               <X size={18} color="#6c757d" />
               <Text style={styles.closeText}>Close</Text>
             </TouchableOpacity>
-          )}
+          ) : null}
         </Animated.View>
       </View>
     </Modal>
@@ -173,7 +187,6 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   phoneButton: {
-    borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -185,6 +198,27 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 4,
+  },
+  tryAgainBtn: {
+    flex: 1,
+    backgroundColor: '#7BC4FF',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tryAgainText: {
+    color: '#1a1a1a',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });
 

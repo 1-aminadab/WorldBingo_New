@@ -157,14 +157,8 @@ const UpdateModal: React.FC<UpdateModalProps> = ({ onClose }) => {
     ]).start();
   };
 
-  // Hide modal with animations - prevent hiding for forced updates
+  // Hide modal with animations
   const hideModalWithAnimation = () => {
-    // Never hide forced update modal
-    if (updateInfo?.forced) {
-      console.log('🔒 [MODAL] Cannot hide forced update modal');
-      return;
-    }
-    
     Animated.parallel([
       Animated.timing(overlayOpacity, {
         toValue: 0,
@@ -193,33 +187,6 @@ const UpdateModal: React.FC<UpdateModalProps> = ({ onClose }) => {
     // Check for updates when component mounts (app launch)
     checkForUpdates();
   }, []);
-
-  // Check if app was actually updated (for forced updates)
-  useEffect(() => {
-    if (updateInfo?.forced && showModal) {
-      const checkIfUpdated = () => {
-        const currentAppVersion = getAppVersion();
-        console.log('🔍 [VERSION CHECK] Current app version:', currentAppVersion);
-        console.log('🔍 [VERSION CHECK] Required version:', updateInfo.version);
-        
-        // Only hide modal if the current version is greater than or equal to required version
-        if (!isUpdateNeeded(updateInfo.version)) {
-          console.log('✅ [VERSION CHECK] App has been updated successfully - allowing modal to close');
-          setShowModal(false);
-          completeUpdate();
-          clearVersionCache();
-        } else {
-          console.log('⏳ [VERSION CHECK] App still needs update - keeping modal open');
-        }
-      };
-
-      // Check immediately and then every 2 seconds
-      checkIfUpdated();
-      const interval = setInterval(checkIfUpdated, 2000);
-      
-      return () => clearInterval(interval);
-    }
-  }, [updateInfo, showModal, completeUpdate, clearVersionCache]);
 
   const [downloadedFilePath, setDownloadedFilePath] = useState<string>('');
 
@@ -478,33 +445,22 @@ const UpdateModal: React.FC<UpdateModalProps> = ({ onClose }) => {
       console.log('📱 [INSTALL] Attempting direct installation...');
       await installApk(downloadedFilePath);
       
-      // For forced updates, NEVER close the modal - only close for non-forced updates
-      if (!updateInfo?.forced) {
-        setTimeout(() => {
-          hideModalWithAnimation();
-          completeUpdate(); // Mark update as completed to hide floating button
-          
-          // Clear any cached version data to ensure fresh version check on next app launch
-          clearVersionCache();
-          console.log('✅ [INSTALL] Installation triggered successfully');
-          console.log('✅ [INSTALL] Version cache cleared for fresh detection on restart');
-          console.log('✅ [INSTALL] Update will be effective after app restart');
-          
-          onClose?.();
-        }, 500);
-      } else {
-        console.log('🔒 [INSTALL] Forced update - keeping modal open until app restarts');
-        // For forced updates, the modal will only close when the app restarts with the new version
-        // The UpdateGuard will check the version and hide the modal only if version is updated
-      }
+      // Close modal after triggering install and mark update as completed
+      setTimeout(() => {
+        hideModalWithAnimation();
+        completeUpdate(); // Mark update as completed to hide floating button
+        
+        // Clear any cached version data to ensure fresh version check on next app launch
+        clearVersionCache();
+        console.log('✅ [INSTALL] Installation triggered successfully');
+        console.log('✅ [INSTALL] Version cache cleared for fresh detection on restart');
+        console.log('✅ [INSTALL] Update will be effective after app restart');
+        
+        onClose?.();
+      }, 500);
 
     } catch (error: any) {
       console.error('❌ [INSTALL] Installation error:', error);
-      
-      // For forced updates, NEVER close the modal even on error
-      if (updateInfo?.forced) {
-        console.log('🔒 [INSTALL] Forced update installation failed - keeping modal open');
-      }
       
       // Check for common installation issues
       const errorMessage = error.message || 'Unknown error';
@@ -517,9 +473,7 @@ const UpdateModal: React.FC<UpdateModalProps> = ({ onClose }) => {
         // Package conflict or version incompatibility issue
         Alert.alert(
           'Installation Conflict',
-          updateInfo?.forced 
-            ? 'Cannot install because of a version or compatibility conflict. You must resolve this to continue using the app.\n\nThis usually happens when:\n• App was installed from a different source\n• Different signing keys are used\n• Version incompatibility\n\nSolutions:'
-            : 'Cannot install because of a version or compatibility conflict.\n\nThis usually happens when:\n• App was installed from a different source\n• Different signing keys are used\n• Version incompatibility\n\nSolutions:',
+          'Cannot install because of a version or compatibility conflict.\n\nThis usually happens when:\n• App was installed from a different source\n• Different signing keys are used\n• Version incompatibility\n\nSolutions:',
           [
             {
               text: 'Uninstall & Reinstall',
@@ -529,31 +483,27 @@ const UpdateModal: React.FC<UpdateModalProps> = ({ onClose }) => {
               text: 'Manual Install Guide',
               onPress: () => showManualInstallInstructions(),
             },
-            ...(updateInfo?.forced ? [] : [{ text: 'Cancel', style: 'cancel' as const }])
+            { text: 'Cancel', style: 'cancel' }
           ]
         );
       } else if (errorMessage.includes('permission')) {
         // Permission issue
         Alert.alert(
           'Permission Required',
-          updateInfo?.forced 
-            ? 'Permission to install apps is required to continue using the app. Please grant permission and try again.'
-            : 'Please grant permission to install apps from unknown sources, then try again.',
+          'Please grant permission to install apps from unknown sources, then try again.',
           [{ text: 'OK' }]
         );
       } else {
         // Generic installation error
         Alert.alert(
           'Installation Failed',
-          updateInfo?.forced
-            ? `Critical update installation failed. You must install this update to continue using the app.\n\nError: ${errorMessage}\n\nPlease try the manual installation method.`
-            : `Could not install the update automatically.\n\nError: ${errorMessage}\n\nYou can install manually using the downloaded APK file.`,
+          `Could not install the update automatically.\n\nError: ${errorMessage}\n\nYou can install manually using the downloaded APK file.`,
           [
             {
               text: 'Manual Install Guide',
               onPress: () => showManualInstallInstructions(),
             },
-            ...(updateInfo?.forced ? [] : [{ text: 'OK' }])
+            { text: 'OK' }
           ]
         );
       }
@@ -620,68 +570,6 @@ const UpdateModal: React.FC<UpdateModalProps> = ({ onClose }) => {
     // For forced updates, do nothing - modal cannot be closed
   };
 
-  // Helper function to view download logs (for debugging)
-  const viewDownloadLogs = async () => {
-    try {
-      const logsResponse = await fileApiService.getDownloadLogs({
-        limit: 10, // Get last 10 downloads
-      });
-      
-      if (logsResponse.success && logsResponse.data?.logs) {
-        console.log('📋 Recent download logs:', logsResponse.data.logs);
-        console.log('📊 Download statistics:', fileApiService.getDownloadStatistics());
-        
-        // You could show this in a modal or export it
-        Alert.alert(
-          'Download Logs',
-          `Found ${logsResponse.data.logs.length} recent downloads. Check console for details.`,
-          [{ text: 'OK' }]
-        );
-      }
-    } catch (error) {
-      console.error('Failed to get download logs:', error);
-    }
-  };
-
-  // Test function for APK download (for development/testing)
-  const testApkDownload = async () => {
-    const testUrl = 'https://storage.googleapis.com/bingo-app-console/app-release.apk';
-    
-    try {
-      console.log('🧪 Testing APK download with logging...');
-      
-      const downloadResponse = await fileApiService.downloadFile({
-        url: testUrl,
-        filename: 'test-download.apk',
-        onProgress: (progress: number, downloadedBytes: number, totalBytes: number) => {
-          console.log(`🧪 Test progress: ${progress.toFixed(1)}% (${(downloadedBytes / (1024 * 1024)).toFixed(2)}MB / ${(totalBytes / (1024 * 1024)).toFixed(2)}MB)`);
-        },
-      });
-      
-      if (downloadResponse.success) {
-        console.log('✅ Test download successful:', downloadResponse);
-        
-        // Show download statistics
-        const stats = fileApiService.getDownloadStatistics();
-        console.log('📊 Download statistics after test:', stats);
-        
-        Alert.alert(
-          'Test Successful',
-          `APK download test completed successfully!\n\nFile size: ${(downloadResponse.data?.file?.size || 0 / (1024 * 1024)).toFixed(2)} MB\n\nCheck console for detailed logs.`,
-          [{ text: 'OK' }]
-        );
-      } else {
-        throw new Error(downloadResponse.message || 'Test download failed');
-      }
-    } catch (error: any) {
-      console.error('❌ Test download failed:', error);
-      Alert.alert(
-        'Test Failed',
-        `APK download test failed: ${error.message}`,
-        [{ text: 'OK' }]
-      );
-    }
-  };
 
   if (!showModal || !updateInfo) return null;
 
