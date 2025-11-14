@@ -27,7 +27,15 @@ import { audioService } from '../../services/audioService';
 import { LoadingOverlay } from '../../components/ui/LoadingOverlay';
 import { GameLoadingOverlay } from '../../components/ui/GameLoadingOverlay';
 import { ReportStorageManager } from '../../utils/reportStorage';
+import { useReportSyncStore } from '../../sync/reportSyncStore';
 import { ScreenNames } from '../../constants/ScreenNames';
+
+// Utility function to generate unique report ID
+const generateReportId = () => {
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 1000);
+  return `RPT_${timestamp}_${random}`;
+};
 
 // Helper function to get pattern display name
 const getPatternDisplayName = (category: any, pattern: any, linesTarget?: number) => {
@@ -53,11 +61,13 @@ const getPatternDisplayName = (category: any, pattern: any, linesTarget?: number
 };
 
 export const SinglePlayerGameScreen: React.FC = () => {
+  console.log('🎮 SINGLE PLAYER GAME SCREEN MOUNTED');
   const navigation = useNavigation();
   const route = useRoute();
   const { theme } = useGameTheme();
   const { user } = useAuthStore();
-  const { createInitialGameReport, updateGameReportOnEnd } = useGameReportStore();
+  const { addReport } = useReportSyncStore();
+  // Remove all backend game report sync functionality
 
   // Hide tab bar when this screen is focused
   useFocusEffect(
@@ -174,18 +184,9 @@ export const SinglePlayerGameScreen: React.FC = () => {
       const totalCollectedAmount = effectiveMedebAmount * totalCardsSold;
       const patternDisplayName = getPatternDisplayName(patternCategory, selectedPattern, classicLinesTarget);
       const effectiveRtpPercentage = totalCardsSold <= 4 ? 100 : (rtpPercentage ?? 60);
+      const payout = totalCollectedAmount * effectiveRtpPercentage / 100; // Calculate payout at start
       
-      console.log('🎮 Creating COMPLETE SinglePlayer game report at START using ReportStorageManager');
       const userId = useAuthStore.getState().getUserId();
-      console.log('🎮 Complete SinglePlayer game START report data:', {
-        cardsSold: totalCardsSold,
-        collectedAmount: totalCollectedAmount,
-        rtpPercentage: effectiveRtpPercentage,
-        pattern: patternDisplayName,
-        gameStatus: 'started',
-        gameMode: 'single_player',
-        userId: userId || undefined
-      });
       
       // Create complete report with all necessary data at start
       const reportId = await ReportStorageManager.addGameEntry({
@@ -201,9 +202,21 @@ export const SinglePlayerGameScreen: React.FC = () => {
         gameMode: 'single_player'
       });
       
-      console.log('✅ COMPLETE SinglePlayer game START report created successfully with ID:', reportId);
       setGameReportId(reportId); // Store the ID for later updates
       setGameStartReportCreated(true);
+
+      // Create sync report immediately at game start
+      console.log('🎮 SINGLE PLAYER GAME STARTED - Creating sync report at start');
+      addReport({
+        id: generateReportId(),
+        numberOfGames: 1,
+        numberOfCards: totalCardsSold,
+        totalPayin: totalCollectedAmount,
+        totalPayout: payout,
+        balance: totalCollectedAmount - payout
+      });
+
+      // Backend sync removed - only local reports now
     } catch (error) {
       console.error('❌ Error creating complete SinglePlayer game start report:', error);
     }
@@ -211,11 +224,9 @@ export const SinglePlayerGameScreen: React.FC = () => {
 
   // Pause background music when entering game, resume when leaving
   useEffect(() => {
-    console.log('🎵 SinglePlayerGameScreen: Pausing background music');
     audioService.pauseMusic();
     
     return () => {
-      console.log('🎵 SinglePlayerGameScreen: Resuming background music');
       audioService.resumeMusic();
       // Clear audio queue when leaving the screen
       audioQueue.clear();
@@ -226,7 +237,6 @@ export const SinglePlayerGameScreen: React.FC = () => {
   useEffect(() => {
     // Update audio manager whenever selected voice changes
     if (selectedVoice) {
-      console.log('Updating audioManager with new voice:', selectedVoice);
       audioManager.setVoice(selectedVoice);
     }
   }, [selectedVoice]);
@@ -363,13 +373,14 @@ export const SinglePlayerGameScreen: React.FC = () => {
     const patternDisplayName = getPatternDisplayName(patternCategory, selectedPattern, classicLinesTarget);
     
     // Only update existing report if it hasn't been updated yet
+    console.log('🏁 SINGLE PLAYER GAME ENDED - Processing report...');
+    
     if (!reportsCreated) {
       if (gameReportId) {
       try {
         const gameId = `game_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         // Apply RTP only if more than 4 cards/players, otherwise 100% payout
         const effectiveRtpPercentage = totalCardsSold <= 4 ? 100 : (rtpPercentage ?? 60);
-        console.log(`🎰 RTP Logic: ${totalCardsSold} cards/players - ${totalCardsSold <= 4 ? '100% payout (4 or less)' : `${effectiveRtpPercentage}% RTP applied (more than 4)`}`);
         const payout = bingoFound ? (totalCollectedAmount * effectiveRtpPercentage / 100) : 0;
         
         // Update existing game report with completion data
@@ -394,6 +405,10 @@ export const SinglePlayerGameScreen: React.FC = () => {
         
         console.log('✅ Existing SinglePlayer game report UPDATED with completion data successfully');
 
+        // Sync report already created at game start
+
+        // Backend sync removed - only local reports now
+
         // Record payout transaction if user won and there's a payout
         if (user?.id && payout > 0) {
           try {
@@ -401,7 +416,6 @@ export const SinglePlayerGameScreen: React.FC = () => {
             if (!userId) {
               throw new Error('No user ID available');
             }
-            console.log('💳 Recording game payout transaction for user:', userId);
             
             // Only create payout transaction (payin was already created at game start)
             await transactionApiService.createTransaction({
@@ -412,9 +426,8 @@ export const SinglePlayerGameScreen: React.FC = () => {
               description: `Game payout - won ${payout.toFixed(0)} Birr (${patternDisplayName})`
             });
             
-            console.log('✅ Game payout transaction recorded successfully');
           } catch (transactionError) {
-            console.error('❌ Error recording game payout transaction:', transactionError);
+            // Transaction error handled silently
           }
         }
 
@@ -424,7 +437,8 @@ export const SinglePlayerGameScreen: React.FC = () => {
         console.error('❌ Error saving game report to backend:', error);
       }
       } else {
-        console.warn('⚠️ No gameReportId found, cannot update report - report was not created at start');
+        console.error('❌ NO GAME REPORT ID IN SINGLE PLAYER - Report will not be created!');
+        console.log('🚨 This means createGameStartReport() was not called or failed in single player mode');
       }
     } else {
       console.log('📊 Reports already created, skipping report update');
@@ -526,12 +540,9 @@ export const SinglePlayerGameScreen: React.FC = () => {
       // Play winner audio sequence after a short delay to avoid conflict
       setTimeout(() => {
         if (selectedVoice) {
-          console.log('Playing winner audio for cartela:', cardIndex, 'with voice:', selectedVoice);
           // Stop any ongoing audio first
           audioManager.stopAllSounds();
           NumberAnnouncementService.announceWinnerCartela(cardIndex, selectedVoice);
-        } else {
-          console.log('No selectedVoice available for winner audio');
         }
       }, 1000); // Wait 1 second to let current number announcement finish
       
@@ -636,7 +647,6 @@ export const SinglePlayerGameScreen: React.FC = () => {
         // Play winner audio after delay to avoid conflicts
         setTimeout(() => {
           if (selectedVoice) {
-            console.log('Auto-detected bingo for card:', cardNumber, 'with voice:', selectedVoice);
             // Stop any ongoing audio first
             audioManager.stopAllSounds();
             NumberAnnouncementService.announceWinnerCartela(cardNumber, selectedVoice);

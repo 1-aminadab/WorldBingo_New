@@ -30,9 +30,17 @@ import { audioService } from '../../services/audioService';
 import { LoadingOverlay } from '../../components/ui/LoadingOverlay';
 import { GameLoadingOverlay } from '../../components/ui/GameLoadingOverlay';
 import { ReportStorageManager } from '../../utils/reportStorage';
+import { useReportSyncStore } from '../../sync/reportSyncStore';
 import { ScreenNames } from '../../constants/ScreenNames';
 
 const { height } = Dimensions.get('window');
+
+// Utility function to generate unique report ID
+const generateReportId = () => {
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 1000);
+  return `RPT_${timestamp}_${random}`;
+};
 
 // Helper function to get pattern display name
 const getPatternDisplayName = (category: any, pattern: any, linesTarget?: number) => {
@@ -58,11 +66,13 @@ const getPatternDisplayName = (category: any, pattern: any, linesTarget?: number
 };
 
 export const GameScreen: React.FC = () => {
+  console.log('🎮 GAME SCREEN MOUNTED');
   const navigation = useNavigation();
   const route = useRoute();
   const { theme } = useGameTheme();
-  const { updateGameReportOnEnd } = useGameReportStore();
+  // Remove all backend game report sync functionality
   const { user } = useAuthStore();
+  const { addReport } = useReportSyncStore();
 
   // Hide tab bar when this screen is focused
   useFocusEffect(
@@ -175,22 +185,13 @@ export const GameScreen: React.FC = () => {
       setGameCustomCardTypes(params.customCardTypes);
     }
     
-    console.log('GameScreen received params:', {
-      selectedCardNumbers: params?.selectedCardNumbers,
-      medebAmount: params?.medebAmount,
-      derashValue: params?.derashValue,
-      selectedCardTypeName: params?.selectedCardTypeName,
-      customCardTypes: params?.customCardTypes?.length || 0,
-    });
   }, [route.params]);
 
   // Pause background music when entering game, resume when leaving
   useEffect(() => {
-    console.log('🎵 GameScreen: Pausing background music');
     audioService.pauseMusic();
     
     return () => {
-      console.log('🎵 GameScreen: Resuming background music');
       audioService.resumeMusic();
       // Clear audio queue when leaving the screen
       audioQueue.clear();
@@ -201,7 +202,6 @@ export const GameScreen: React.FC = () => {
   useEffect(() => {
     // Update audio manager whenever selected voice changes
     if (selectedVoice) {
-      console.log('Updating audioManager with new voice:', selectedVoice);
       audioManager.setVoice(selectedVoice);
     }
   }, [selectedVoice]);
@@ -242,18 +242,9 @@ export const GameScreen: React.FC = () => {
       const totalCollectedAmount = effectiveMedebAmount * totalCardsSold;
       const patternDisplayName = getPatternDisplayName(patternCategory, selectedPattern, classicLinesTarget);
       const effectiveRtpPercentage = totalCardsSold <= 4 ? 100 : (rtpPercentage ?? 60);
+      const payout = totalCollectedAmount * effectiveRtpPercentage / 100; // Calculate payout at start
       
-      console.log('🎮 Creating COMPLETE game report at START using ReportStorageManager');
       const userId = useAuthStore.getState().getUserId();
-      console.log('🎮 Complete game START report data:', {
-        cardsSold: totalCardsSold,
-        collectedAmount: totalCollectedAmount,
-        rtpPercentage: effectiveRtpPercentage,
-        pattern: patternDisplayName,
-        gameStatus: 'started',
-        gameMode: 'multi_player',
-        userId: userId || undefined
-      });
       
       // Create complete report with all necessary data at start
       const reportId = await ReportStorageManager.addGameEntry({
@@ -269,9 +260,21 @@ export const GameScreen: React.FC = () => {
         gameMode: 'multi_player'
       });
       
-      console.log('✅ COMPLETE game START report created successfully with ID:', reportId);
       setGameReportId(reportId); // Store the ID for later updates
       setGameStartReportCreated(true);
+
+      // Create sync report immediately at game start
+      console.log('🎮 GAME STARTED - Creating sync report at start');
+      addReport({
+        id: generateReportId(),
+        numberOfGames: 1,
+        numberOfCards: totalCardsSold,
+        totalPayin: totalCollectedAmount,
+        totalPayout: payout,
+        balance: totalCollectedAmount - payout
+      });
+
+      // Backend sync removed - only local reports now
     } catch (error) {
       console.error('❌ Error creating complete game start report:', error);
     }
@@ -365,7 +368,6 @@ export const GameScreen: React.FC = () => {
       setCurrent(drawn);
       
         // Queue audio for the drawn number to prevent overlap
-        console.log('About to queue audio for number:', drawn.number, 'with selectedVoice:', selectedVoice);
         if (selectedVoice) {
           audioManager.setVoice(selectedVoice);
         }
@@ -406,13 +408,14 @@ export const GameScreen: React.FC = () => {
     const patternDisplayName = getPatternDisplayName(patternCategory, selectedPattern, classicLinesTarget);
     
     // Update the existing start report with completion data (only if not already done and report exists)
+    console.log('🏁 GAME ENDED - Processing report...');
+    
     if (!reportsCreated) {
       if (gameReportId) {
       try {
         const gameId = `game_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         // Apply RTP only if more than 4 cards/players, otherwise 100% payout
         const effectiveRtpPercentage = totalCardsSold <= 4 ? 100 : (rtpPercentage ?? 60);
-        console.log(`🎰 RTP Logic: ${totalCardsSold} cards/players - ${totalCardsSold <= 4 ? '100% payout (4 or less)' : `${effectiveRtpPercentage}% RTP applied (more than 4)`}`);
         const payout = bingoFound ? (totalCollectedAmount * effectiveRtpPercentage / 100) : 0;
         
         // Update the existing game report with completion data
@@ -436,6 +439,18 @@ export const GameScreen: React.FC = () => {
         
         console.log('✅ Existing game report UPDATED with completion data successfully');
 
+        // Add report to sync store for backend synchronization
+        addReport({
+          id: generateReportId(),
+          numberOfGames: 1,
+          numberOfCards: totalCardsSold,
+          totalPayin: totalCollectedAmount,
+          totalPayout: payout,
+          balance: totalCollectedAmount - payout
+        });
+
+        // Backend sync removed - only local reports now
+
         // Record payout transaction if user won and there's a payout
         if (user?.id && payout > 0) {
           try {
@@ -443,7 +458,6 @@ export const GameScreen: React.FC = () => {
             if (!userId) {
               throw new Error('No user ID available');
             }
-            console.log('💳 Recording game payout transaction for user:', userId);
             
             // Only create payout transaction (payin was already created at game start)
             await transactionApiService.createTransaction({
@@ -454,9 +468,7 @@ export const GameScreen: React.FC = () => {
               description: `Game payout - won ${payout.toFixed(0)} Birr (${patternDisplayName})`
             });
             
-            console.log('✅ Game payout transaction recorded successfully');
           } catch (transactionError) {
-            console.error('❌ Error recording game payout transaction:', transactionError);
           }
         }
 
@@ -466,7 +478,8 @@ export const GameScreen: React.FC = () => {
         console.error('❌ Error saving game report to backend:', error);
       }
       } else {
-        console.warn('⚠️ No gameReportId found, cannot update report - report was not created at start');
+        console.error('❌ NO GAME REPORT ID - Report will not be created!');
+        console.log('🚨 This means createGameStartReport() was not called or failed');
       }
     } else {
       console.log('📊 Reports already created, skipping report update');
@@ -648,11 +661,9 @@ export const GameScreen: React.FC = () => {
       setCheckMessage('Bingo! This card meets the winning pattern.');
       
       // Play winner audio sequence
-      if (true) {
-        console.log('Playing winner audio for cartela:', cardIndex, 'with voice:', selectedVoice);
+      if (selectedVoice) {
         NumberAnnouncementService.announceWinnerCartela(cardIndex, selectedVoice);
       } else {
-        console.log('No selectedVoice available for winner audio');
       }
       
       // Handle bingo celebration
@@ -669,10 +680,8 @@ export const GameScreen: React.FC = () => {
       
       // Play no-winner audio
       if (true) {
-        console.log('Playing no-winner audio with voice:', selectedVoice);
         NumberAnnouncementService.announceNoWinner(selectedVoice);
       } else {
-        console.log('No selectedVoice available for no-winner audio');
       }
     }
   };
@@ -754,21 +763,17 @@ export const GameScreen: React.FC = () => {
   const playPauseSound = () => {
     if (!selectedVoice) return;
     
-    const fileName = getPauseFileName(selectedVoice.language, selectedVoice.gender);
+    const fileName = getPauseFileName(selectedVoice.id);
     
-    console.log('Playing pause sound:', fileName);
     
     const sound = new Sound(fileName, Sound.MAIN_BUNDLE, (error) => {
       if (error) {
-        console.log('Failed to load pause sound:', fileName, 'Error:', error);
         return;
       }
       sound.setVolume(1.0);
       sound.play((success) => {
         if (success) {
-          console.log('Successfully played pause sound');
         } else {
-          console.log('Failed to play pause sound');
         }
         sound.release();
       });
@@ -778,70 +783,80 @@ export const GameScreen: React.FC = () => {
   const playResumeSound = () => {
     if (!selectedVoice) return;
     
-    const fileName = getContinueFileName(selectedVoice.language, selectedVoice.gender);
+    const fileName = getContinueFileName(selectedVoice.id);
     
-    console.log('Playing resume sound:', fileName);
     
     const sound = new Sound(fileName, Sound.MAIN_BUNDLE, (error) => {
       if (error) {
-        console.log('Failed to load resume sound:', fileName, 'Error:', error);
         return;
       }
       sound.setVolume(1.0);
       sound.play((success) => {
         if (success) {
-          console.log('Successfully played resume sound');
         } else {
-          console.log('Failed to play resume sound');
         }
         sound.release();
       });
     });
   };
 
-  // Helper function to get pause file name based on language and gender
-  const getPauseFileName = (language: string, gender: string) => {
-    switch (language) {
-      case 'english':
+  // Helper function to get pause file name based on voice ID
+  const getPauseFileName = (voiceId: string) => {
+    switch (voiceId) {
+      case 'english_men':
+      case 'english_woman':
         return Platform.OS === 'ios' 
-          ? 'english_general_other_game_paused.mp3'
-          : 'english_general_other_game_paused';
-      case 'spanish':
+          ? `${voiceId}_other_game_paused.mp3`
+          : `${voiceId}_other_game_paused`;
+      case 'spanish_general':
         return Platform.OS === 'ios' 
           ? 'spanish_general_other_game_paused.mp3'
           : 'spanish_general_other_game_paused';
-      case 'amharic':
-        const genderPrefix = gender === 'female' ? 'woman' : 'men';
+      case 'amharic_men_aradaw':
+      case 'amharic_men_duryew':
+      case 'amharic_men_shebaw':
+      case 'amharic_men_shebelaw':
         return Platform.OS === 'ios' 
-          ? `${genderPrefix}_game_sound_game_paused.mp3`
-          : `${genderPrefix}_game_sound_game_paused`;
+          ? 'men_game_sound_game_paused.mp3'
+          : 'men_game_sound_game_paused';
+      case 'amharic_women_amalaya':
+        return Platform.OS === 'ios' 
+          ? 'woman_game_sound_game_paused.mp3'
+          : 'woman_game_sound_game_paused';
       default:
         return Platform.OS === 'ios' 
-          ? 'english_general_other_game_paused.mp3'
-          : 'english_general_other_game_paused';
+          ? 'men_game_sound_game_paused.mp3'
+          : 'men_game_sound_game_paused';
     }
   };
 
-  // Helper function to get continue file name based on language and gender
-  const getContinueFileName = (language: string, gender: string) => {
-    switch (language) {
-      case 'english':
+  // Helper function to get continue file name based on voice ID
+  const getContinueFileName = (voiceId: string) => {
+    switch (voiceId) {
+      case 'english_men':
+      case 'english_woman':
         return Platform.OS === 'ios' 
-          ? 'english_general_other_game_continue.mp3'
-          : 'english_general_other_game_continue';
-      case 'spanish':
+          ? `${voiceId}_other_game_continue.mp3`
+          : `${voiceId}_other_game_continue`;
+      case 'spanish_general':
         return Platform.OS === 'ios' 
           ? 'spanish_general_other_game_continue.mp3'
           : 'spanish_general_other_game_continue';
-      case 'amharic':
-        const genderPrefix = gender === 'female' ? 'woman' : 'men';
+      case 'amharic_men_aradaw':
+      case 'amharic_men_duryew':
+      case 'amharic_men_shebaw':
+      case 'amharic_men_shebelaw':
         return Platform.OS === 'ios' 
-          ? `${genderPrefix}_game_sound_game_continue.mp3`
-          : `${genderPrefix}_game_sound_game_continue`;
+          ? 'men_game_sound_game_continue.mp3'
+          : 'men_game_sound_game_continue';
+      case 'amharic_women_amalaya':
+        return Platform.OS === 'ios' 
+          ? 'woman_game_sound_game_continue.mp3'
+          : 'woman_game_sound_game_continue';
       default:
         return Platform.OS === 'ios' 
-          ? 'english_general_other_game_continue.mp3'
-          : 'english_general_other_game_continue';
+          ? 'men_game_sound_game_continue.mp3'
+          : 'men_game_sound_game_continue';
     }
   };
 
@@ -849,47 +864,50 @@ export const GameScreen: React.FC = () => {
   const playCheckSound = () => {
     if (!selectedVoice) return;
     
-    const fileName = getCheckFileName(selectedVoice.language, selectedVoice.gender);
+    const fileName = getCheckFileName(selectedVoice.id);
     
-    console.log('Playing check cartela sound:', fileName);
     
     const sound = new Sound(fileName, Sound.MAIN_BUNDLE, (error) => {
       if (error) {
-        console.log('Failed to load check cartela sound:', fileName, 'Error:', error);
         return;
       }
       sound.setVolume(1.0);
       sound.play((success) => {
         if (success) {
-          console.log('Successfully played check cartela sound');
         } else {
-          console.log('Failed to play check cartela sound');
         }
         sound.release();
       });
     });
   };
 
-  // Helper function to get check cartela file name based on language and gender
-  const getCheckFileName = (language: string, gender: string) => {
-    switch (language) {
-      case 'english':
+  // Helper function to get check cartela file name based on voice ID
+  const getCheckFileName = (voiceId: string) => {
+    switch (voiceId) {
+      case 'english_men':
+      case 'english_woman':
         return Platform.OS === 'ios' 
-          ? 'english_general_other_checking_cartela.mp3'
-          : 'english_general_other_checking_cartela';
-      case 'spanish':
+          ? `${voiceId}_other_checking_cartela.mp3`
+          : `${voiceId}_other_checking_cartela`;
+      case 'spanish_general':
         return Platform.OS === 'ios' 
           ? 'spanish_general_other_checking_cartela.mp3'
           : 'spanish_general_other_checking_cartela';
-      case 'amharic':
-        const genderPrefix = gender === 'female' ? 'woman' : 'men';
+      case 'amharic_men_aradaw':
+      case 'amharic_men_duryew':
+      case 'amharic_men_shebaw':
+      case 'amharic_men_shebelaw':
         return Platform.OS === 'ios' 
-          ? `${genderPrefix}_game_sound_checking_cartela.mp3`
-          : `${genderPrefix}_game_sound_checking_cartela`;
+          ? 'men_game_sound_checking_cartela.mp3'
+          : 'men_game_sound_checking_cartela';
+      case 'amharic_women_amalaya':
+        return Platform.OS === 'ios' 
+          ? 'woman_game_sound_checking_cartela.mp3'
+          : 'woman_game_sound_checking_cartela';
       default:
         return Platform.OS === 'ios' 
-          ? 'english_general_other_checking_cartela.mp3'
-          : 'english_general_other_checking_cartela';
+          ? 'men_game_sound_checking_cartela.mp3'
+          : 'men_game_sound_checking_cartela';
     }
   };
 

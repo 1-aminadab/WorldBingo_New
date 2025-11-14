@@ -57,7 +57,7 @@ describe('Report Sorting and Display', () => {
     it('should show all transactions without limiting', () => {
       const mockTransactions = Array.from({ length: 10 }, (_, i) => ({
         id: `${i}`,
-        type: (i % 2 === 0 ? 'credit' : 'debit') as const,
+        type: (i % 2 === 0 ? 'credit' : 'debit') as 'credit' | 'debit',
         amount: 100 + i * 10,
         reason: 'test',
         timestamp: new Date(Date.now() - i * 60 * 1000), // Each 1 minute apart

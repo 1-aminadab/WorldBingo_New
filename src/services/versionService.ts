@@ -35,6 +35,9 @@ export class VersionService {
         return null;
       }
       
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
       const response = await fetch(`${API_BASE_URL}/version/check`, {
         method: 'POST',
         headers: {
@@ -45,8 +48,10 @@ export class VersionService {
           platform,
           appId: 'world-bingo', // Your app identifier
         }),
-        timeout: 5000, // 5 second timeout
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         console.warn(`Update check failed with status: ${response.status}`);
@@ -75,7 +80,7 @@ export class VersionService {
 
       return null;
     } catch (error) {
-      console.warn('Update check failed (non-critical):', error.message || error);
+      console.warn('Update check failed (non-critical):', error instanceof Error ? error.message : error);
       // Return null instead of throwing to prevent blocking the app
       return null;
     }

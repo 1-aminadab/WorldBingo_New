@@ -41,7 +41,7 @@ const PlayerCartelaSelectionScreen = () => {
   const { theme } = useTheme();
   const navigation = useNavigation();
   const { userCoins, deductCoins, user, getUserId } = useAuthStore();
-  const { createInitialGameReport } = useGameReportStore();
+  // Remove all backend game report sync functionality
 
   // Hide tab bar when this screen is focused and reset selections
   useFocusEffect(
@@ -341,15 +341,6 @@ const PlayerCartelaSelectionScreen = () => {
     const derashValue = calculateDerashValue();
     const houseAmount = total - derashValue; // Amount to deduct from coins
     
-    console.log('💰 Transaction Calculation:', {
-      medeb,
-      totalSelected,
-      total,
-      rtpPercentage,
-      derashValue,
-      houseAmount,
-      currentCoins: userCoins
-    });
 
     // Check if user has enough coins BEFORE showing loading
     if (userCoins < houseAmount) {
@@ -378,14 +369,6 @@ const PlayerCartelaSelectionScreen = () => {
       const userId = getUserId();
       const gameId = `GAME_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      console.log('💳 DEBUG: getUserId() returned:', userId);
-      console.log('💳 DEBUG: user object:', user);
-      console.log('💳 Creating payin transaction:', {
-        userId,
-        gameId,
-        amount: houseAmount,
-        type: 'payin'
-      });
 
       if (userId) {
         const result = await transactionApiService.createTransaction({
@@ -396,12 +379,9 @@ const PlayerCartelaSelectionScreen = () => {
           description: `Game start - ${totalSelected} cards @ ${medeb} Birr each (House: ${houseAmount.toFixed(0)} Birr, Prize Pool: ${derashValue.toFixed(0)} Birr)`
         });
         
-        console.log('✅ Transaction created successfully:', result);
       } else {
-        console.warn('⚠️ No userId found - transaction not created');
       }
     } catch (error) {
-      console.error('❌ Failed to create transaction:', error);
       // Transaction failed, but we already deducted coins, so we continue
       // In a real app, you might want to refund the coins or handle this differently
     }
@@ -837,7 +817,8 @@ const PlayerCartelaSelectionScreen = () => {
             )}
           </View>
         ) : (
-          <FlatList
+          <View style={{marginBottom: 50}}>
+               <FlatList
             data={paginatedData}
             keyExtractor={(item) => `card_${item.id}`}
             numColumns={5}
@@ -874,6 +855,8 @@ const PlayerCartelaSelectionScreen = () => {
               return renderNumberItem({ item: item.id });
             }}
           />
+          </View>
+       
         )}
       </View>
 

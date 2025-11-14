@@ -46,10 +46,10 @@ export class CoinApiService {
       console.log(`✅ [${debugId}] Response status: ${response.statusCode}`);
       console.log(`✅ [${debugId}] Response data:`, {
         success: response.success,
-        coin: response.coin,
-        updatedAt: response.updatedAt,
-        lastSettlementAt: response.lastSettlementAt,
-        lastSettlementAmount: response.lastSettlementAmount
+        coin: response.data?.coin,
+        updatedAt: response.data?.updatedAt,
+        lastSettlementAt: response.data?.lastSettlementAt,
+        lastSettlementAmount: response.data?.lastSettlementAmount
       });
       
       return response;
@@ -96,20 +96,20 @@ export class CoinApiService {
       console.log(`✅ [${debugId}] Full response data:`, {
         success: response.success,
         message: response.message,
-        settled: response.settled,
-        remaining: response.remaining,
+        settled: response.data?.settled,
+        remaining: response.data?.remaining,
         statusCode: response.statusCode
       });
       
       // Additional validation
       if (response.success) {
         console.log(`✅ [${debugId}] Settle operation successful!`);
-        console.log(`💰 [${debugId}] Coins settled: ${response.settled || 0}`);
-        console.log(`💰 [${debugId}] Remaining on backend: ${response.remaining || 0}`);
+        console.log(`💰 [${debugId}] Coins settled: ${response.data?.settled || 0}`);
+        console.log(`💰 [${debugId}] Remaining on backend: ${response.data?.remaining || 0}`);
         console.log(`📝 [${debugId}] Backend message: "${response.message}"`);
         
-        if (response.remaining && response.remaining > 0) {
-          console.warn(`⚠️ [${debugId}] Warning: Backend still has ${response.remaining} coins remaining!`);
+        if (response.data?.remaining && response.data.remaining > 0) {
+          console.warn(`⚠️ [${debugId}] Warning: Backend still has ${response.data.remaining} coins remaining!`);
         } else {
           console.log(`✅ [${debugId}] Perfect: Backend is now at 0 coins as expected`);
         }

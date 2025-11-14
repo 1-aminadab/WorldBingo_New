@@ -315,7 +315,7 @@ export const useSettingsStore = create<SettingsStore>()(
 
       getMaxCardsForSelectedType: () => {
         const { customCardTypes, selectedCardTypeName } = get();
-        const cardTypeInfo = getCardTypeInfo(selectedCardTypeName, customCardTypes);
+        const cardTypeInfo = getCardTypeInfo(selectedCardTypeName || 'default', customCardTypes);
         return cardTypeInfo.maxLimit;
       },
 
@@ -489,6 +489,24 @@ export const useSettingsStore = create<SettingsStore>()(
             state.selectedCardTypeName = 'World Bingo';
           }
           
+          // Handle voice migration from old english_general to new english_men/english_woman
+          if (state.selectedVoice && state.selectedVoice.id === 'english_general') {
+            console.log('🎤 Migrating from english_general to english_men');
+            const newVoice = getVoiceById('english_men');
+            if (newVoice) {
+              state.selectedVoice = newVoice;
+              state.selectedVoiceId = newVoice.id;
+            }
+          }
+          
+          // Ensure selectedVoice exists in current AVAILABLE_VOICES
+          if (state.selectedVoice && !getVoiceById(state.selectedVoice.id)) {
+            console.log('🎤 Voice not found, using default for language:', state.voiceLanguage);
+            const fallbackVoice = getDefaultVoiceForLanguage(state.voiceLanguage || 'amharic');
+            state.selectedVoice = fallbackVoice;
+            state.selectedVoiceId = fallbackVoice.id;
+          }
+
           // Ensure worldBingoCardsLimit is reasonable for selected card type
           const cardTypeInfo = getCardTypeInfo(state.selectedCardTypeName, state.customCardTypes);
           const defaultLimit = getDefaultLimitForCardType(state.selectedCardTypeName);

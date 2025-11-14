@@ -17,6 +17,7 @@ import { ScreenNames } from '../constants/ScreenNames';
 import { CardTypeEditorScreen } from '../screens/settings/CardTypeEditorScreen';
 import { BingoCardsScreen } from '../screens/BingoCardsScreen';
 import { TAB_BAR_STYLES, TAB_BAR_LABEL_STYLES, TAB_BAR_COLORS } from '../utils/tabBarStyles';
+import { SyncIndicator } from '../components/ui/SyncIndicator';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const MainStack = createStackNavigator<MainStackParamList>();
@@ -28,19 +29,20 @@ const MainTabNavigator: React.FC = () => {
   const insets = useSafeAreaInsets();
 
   return (
-    <Tab.Navigator
-      initialRouteName={ScreenNames.HOME}
-      backBehavior="initialRoute"
-      screenOptions={{
-        headerShown: false,
-        lazy: false,
-        tabBarHideOnKeyboard: true,
-        tabBarStyle: TAB_BAR_STYLES.default,
-        tabBarLabelStyle: TAB_BAR_LABEL_STYLES,
-        tabBarActiveTintColor: TAB_BAR_COLORS.activeTintColor,
-        tabBarInactiveTintColor: TAB_BAR_COLORS.inactiveTintColor,
-      }}
-    >
+    <>
+      <Tab.Navigator
+        initialRouteName={ScreenNames.HOME}
+        backBehavior="initialRoute"
+        screenOptions={{
+          headerShown: false,
+          lazy: false,
+          tabBarHideOnKeyboard: true,
+          tabBarStyle: TAB_BAR_STYLES.default,
+          tabBarLabelStyle: TAB_BAR_LABEL_STYLES,
+          tabBarActiveTintColor: TAB_BAR_COLORS.activeTintColor,
+          tabBarInactiveTintColor: TAB_BAR_COLORS.inactiveTintColor,
+        }}
+      >
       <Tab.Screen 
         name={ScreenNames.HOME} 
         component={StarterScreen}
@@ -116,7 +118,9 @@ const MainTabNavigator: React.FC = () => {
           ),
         }}
       />
-    </Tab.Navigator>
+      </Tab.Navigator>
+      <SyncIndicator />
+    </>
   );
 };
 

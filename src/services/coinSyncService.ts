@@ -2,6 +2,7 @@ import { CoinApiService } from '../api/services/coin';
 import { CoinStorageManager } from '../utils/coinStorage';
 import { useAuthStore } from '../store/authStore';
 import { apiClient } from '../api/client/base';
+import { useCoinSyncStore } from '../store/coinSyncStore';
 
 export interface CoinSyncResult {
   success: boolean;
@@ -22,15 +23,19 @@ export class CoinSyncService {
   /**
    * Check if user is authenticated and has valid token for sync
    */
-  static validateAuthentication(): { isValid: boolean; message: string } {
+  static async validateAuthentication(): Promise<{ isValid: boolean; message: string }> {
     const authStore = useAuthStore.getState();
-    const token = apiClient.getAuthToken();
     
     console.log('🔐 Validating authentication for coin sync...');
-    console.log('🔐 Auth token available:', !!token);
     console.log('🔐 Is authenticated:', authStore.isAuthenticated);
     console.log('🔐 Is guest:', authStore.isGuest);
     console.log('🔐 User ID:', authStore.getUserId());
+    
+    // Ensure token is loaded before checking
+    await apiClient.ensureTokenLoaded();
+    const token = apiClient.getAuthToken();
+    
+    console.log('🔐 Auth token available:', !!token);
     
     if (!token) {
       console.error('❌ No authentication token found');
@@ -72,8 +77,12 @@ export class CoinSyncService {
     console.log(`🔄 [${debugId}] ===== STARTING COIN SYNC =====`);
     console.log(`🔄 [${debugId}] Timestamp: ${new Date().toISOString()}`);
     
+    // Set loading state
+    const coinSyncStore = useCoinSyncStore.getState();
+    coinSyncStore.setLoading(true, 'Syncing coins...');
+    
     // Pre-check authentication
-    const authValidation = this.validateAuthentication();
+    const authValidation = await this.validateAuthentication();
     if (!authValidation.isValid) {
       console.error(`❌ [${debugId}] Authentication validation failed: ${authValidation.message}`);
       
@@ -86,6 +95,9 @@ export class CoinSyncService {
       } catch (error) {
         console.error(`❌ [${debugId}] Failed to get local balance during auth failure:`, error);
       }
+      
+      // Clear loading state on auth failure
+      coinSyncStore.setLoading(false, authValidation.message);
       
       return {
         success: false,
@@ -129,10 +141,10 @@ export class CoinSyncService {
       console.log(`📡 [${debugId}] Backend response:`, {
         success: balanceResponse.success,
         statusCode: balanceResponse.statusCode,
-        coin: balanceResponse.coin,
-        updatedAt: balanceResponse.updatedAt,
-        lastSettlementAt: balanceResponse.lastSettlementAt,
-        lastSettlementAmount: balanceResponse.lastSettlementAmount
+        coin: balanceResponse.data?.coin,
+        updatedAt: balanceResponse.data?.updatedAt,
+        lastSettlementAt: balanceResponse.data?.lastSettlementAt,
+        lastSettlementAmount: balanceResponse.data?.lastSettlementAmount
       });
       
       if (!balanceResponse.success) {
@@ -140,7 +152,7 @@ export class CoinSyncService {
         throw new Error(`Failed to retrieve backend coin balance: ${balanceResponse.statusCode}`);
       }
 
-      const backendCoins = balanceResponse.coin || 0;
+      const backendCoins = balanceResponse.data?.coin || 0;
       console.log(`🏦 [${debugId}] Backend coins found: ${backendCoins}`);
 
       // Step 2: Add backend coins to local storage
@@ -170,8 +182,8 @@ export class CoinSyncService {
           success: settleResponse.success,
           statusCode: settleResponse.statusCode,
           message: settleResponse.message,
-          settled: settleResponse.settled,
-          remaining: settleResponse.remaining
+          settled: settleResponse.data?.settled,
+          remaining: settleResponse.data?.remaining
         });
         
         if (!settleResponse.success) {
@@ -179,9 +191,9 @@ export class CoinSyncService {
           console.warn(`⚠️ [${debugId}] Settle error:`, settleResponse);
           // Continue execution - this is not critical if coins were already added locally
         } else {
-          settledAmount = settleResponse.settled || 0;
+          settledAmount = settleResponse.data?.settled || 0;
           console.log(`✅ [${debugId}] Successfully settled ${settledAmount} coins on backend`);
-          console.log(`✅ [${debugId}] Backend remaining coins: ${settleResponse.remaining || 0}`);
+          console.log(`✅ [${debugId}] Backend remaining coins: ${settleResponse.data?.remaining || 0}`);
         }
       } catch (settleError: any) {
         console.error(`❌ [${debugId}] Settle operation failed:`, {
@@ -207,6 +219,10 @@ export class CoinSyncService {
 
       console.log(`✅ [${debugId}] ===== COIN SYNC COMPLETED =====`);
       console.log(`✅ [${debugId}] Final result:`, result);
+      
+      // Clear loading state on success
+      coinSyncStore.setLoading(false, result.message);
+      
       return result;
 
     } catch (error: any) {
@@ -250,6 +266,10 @@ export class CoinSyncService {
       };
 
       console.error(`❌ [${debugId}] Error result:`, errorResult);
+      
+      // Clear loading state on error
+      coinSyncStore.setLoading(false, errorResult.message);
+      
       return errorResult;
     }
   }
@@ -259,11 +279,27 @@ export class CoinSyncService {
    */
   static async canSync(): Promise<boolean> {
     try {
-      // Simple connectivity check - try to get coin balance
+      // First check if authentication is valid before testing connectivity
+      const authValidation = await this.validateAuthentication();
+      if (!authValidation.isValid) {
+        console.log('📡 Cannot sync - authentication not valid:', authValidation.message);
+        return false;
+      }
+
+      // Test connectivity by trying to get coin balance
       await CoinApiService.getCoinBalance();
       return true;
-    } catch (error) {
-      console.log('📡 Cannot sync - offline or backend unavailable');
+    } catch (error: any) {
+      // More specific error logging
+      if (error.statusCode === 401) {
+        console.log('📡 Cannot sync - authentication error (401)');
+      } else if (error.statusCode >= 500) {
+        console.log('📡 Cannot sync - backend server error');
+      } else if (error.message?.includes('Network')) {
+        console.log('📡 Cannot sync - network connectivity issue');
+      } else {
+        console.log('📡 Cannot sync - offline or backend unavailable for coin sync');
+      }
       return false;
     }
   }
@@ -273,14 +309,33 @@ export class CoinSyncService {
    */
   static async autoSync(): Promise<CoinSyncResult | null> {
     try {
+      const authValidation = await this.validateAuthentication();
+      if (!authValidation.isValid) {
+        console.log('🪙 [AutoSync] Skipping coin sync - not authenticated');
+        return null;
+      }
+
       const canSync = await this.canSync();
       if (canSync) {
-        console.log('🔄 Auto-syncing coins...');
-        return await this.syncCoins();
+        console.log('🪙 [AutoSync] Auto-syncing coins on startup...');
+        const result = await this.syncCoins();
+        
+        // Log only essential info for auto-sync
+        if (result.success && result.backendCoins > 0) {
+          console.log(`🪙 [AutoSync] ✅ Added ${result.backendCoins} coins from backend`);
+        } else if (result.success) {
+          console.log('🪙 [AutoSync] ✅ Coin balance up to date');
+        } else {
+          console.log(`🪙 [AutoSync] ❌ ${result.message}`);
+        }
+        
+        return result;
+      } else {
+        console.log('🪙 [AutoSync] Skipping coin sync - offline or backend unavailable');
+        return null;
       }
-      return null;
     } catch (error) {
-      console.log('📡 Auto-sync skipped - offline');
+      console.log('🪙 [AutoSync] Skipping coin sync - error occurred:', error);
       return null;
     }
   }

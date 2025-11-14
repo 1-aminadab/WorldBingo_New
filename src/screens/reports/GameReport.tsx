@@ -29,7 +29,7 @@ export const GameReport: React.FC = () => {
   const navigation = useNavigation();
   const { theme } = useTheme();
   const { user } = useAuthStore();
-  const { currentReport, fetchCurrentUserReport } = useGameReportStore();
+  // Remove backend sync functionality - this screen uses local reports via ReportStorageManager
 
   // Hide tab bar when this screen is focused
   useFocusEffect(

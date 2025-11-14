@@ -20,7 +20,6 @@ class AudioQueue {
     };
 
     this.queue.push(item);
-    console.log('AudioQueue: Added to queue:', item, 'Queue length:', this.queue.length);
 
     // Start processing if not already doing so
     if (!this.isProcessing) {
@@ -35,13 +34,11 @@ class AudioQueue {
     }
 
     this.isProcessing = true;
-    console.log('AudioQueue: Starting to process queue');
 
     while (this.queue.length > 0) {
       const item = this.queue.shift();
       if (!item) break;
 
-      console.log('AudioQueue: Processing item:', item);
       
       try {
         // Call the audio manager to play the number
@@ -52,12 +49,10 @@ class AudioQueue {
         await this.waitForAudio();
         
       } catch (error) {
-        console.error('AudioQueue: Error playing audio:', error);
       }
     }
 
     this.isProcessing = false;
-    console.log('AudioQueue: Finished processing queue');
   }
 
   // Wait for audio to finish (estimated duration)
@@ -73,7 +68,6 @@ class AudioQueue {
   clear() {
     this.queue = [];
     this.isProcessing = false;
-    console.log('AudioQueue: Queue cleared');
   }
 
   // Get queue status

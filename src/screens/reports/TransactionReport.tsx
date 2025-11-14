@@ -80,11 +80,7 @@ export const TransactionReport: React.FC = () => {
     setIsRefreshing(true);
     try {
       const userId = user?.userId || user?.id; // Get userId from auth store (handle both formats)
-      console.log('💳 Loading transaction reports for user:', userId);
-      console.log('💳 Full user object:', JSON.stringify(user, null, 2));
       const cashData = await ReportStorageManager.getCashReports(userId);
-      console.log('💳 Loaded cash reports:', cashData.length);
-      console.log('💳 Cash reports details:', JSON.stringify(cashData, null, 2));
       setAllCashReports(cashData.sort((a, b) => b.date.localeCompare(a.date)));
     } catch (error) {
       console.error('Error loading cash reports:', error);
@@ -162,7 +158,6 @@ export const TransactionReport: React.FC = () => {
 
   const handleAddBalance = () => {
     const userId = user?.userId || user?.id;
-    console.log('💳 Navigating to payment page with user ID:', userId);
     navigation.navigate(ScreenNames.PAYMENT_WEBVIEW as never);
   };
 

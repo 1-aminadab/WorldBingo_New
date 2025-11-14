@@ -162,7 +162,7 @@ export class FileApiService {
               
               setTimeout(() => {
                 console.log(`🔄 [DOWNLOAD] Simulated progress: ${progress}% (${(simulatedBytes / (1024 * 1024)).toFixed(2)}MB / ${(contentLength / (1024 * 1024)).toFixed(2)}MB)`);
-                request.onProgress(progress, simulatedBytes, contentLength);
+                request.onProgress?.(progress, simulatedBytes, contentLength);
               }, i * 100); // Spread over 1 second
             }
           }
@@ -530,7 +530,7 @@ export class FileApiService {
         .filter(log => log.success)
         .reduce((total, log) => total + log.downloadSize, 0),
       averageDownloadTime: 0,
-      mostDownloadedFiles: [],
+      mostDownloadedFiles: [] as Array<{ fileId: string; filename: string; count: number }>,
     };
 
     // Calculate average download time

@@ -52,6 +52,7 @@ export const getPatternDifficulty = (pattern: BingoPattern): 'easy' | 'medium' |
     t_shape: 'medium' as const,
     u_shape: 'medium' as const,
     x_shape: 'medium' as const,
+    l_shape: 'medium' as const,
     plus_sign: 'easy' as const,
     diamond: 'medium' as const,
   };

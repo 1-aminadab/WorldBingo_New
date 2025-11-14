@@ -1,4 +1,4 @@
-import { TabBarStyle } from '@react-navigation/bottom-tabs';
+import type { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
 
 export const TAB_BAR_STYLES = {
   default: {

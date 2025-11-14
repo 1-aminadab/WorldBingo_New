@@ -2,13 +2,20 @@ import { VoiceOption, VoiceLanguage, VoiceGender } from '../types';
 
 // Available voice options based on actual folder structure
 export const AVAILABLE_VOICES: VoiceOption[] = [
-  // English voices - only general
+  // English voices - men and woman
   {
-    id: 'english_general',
-    name: 'General',
+    id: 'english_men',
+    name: 'Men',
     language: 'english',
-    gender: 'male', // Default to male for consistency
-    displayName: 'English (General)'
+    gender: 'male',
+    displayName: 'English (Men)'
+  },
+  {
+    id: 'english_woman',
+    name: 'Woman',
+    language: 'english',
+    gender: 'female',
+    displayName: 'English (Woman)'
   },
   
   // Spanish voices - only general
@@ -79,6 +86,11 @@ export const getDefaultVoiceForLanguage = (language: VoiceLanguage): VoiceOption
     return voices.find(v => v.id === 'amharic_men_aradaw') || voices[0];
   }
   
+  // Default to Men voice for English
+  if (language === 'english') {
+    return voices.find(v => v.id === 'english_men') || voices[0];
+  }
+  
   // Default to first available voice for other languages
   return voices[0];
 };
@@ -90,8 +102,9 @@ export const getDefaultVoice = (): VoiceOption => {
 
 // Voice file mapping - maps voice IDs to their actual folder names with spaces
 export const VOICE_FILE_MAPPING: Record<string, string> = {
-  // English - folder: "english general"
-  'english_general': 'english general',
+  // English - folders: "english men" and "english woman"
+  'english_men': 'english men',
+  'english_woman': 'english woman',
   
   // Spanish - folder: "spanish general"  
   'spanish_general': 'spanish general',

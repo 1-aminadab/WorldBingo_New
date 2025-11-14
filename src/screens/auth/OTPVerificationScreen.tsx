@@ -113,20 +113,16 @@ export const OTPVerificationScreen: React.FC = () => {
         : await verifyOtp(phoneNumber, otpString);
         
       if (result.success) {
-        setStatus({ visible: true, variant: 'success', title: 'Verified', message: 'Redirecting...' });
-        setTimeout(() => {
-          setStatus((s)=>({ ...s, visible:false }));
-          setTimeout(() => {
-            if (type === 'password_reset') {
-              navigation.navigate(ScreenNames.CHANGE_PASSWORD as never, { 
-                phoneNumber, 
-                otp: otpString 
-              });
-            } else {
-              navigation.navigate(ScreenNames.MAIN as never);
-            }
-          }, 300); // Small delay to let modal close animation complete
-        }, 1500);
+        // Navigate immediately without showing success modal
+        if (type === 'password_reset') {
+          navigation.navigate(ScreenNames.CHANGE_PASSWORD as never, { 
+            phoneNumber, 
+            otp: otpString 
+          });
+        } else {
+          // After registration verification, go back to SignUpLoginScreen on login tab
+          navigation.navigate(ScreenNames.LOGIN_SIGNUP as never, { isLogin: true });
+        }
       } else {
         setStatus({ visible: true, variant: 'error', title: 'Invalid code', message: result.message || 'Please try again' });
       }

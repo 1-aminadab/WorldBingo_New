@@ -163,7 +163,7 @@ class AudioManager {
 
   // Fallback to default number audio (existing audio_X files)
   private playDefaultNumberAudio(number: number) {
-    console.log('Playing default audio for number:', number);
+    console.log('FALLBACK: Playing default audio for number:', number);
     
     const fileName = Platform.OS === 'ios' ? `${number}.mp3` : `audio_${number}`;
     
@@ -362,7 +362,11 @@ class AudioManager {
         soundPath = 'spanish_general_other_game_start';
         break;
       case 'english':
-        soundPath = 'english_general_other_game_start';
+        if (this.currentVoice.gender === 'male') {
+          soundPath = 'english_men_other_game_start';
+        } else {
+          soundPath = 'english_woman_other_game_start';
+        }
         break;
       default:
         console.warn('Unknown language, using default game start sound');

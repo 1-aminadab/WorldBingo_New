@@ -10,7 +10,8 @@ const IOS_DEST = path.join(__dirname, '../ios/WorldBingo'); // Adjust this path 
 
 // Voice folder mappings
 const VOICE_MAPPINGS = {
-  'english general': 'english_general',
+  'english men': 'english_men',
+  'english woman': 'english_woman',
   'spanish general': 'spanish_general',
   'amharic men Aradaw': 'amharic_men_aradaw',
   'amharic men Duryew': 'amharic_men_duryew',
@@ -41,12 +42,12 @@ function copyAudioFiles() {
     // Copy numbered files (1.mp3 to 75.mp3)
     for (let i = 1; i <= 75; i++) {
       const sourceFile = path.join(sourcePath, `${i}.mp3`);
-      const targetFile = path.join(ANDROID_DEST, `${targetPrefix}_${i}.mp3`);
+      const targetFile = path.join(ANDROID_DEST, `${targetPrefix}_${i}`); // No .mp3 for Android
       
       if (fs.existsSync(sourceFile)) {
         try {
           fs.copyFileSync(sourceFile, targetFile);
-          console.log(`  Copied: ${i}.mp3 -> ${targetPrefix}_${i}.mp3`);
+          console.log(`  Copied: ${i}.mp3 -> ${targetPrefix}_${i}`);
         } catch (error) {
           console.error(`  Error copying ${i}.mp3:`, error.message);
         }
@@ -62,10 +63,10 @@ function copyAudioFiles() {
     for (const testFile of testFiles) {
       const sourceTestFile = path.join(sourcePath, testFile);
       if (fs.existsSync(sourceTestFile)) {
-        const targetTestFile = path.join(ANDROID_DEST, `${targetPrefix}_test.mp3`);
+        const targetTestFile = path.join(ANDROID_DEST, `${targetPrefix}_test`); // No .mp3 for Android
         try {
           fs.copyFileSync(sourceTestFile, targetTestFile);
-          console.log(`  Copied: ${testFile} -> ${targetPrefix}_test.mp3`);
+          console.log(`  Copied: ${testFile} -> ${targetPrefix}_test`);
           testCopied = true;
           break;
         } catch (error) {
@@ -74,14 +75,36 @@ function copyAudioFiles() {
       }
     }
     
-    // Try test file in Other subfolder for English/Spanish
+    // Copy all files from Other subfolder for English/Spanish
+    const otherPath = path.join(sourcePath, 'Other');
+    if (fs.existsSync(otherPath)) {
+      const otherFiles = fs.readdirSync(otherPath).filter(file => file.endsWith('.mp3'));
+      
+      otherFiles.forEach(fileName => {
+        const sourceFile = path.join(otherPath, fileName);
+        const baseFileName = fileName.replace('.mp3', '').replace(/-/g, '_').toLowerCase();
+        const targetFile = path.join(ANDROID_DEST, `${targetPrefix}_other_${baseFileName}`); // No .mp3 for Android
+        
+        try {
+          fs.copyFileSync(sourceFile, targetFile);
+          console.log(`  Copied: Other/${fileName} -> ${targetPrefix}_other_${baseFileName}`);
+          if (fileName === 'test.mp3') {
+            testCopied = true;
+          }
+        } catch (error) {
+          console.error(`  Error copying Other/${fileName}:`, error.message);
+        }
+      });
+    }
+    
+    // Try test file in Other subfolder for backwards compatibility
     if (!testCopied) {
       const otherTestFile = path.join(sourcePath, 'Other', 'test.mp3');
       if (fs.existsSync(otherTestFile)) {
-        const targetTestFile = path.join(ANDROID_DEST, `${targetPrefix}_test.mp3`);
+        const targetTestFile = path.join(ANDROID_DEST, `${targetPrefix}_test`); // No .mp3 for Android
         try {
           fs.copyFileSync(otherTestFile, targetTestFile);
-          console.log(`  Copied: Other/test.mp3 -> ${targetPrefix}_test.mp3`);
+          console.log(`  Copied: Other/test.mp3 -> ${targetPrefix}_test`);
           testCopied = true;
         } catch (error) {
           console.error(`  Error copying Other/test.mp3:`, error.message);
@@ -102,7 +125,11 @@ function copyAudioFiles() {
   if (fs.existsSync(menWinnerPath)) {
     console.log('Processing: men game sound/winner-cartela -> men_game_sound_winner_cartela_*');
     
-    const winnerNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+    // Copy all numbers from 1 to 999 since we have audio files for all of them
+    const winnerNumbers = [];
+    for (let i = 1; i <= 999; i++) {
+      winnerNumbers.push(i);
+    }
     
     winnerNumbers.forEach(num => {
       const sourceFile = path.join(menWinnerPath, `${num}.mp3`);
@@ -128,7 +155,11 @@ function copyAudioFiles() {
   if (fs.existsSync(womenWinnerPath)) {
     console.log('Processing: woman game sound/winner-cartela -> woman_game_sound_winner_cartela_*');
     
-    const winnerNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+    // Copy all numbers from 1 to 999 since we have audio files for all of them
+    const winnerNumbers = [];
+    for (let i = 1; i <= 999; i++) {
+      winnerNumbers.push(i);
+    }
     
     winnerNumbers.forEach(num => {
       const sourceFile = path.join(womenWinnerPath, `${num}.mp3`);

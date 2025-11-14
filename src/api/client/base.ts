@@ -30,19 +30,47 @@ class ApiClient {
     // Request interceptor
     this.client.interceptors.request.use(
       async (config) => {
-        // Add auth token if available
+        // Add auth token if available (without Bearer prefix as per backend requirement)
         if (this.authToken) {
-          config.headers.Authorization = `Bearer ${this.authToken}`;
+          config.headers.Authorization = this.authToken;
         }
 
         // Log request in development
         if (__DEV__) {
           console.log('🌐 API Request:', {
             method: config.method?.toUpperCase(),
+            baseURL: config.baseURL,
             url: config.url,
+            fullURL: `${config.baseURL}${config.url}`,
             data: config.data,
-            headers: config.headers,
+            dataStringified: JSON.stringify(config.data, null, 2),
+            dataType: typeof config.data,
+            hasData: !!config.data,
+            headers: {
+              ...config.headers,
+              Authorization: config.headers.Authorization ? '[TOKEN_PRESENT]' : '[NO_TOKEN]'
+            },
           });
+          
+          // Additional check for POST requests
+          if (config.method?.toUpperCase() === 'POST') {
+            console.log('🔍 POST Request Body Analysis:');
+            console.log('  - Has data:', !!config.data);
+            console.log('  - Data type:', typeof config.data);
+            console.log('  - Data is null:', config.data === null);
+            console.log('  - Data is undefined:', config.data === undefined);
+            console.log('  - Data is empty object:', JSON.stringify(config.data) === '{}');
+            console.log('  - Content-Type:', config.headers['Content-Type']);
+            
+            if (config.data) {
+              console.log('  - Request body keys:', Object.keys(config.data));
+              console.log('  - Request body values:', Object.values(config.data));
+              console.log('  - numberOfGames specifically:', config.data.numberOfGames);
+              console.log('  - Raw data object:', config.data);
+            } else {
+              console.log('  - ❌ NO DATA IN REQUEST BODY!');
+            }
+          }
         }
 
         return config;
@@ -72,9 +100,14 @@ class ApiClient {
         if (__DEV__) {
           console.error('❌ API Error:', {
             status: error.response?.status,
+            statusText: error.response?.statusText,
+            method: error.config?.method?.toUpperCase(),
+            baseURL: error.config?.baseURL,
             url: error.config?.url,
+            fullURL: `${error.config?.baseURL}${error.config?.url}`,
             message: error.message,
             data: error.response?.data,
+            headers: error.config?.headers,
           });
         }
 
@@ -99,12 +132,20 @@ class ApiClient {
 
   private async loadStoredToken(): Promise<void> {
     try {
+      console.log('🔑 [ApiClient] Loading stored auth token...');
       const token = await AsyncStorage.getItem('authToken');
       if (token) {
         this.authToken = token;
+        console.log('🔑 [ApiClient] Auth token loaded successfully:', {
+          tokenExists: !!token,
+          tokenLength: token.length,
+          tokenPreview: `${token.substring(0, 10)}...`
+        });
+      } else {
+        console.log('🔑 [ApiClient] No stored auth token found');
       }
     } catch (error) {
-      console.error('Failed to load stored token:', error);
+      console.error('❌ [ApiClient] Failed to load stored token:', error);
     }
   }
 
@@ -159,6 +200,13 @@ class ApiClient {
 
   public getAuthToken(): string | null {
     return this.authToken;
+  }
+
+  public async ensureTokenLoaded(): Promise<void> {
+    if (this.authToken === null) {
+      console.log('🔑 [ApiClient] Token not loaded yet, loading now...');
+      await this.loadStoredToken();
+    }
   }
 
   // HTTP Methods

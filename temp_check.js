@@ -1,0 +1,1 @@
+console.log('🔍 CHECKING SYNC STORE STATE:'); const { useReportSyncStore } = require('./src/sync/reportSyncStore'); const store = useReportSyncStore.getState(); console.log('📊 Reports in queue:', store.reports.length); store.logCurrentState();

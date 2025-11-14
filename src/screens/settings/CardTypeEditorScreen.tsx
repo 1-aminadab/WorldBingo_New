@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef, createRef, memo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, Modal, BackHandler, SectionList } from 'react-native';
 import { useTheme } from '../../components/ui/ThemeProvider';
 import { Button } from '../../components/ui/Button';
@@ -11,6 +11,209 @@ import { getCardTypeInfo, getDefaultLimitForCardType } from '../../utils/cardTyp
 import Slider from '@react-native-community/slider';
 
 type CardRow = number[]; // 24 numbers
+
+// Completely isolated input component that NEVER re-renders
+const IsolatedNumberInput = memo<{
+  index: number;
+  columnIndex: number;
+  initialValue: string | null;
+  placeholder: string;
+  onValueChange: (index: number, value: string | null) => void;
+  theme: any;
+}>(({ index, columnIndex, initialValue, placeholder, onValueChange, theme }) => {
+  const [localValue, setLocalValue] = useState(initialValue || '');
+  const inputRef = useRef<TextInput>(null);
+
+  // Validate for column ranges
+  const getValidationState = (value: string) => {
+    if (!value || value === '') return 'empty';
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0) return 'invalid';
+    
+    const columnRanges = [
+      { min: 1, max: 15 },   // B column: 1-15
+      { min: 16, max: 30 },  // I column: 16-30
+      { min: 31, max: 45 },  // N column: 31-45
+      { min: 46, max: 60 },  // G column: 46-60
+      { min: 61, max: 75 }   // O column: 61-75
+    ];
+    const { min, max } = columnRanges[columnIndex];
+    return (n >= min && n <= max) ? 'valid' : 'invalid';
+  };
+
+  const validationState = getValidationState(localValue);
+
+  return (
+    <TextInput
+      ref={inputRef}
+      value={localValue}
+      onChangeText={(text) => {
+        // Only numeric, max 2 digits
+        const numericText = text.replace(/[^0-9]/g, '').slice(0, 2);
+        setLocalValue(numericText);
+      }}
+      onBlur={() => {
+        // Only sync to parent on blur
+        onValueChange(index, localValue === '' ? null : localValue);
+      }}
+      keyboardType="numeric"
+      maxLength={2}
+      blurOnSubmit={false}
+      returnKeyType="next"
+      autoCorrect={false}
+      autoComplete="off"
+      style={{
+        width: 50,
+        height: 50,
+        borderWidth: 1,
+        borderRadius: 6,
+        textAlign: 'center',
+        fontSize: 14,
+        fontWeight: '600',
+        borderColor: validationState === 'invalid' ? '#ff6b6b' : theme.colors.border,
+        backgroundColor: validationState === 'invalid' ? '#ffe6e6' : theme.colors.surface,
+        color: theme.colors.text,
+      }}
+      placeholder={placeholder}
+      placeholderTextColor={theme.colors.textSecondary}
+    />
+  );
+}, (prevProps, nextProps) => {
+  // Only re-render if these specific props change
+  return (
+    prevProps.index === nextProps.index &&
+    prevProps.columnIndex === nextProps.columnIndex &&
+    prevProps.initialValue === nextProps.initialValue &&
+    prevProps.placeholder === nextProps.placeholder
+  );
+});
+
+// Isolated CSV input that never re-renders and never closes keyboard
+const IsolatedCSVInput = memo<{
+  placeholder: string;
+  onValueChange: (value: string) => void;
+  theme: any;
+}>(({ placeholder, onValueChange, theme }) => {
+  const [localValue, setLocalValue] = useState('');
+  const inputRef = useRef<TextInput>(null);
+
+  // BINGO column validation ranges
+  const columnRanges = [
+    { min: 1, max: 15, name: 'B' },   // Positions 0-4: B column (1-15)
+    { min: 16, max: 30, name: 'I' },  // Positions 5-9: I column (16-30)  
+    { min: 31, max: 45, name: 'N' },  // Positions 10-14: N column (31-45)
+    { min: 46, max: 60, name: 'G' },  // Positions 15-19: G column (46-60)
+    { min: 61, max: 75, name: 'O' }   // Positions 20-23: O column (61-75)
+  ];
+
+  const validateAndFormatInput = (text: string): string => {
+    // Only allow numbers and commas
+    let filtered = text.replace(/[^0-9,]/g, '');
+    
+    // If user just typed a comma at the end, preserve it
+    if (filtered.endsWith(',') && !text.endsWith(',,')) {
+      return filtered; // Return immediately to preserve comma
+    }
+    
+    // Split by commas to get individual numbers
+    const parts = filtered.split(',');
+    const validParts: string[] = [];
+    
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i].trim();
+      
+      // If this is an empty part (like between commas or trailing comma), handle it
+      if (part === '') {
+        validParts.push('');
+        continue;
+      }
+      
+      // Limit each individual number to 2 digits max
+      let limitedPart = part.slice(0, 2);
+      
+      // Also enforce max value of 75 for any number
+      const number = parseInt(limitedPart);
+      if (!isNaN(number) && number > 75) {
+        limitedPart = '75'; // Cap at 75
+      }
+      
+      // Count how many actual numbers we have so far (excluding empty parts)
+      const currentNumberPosition = validParts.filter(p => p !== '').length;
+      
+      // If this number would exceed 24 total numbers, don't add it
+      if (currentNumberPosition >= 24) {
+        break;
+      }
+      
+      // Only validate ranges for completed numbers (followed by comma or not last part)
+      const isLastPart = i === parts.length - 1;
+      const isCompletedNumber = !isLastPart;
+      
+      if (isCompletedNumber && !isNaN(number)) {
+        // Determine which BINGO column this position should be in
+        let columnIndex: number;
+        
+        // Map position to column (each column has 5 numbers, but N column only has 4 due to FREE space)
+        if (currentNumberPosition < 5) columnIndex = 0;        // B: positions 0-4
+        else if (currentNumberPosition < 10) columnIndex = 1;  // I: positions 5-9
+        else if (currentNumberPosition < 14) columnIndex = 2;  // N: positions 10-13 (only 4 numbers)
+        else if (currentNumberPosition < 19) columnIndex = 3;  // G: positions 14-18
+        else columnIndex = 4;                                  // O: positions 19-23
+        
+        const { min, max } = columnRanges[columnIndex];
+        
+        // If number is not in correct range for this column, reject it
+        if (number < min || number > max) {
+          continue; // Skip this invalid number
+        }
+      }
+      
+      validParts.push(limitedPart);
+    }
+    
+    return validParts.join(',');
+  };
+
+  return (
+    <TextInput
+      ref={inputRef}
+      value={localValue}
+      onChangeText={(text) => {
+        const validatedText = validateAndFormatInput(text);
+        setLocalValue(validatedText);
+      }}
+      onBlur={() => {
+        // Only sync to parent on blur
+        onValueChange(localValue);
+      }}
+      placeholder={placeholder}
+      placeholderTextColor={theme.colors.textSecondary}
+      keyboardType="numeric"
+      multiline
+      blurOnSubmit={false}
+      returnKeyType="done"
+      autoCorrect={false}
+      autoComplete="off"
+      style={{
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        borderRadius: 8,
+        padding: 12,
+        minHeight: 80,
+        maxHeight: 120,
+        backgroundColor: theme.colors.background,
+        color: theme.colors.text,
+        fontSize: 16,
+        textAlignVertical: 'top',
+      }}
+    />
+  );
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.placeholder === nextProps.placeholder &&
+    prevProps.theme === nextProps.theme
+  );
+});
 
 export const CardTypeEditorScreen: React.FC = () => {
   const { theme } = useTheme();
@@ -46,6 +249,21 @@ export const CardTypeEditorScreen: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [tempSliderValue, setTempSliderValue] = useState(worldBingoCardsLimit);
   const sliderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+
+  // Callback for isolated input components
+  const handleInputValueChange = useCallback((index: number, value: string | null) => {
+    setCurrentManual(prev => {
+      const next = [...prev];
+      next[index] = value === null || value === '' ? null : value;
+      return next;
+    });
+  }, []);
+
+  // Callback for isolated CSV input
+  const handleCSVValueChange = useCallback((value: string) => {
+    setCsv(value);
+  }, []);
 
   // Update tempSliderValue when worldBingoCardsLimit changes from external sources
   useEffect(() => {
@@ -603,18 +821,24 @@ export const CardTypeEditorScreen: React.FC = () => {
 
       {!isWorldBingo && !isAfricaBingo && (
         mode === MODE_CSV ? (
-          <View style={[{ backgroundColor: theme.colors.surface, borderRadius: 8, padding: 16 }]}>
+          <View style={[{ backgroundColor: theme.colors.surface, borderRadius: 8, padding: 16, marginTop: 10 }]}>
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Add card by CSV (24 numbers)</Text>
               <Text style={[styles.rangeHelper, { color: theme.colors.textSecondary }]}>
                 B: 1-15, I: 16-30, N: 31-45, G: 46-60, O: 61-75
               </Text>
-              <Input placeholder="11,24,31,... (24 numbers)" value={csv} onChangeText={setCsv} multiline />
-              <Button title="Add Card From CSV" onPress={addFromCsv} />
+              <IsolatedCSVInput
+                placeholder="11,24,31,... (24 numbers)"
+                onValueChange={handleCSVValueChange}
+                theme={theme}
+              />
+              <View style={{ marginTop: 12 }}>
+                <Button title="Add Card From CSV" onPress={addFromCsv} />
+              </View>
             </View>
           </View>
         ) : (
-          <View style={[{ backgroundColor: theme.colors.surface, borderRadius: 8, padding: 16 }]}>
+          <View style={[{ backgroundColor: theme.colors.surface, borderRadius: 8, padding: 16, marginTop:10 }]}>
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Build card manually</Text>
               <Text style={[styles.rangeHelper, { color: theme.colors.textSecondary }]}>
@@ -649,71 +873,18 @@ export const CardTypeEditorScreen: React.FC = () => {
                   let numberIndex = row * 5 + col;
                   if (numberIndex > 12) numberIndex--; // Adjust for center cell
                   
-                  const val = currentManual[numberIndex];
-                  
-                  // Check if current value is valid for this column
-                  const isValidForColumn = () => {
-                    if (val === null) return true;
-                    const n = Number(val);
-                    if (!Number.isFinite(n) || n <= 0) return false;
-                    
-                    const columnRanges = [
-                      { min: 1, max: 15 },   // B column: 1-15
-                      { min: 16, max: 30 },  // I column: 16-30
-                      { min: 31, max: 45 },  // N column: 31-45
-                      { min: 46, max: 60 },  // G column: 46-60
-                      { min: 61, max: 75 }   // O column: 61-75
-                    ];
-                    const { min, max } = columnRanges[col];
-                    return n >= min && n <= max;
-                  };
+                  const currentValue = currentManual[numberIndex];
+                  const placeholder = col === 0 ? '1-15' : col === 1 ? '16-30' : col === 2 ? '31-45' : col === 3 ? '46-60' : '61-75';
                   
                   return (
-                    <TextInput
-                      key={`${row}-${col}`}
-                      value={val === null ? '' : String(val)}
-                      onChangeText={(t) => {
-                        // Allow any text input while typing, validate only on complete numbers
-                        const next = [...currentManual];
-                        if (t === '') {
-                          next[numberIndex] = null;
-                        } else {
-                          const n = Number(t);
-                          if (Number.isFinite(n) && n > 0) {
-                            // Only validate if it's a complete valid number
-                            const columnRanges = [
-                              { min: 1, max: 15 },   // B column: 1-15
-                              { min: 16, max: 30 },  // I column: 16-30
-                              { min: 31, max: 45 },  // N column: 31-45
-                              { min: 46, max: 60 },  // G column: 46-60
-                              { min: 61, max: 75 }   // O column: 61-75
-                            ];
-                            
-                            const { min, max } = columnRanges[col];
-                            if (n >= min && n <= max) {
-                              next[numberIndex] = n;
-                            } else {
-                              // If out of range, keep as text for now (will be validated on save)
-                              next[numberIndex] = t as any;
-                            }
-                          } else {
-                            // Keep partial input as text
-                            next[numberIndex] = t as any;
-                          }
-                        }
-                        setCurrentManual(next);
-                      }}
-                      keyboardType="numeric"
-                      style={[
-                        styles.gridCell,
-                        {
-                          borderColor: val === null ? '#dc3545' : !isValidForColumn() ? '#ff6b6b' : theme.colors.border,
-                          backgroundColor: !isValidForColumn() ? '#ffe6e6' : theme.colors.surface,
-                          color: theme.colors.text,
-                        },
-                      ]}
-                      placeholderTextColor={theme.colors.textSecondary}
-                      placeholder={col === 0 ? '1-15' : col === 1 ? '16-30' : col === 2 ? '31-45' : col === 3 ? '46-60' : '61-75'}
+                    <IsolatedNumberInput
+                      key={`input-${row}-${col}`}
+                      index={numberIndex}
+                      columnIndex={col}
+                      initialValue={currentValue === null ? null : String(currentValue)}
+                      placeholder={placeholder}
+                      onValueChange={handleInputValueChange}
+                      theme={theme}
                     />
                   );
                 })}

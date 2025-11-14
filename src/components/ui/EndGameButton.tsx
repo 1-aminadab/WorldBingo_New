@@ -14,9 +14,14 @@ export const EndGameButton: React.FC<EndGameButtonProps> = ({
   size = 20,
   style,
 }) => {
+  const handlePress = () => {
+    console.log('🛑 END GAME BUTTON PRESSED - Ending game...');
+    onPress();
+  };
+
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={handlePress}
       style={[styles.button, style]}
     >
       <PowerCircle size={size} color={'red'} />

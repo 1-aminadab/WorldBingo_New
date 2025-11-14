@@ -296,6 +296,13 @@ export const useVersionStore = create<VersionStore>()(
         versionInfo: state.versionInfo,
         isUpdateAvailable: state.isUpdateAvailable,
       }),
+      onRehydrateStorage: () => (state, error) => {
+        if (error) {
+          console.warn('🏪 [VersionStore] Failed to rehydrate state:', error);
+        } else {
+          console.log('🏪 [VersionStore] State rehydrated successfully');
+        }
+      },
     }
   )
 );

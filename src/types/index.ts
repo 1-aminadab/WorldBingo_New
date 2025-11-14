@@ -91,6 +91,7 @@ export interface GameSettings {
 // Custom cartela/card type structure
 export interface CustomCardType {
   name: string; // unique name
+  displayName?: string; // display name for UI
   // Each card must include 24 numbers (center free cell is assumed)
   cards: number[][]; // array of 24-number arrays
 }
@@ -203,6 +204,7 @@ export interface GameReport {
   totalProfit: number; // calculated as totalCollectedAmount * (100 - RTP) / 100
   rtpPercentage: number;
   games: GameReportEntry[];
+  userId?: string;
 }
 
 export interface GameReportEntry {
@@ -228,6 +230,7 @@ export interface CashReport {
   totalDebit: number;
   totalCredit: number;
   netBalance: number;
+  userId?: string;
 }
 
 export interface CashTransaction {
@@ -237,6 +240,7 @@ export interface CashTransaction {
   amount: number;
   reason: string;
   description?: string;
+  userId?: string;
 }
 
 export type CashTransactionReason = 

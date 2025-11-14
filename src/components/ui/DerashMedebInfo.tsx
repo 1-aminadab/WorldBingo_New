@@ -84,13 +84,7 @@ export const DerashMedebInfo: React.FC<DerashMedebInfoProps> = ({
       </View>
     );
   }
-console.log('====================================');
-console.log(typeof medebAmount, derashShown,
-  gameMedebAmount,
-  medebAmount,
-  numPlayers,
-  totalCollectedAmount);
-console.log('====================================');
+
   return (
     <View style={styles.portraitContainer}>
       {/* Pay in - Total Collected */}

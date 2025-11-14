@@ -97,46 +97,11 @@ export class ReportService {
 
   // Mock API call - replace with actual backend integration
   private async makeApiCall(endpoint: string, params?: any): Promise<any> {
-    const userId = this.getUserId();
-    const user = this.getUser();
-    
-    console.log('📊 Report API Request ====================================');
-    console.log('Endpoint:', endpoint);
-    console.log('Parameters:', JSON.stringify(params, null, 2));
-    console.log('User ID:', userId);
-    console.log('User Name:', user?.name);
-    console.log('Timestamp:', new Date().toISOString());
-    console.log('========================================================');
-    
     try {
       // For now, return mock data based on the web implementation structure
       const data = this.getMockData(endpoint, params);
-      
-      console.log('📊 Report API Response ===================================');
-      console.log('Endpoint:', endpoint);
-      console.log('Success: true');
-      console.log('Data Keys:', Object.keys(data));
-      if (data.summary) {
-        console.log('Summary Stats:', {
-          totalGames: data.summary.totalGame,
-          totalPayin: data.summary.totalPayin,
-          totalPayout: data.summary.totalPayout,
-          netProfit: data.summary.netProfit
-        });
-      }
-      if (data.shops) {
-        console.log('Shops Count:', data.shops.length);
-      }
-      console.log('Timestamp:', new Date().toISOString());
-      console.log('========================================================');
-      
       return data;
     } catch (error) {
-      console.error('❌ Report API Error ====================================');
-      console.error('Endpoint:', endpoint);
-      console.error('Error:', error);
-      console.error('Timestamp:', new Date().toISOString());
-      console.error('========================================================');
       throw error;
     }
   }
@@ -204,62 +169,26 @@ export class ReportService {
 
   // Get company balances
   async getCompanyBalances(): Promise<CompanyBalance> {
-    const userId = this.getUserId();
-    
-    console.log('💰 Fetching Company Balances...');
-    console.log('User ID:', userId);
-    
     try {
       const data = await this.makeApiCall('balances');
-      
-      console.log('💰 Company Balances Retrieved:');
-      console.log('Company:', data.company);
-      console.log('Agent:', data.agent);
-      console.log('Shop:', data.shop);
-      console.log('Total:', data.company + data.agent + data.shop);
-      
       return data;
     } catch (error) {
-      console.error('❌ Error fetching company balances:', error);
       throw error;
     }
   }
 
   // Get report data for date range
   async getReportData(dateRange: DateRange): Promise<{ shops: ShopReport[], summary: ReportSummary }> {
-    const userId = this.getUserId();
-    
-    console.log('📈 Fetching Report Data...');
-    console.log('User ID:', userId);
-    console.log('Date Range:', {
-      startDate: dateRange.startDate,
-      endDate: dateRange.endDate
-    });
-    
     try {
       const startDate = new Date(dateRange.startDate);
       const endDate = new Date(dateRange.endDate);
       const dates = this.getDateRange(startDate, endDate);
       
-      console.log('Date range covers', dates.length, 'days:', dates);
-      
       // Simulate loading multiple dates like the web version
       const data = await this.makeApiCall('report', { dates });
       
-      console.log('📈 Report Data Retrieved:');
-      console.log('Total Shops:', data.shops.length);
-      console.log('Summary:', {
-        totalGames: data.summary.totalGame,
-        totalTickets: data.summary.totalTicket,
-        totalPayin: data.summary.totalPayin,
-        totalPayout: data.summary.totalPayout,
-        netProfit: data.summary.netProfit,
-        rtpMargin: data.summary.rtpMargin
-      });
-      
       return data;
     } catch (error) {
-      console.error('❌ Error fetching report data:', error);
       throw error;
     }
   }

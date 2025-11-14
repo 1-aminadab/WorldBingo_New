@@ -16,9 +16,7 @@ class TransactionLocalService {
    */
   public async createTransaction(data: CreateTransactionRequest): Promise<ApiResponse<Transaction>> {
     try {
-      console.log('💳 Creating transaction (local storage only):', data);
       const userIdString = typeof data.userId === 'string' ? data.userId : data.userId?.toString();
-      console.log('💳 Transaction userId as string:', userIdString);
       
       // Save to local storage with userId
       await ReportStorageManager.addCashTransaction({
@@ -29,25 +27,23 @@ class TransactionLocalService {
         userId: userIdString // Pass userId to ensure data isolation
       });
       
-      console.log('💾 Transaction saved to local storage for user:', data.userId?.toString());
       
       // Return success response with local data
       return {
         success: true,
         data: {
           id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          userId: data.userId,
+          userId: typeof data.userId === 'string' ? parseInt(data.userId) : data.userId,
           gameId: data.gameId,
           type: data.type,
           amount: data.amount,
           description: data.description,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          status: 'completed'
         } as Transaction,
         message: 'Transaction saved to local storage'
       };
     } catch (error) {
-      console.error('❌ Failed to save transaction to local storage:', error);
       throw error;
     }
   }
@@ -57,7 +53,6 @@ class TransactionLocalService {
    */
   public async getTransactions(): Promise<ApiResponse<Transaction[]>> {
     try {
-      console.log('💳 Fetching all transactions from local storage...');
       
       const cashReports = await ReportStorageManager.getCashReports();
       const transactions: Transaction[] = [];
@@ -65,27 +60,27 @@ class TransactionLocalService {
       // Convert cash reports to transactions format
       cashReports.forEach(report => {
         report.transactions.forEach(transaction => {
-          transactions.push({
-            id: `${report.id}_${transaction.id}`,
-            userId: transaction.userId ? parseInt(transaction.userId) : undefined,
-            gameId: `game_${transaction.id}`,
-            type: transaction.type === 'debit' ? 'payin' : 'payout',
-            amount: transaction.amount,
-            description: transaction.description,
-            createdAt: transaction.timestamp,
-            updatedAt: transaction.timestamp
-          } as Transaction);
+          if (transaction.userId) {
+            transactions.push({
+              id: `${report.id}_${transaction.id}`,
+              userId: parseInt(transaction.userId),
+              gameId: `game_${transaction.id}`,
+              type: transaction.type === 'debit' ? 'payin' : 'payout',
+              amount: transaction.amount,
+              description: transaction.description || '',
+              timestamp: transaction.timestamp.toISOString(),
+              status: 'completed'
+            } as Transaction);
+          }
         });
       });
 
-      console.log('✅ Transactions fetched from local storage:', transactions.length);
       return {
         success: true,
         data: transactions,
         message: 'Transactions fetched from local storage'
       };
     } catch (error) {
-      console.error('❌ Failed to fetch transactions from local storage:', error);
       throw error;
     }
   }
@@ -95,7 +90,6 @@ class TransactionLocalService {
    */
   public async getTransactionsByUserId(userId: number): Promise<ApiResponse<Transaction[]>> {
     try {
-      console.log('💳 Fetching transactions for user ID from local storage:', userId);
       
       const userIdString = userId.toString();
       const cashReports = await ReportStorageManager.getCashReports(userIdString);
@@ -111,22 +105,20 @@ class TransactionLocalService {
               gameId: `game_${transaction.id}`,
               type: transaction.type === 'debit' ? 'payin' : 'payout',
               amount: transaction.amount,
-              description: transaction.description,
-              createdAt: transaction.timestamp,
-              updatedAt: transaction.timestamp
+              description: transaction.description || '',
+              timestamp: transaction.timestamp.toISOString(),
+              status: 'completed'
             } as Transaction);
           }
         });
       });
 
-      console.log('✅ User transactions fetched from local storage:', transactions.length);
       return {
         success: true,
         data: transactions,
         message: 'User transactions fetched from local storage'
       };
     } catch (error) {
-      console.error('❌ Failed to fetch user transactions from local storage:', error);
       throw error;
     }
   }
@@ -141,7 +133,6 @@ class TransactionLocalService {
     payout: number
   ): Promise<{ payinTransaction: Transaction; payoutTransaction?: Transaction }> {
     try {
-      console.log('🎮 Recording game transactions:', { userId, gameId, payin, payout });
       
       // Create payin transaction
       const payinResponse = await this.createTransaction({
@@ -166,13 +157,11 @@ class TransactionLocalService {
         payoutTransaction = payoutResponse.data!;
       }
 
-      console.log('✅ Game transactions recorded successfully');
       return {
         payinTransaction: payinResponse.data!,
         payoutTransaction
       };
     } catch (error) {
-      console.error('❌ Failed to record game transactions:', error);
       throw error;
     }
   }
@@ -208,7 +197,7 @@ class TransactionLocalService {
         const start = new Date(startDate);
         const end = new Date(endDate);
         transactions = transactions.filter(transaction => {
-          const transactionDate = new Date(transaction.createdAt);
+          const transactionDate = new Date(transaction.timestamp);
           return transactionDate >= start && transactionDate <= end;
         });
       }
@@ -244,10 +233,8 @@ class TransactionLocalService {
 
       summary.netAmount = summary.totalPayout + summary.totalBonus + summary.totalRefund - summary.totalPayin;
 
-      console.log('📊 Transaction summary calculated:', summary);
       return summary;
     } catch (error) {
-      console.error('❌ Failed to calculate transaction summary:', error);
       throw error;
     }
   }

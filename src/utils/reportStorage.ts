@@ -23,10 +23,8 @@ export class ReportStorageManager {
   static async getGameReports(userId?: string): Promise<GameReport[]> {
     try {
       const key = this.getGameReportsKey(userId);
-      console.log('📊 Loading game reports with key:', key, 'for userId:', userId);
       const data = await AsyncStorage.getItem(key);
       if (!data) {
-        console.log('📊 No game reports found in storage for user:', userId);
         return [];
       }
       const reports = JSON.parse(data).map((report: any) => ({
@@ -37,10 +35,8 @@ export class ReportStorageManager {
           timestamp: new Date(game.timestamp)
         }))
       }));
-      console.log('📊 Successfully loaded', reports.length, 'game reports for user:', userId);
       return reports;
     } catch (error) {
-      console.error('❌ Error loading game reports for user:', userId, error);
       return [];
     }
   }
@@ -48,18 +44,8 @@ export class ReportStorageManager {
   static async saveGameReports(reports: GameReport[], userId?: string): Promise<void> {
     try {
       const key = this.getGameReportsKey(userId);
-      console.log('💾 [ReportStorageManager] Saving', reports.length, 'game reports for user:', userId);
-      console.log('💾 [ReportStorageManager] Storage key:', key);
-      console.log('💾 [ReportStorageManager] Reports being saved:', reports.map(r => ({
-        date: r.date,
-        totalGames: r.totalGames,
-        userId: r.userId,
-        gamesCount: r.games.length
-      })));
       await AsyncStorage.setItem(key, JSON.stringify(reports));
-      console.log('✅ [ReportStorageManager] Game reports saved successfully for user:', userId);
     } catch (error) {
-      console.error('❌ [ReportStorageManager] Error saving game reports for user:', userId, error);
     }
   }
 
@@ -82,12 +68,8 @@ export class ReportStorageManager {
     gameMode?: 'single_player' | 'multi_player'; // Track game mode
   }): Promise<string> {
     const userId = gameData.userId;
-    console.log('📊 [ReportStorageManager] Adding game entry for userId:', userId);
-    console.log('📊 [ReportStorageManager] Game data:', JSON.stringify(gameData, null, 2));
     const reports = await this.getGameReports(userId);
-    console.log('📊 [ReportStorageManager] Existing reports count:', reports.length);
     const todayDate = this.getTodayDateString();
-    console.log('📊 [ReportStorageManager] Today date:', todayDate);
     
     let todaysReport = reports.find(report => report.date === todayDate);
     
@@ -130,18 +112,8 @@ export class ReportStorageManager {
     todaysReport.totalCollectedAmount += gameData.collectedAmount;
     todaysReport.totalProfit += profitAmount;
 
-    console.log('📊 [ReportStorageManager] Updated today\'s report:', {
-      date: todaysReport.date,
-      totalGames: todaysReport.totalGames,
-      totalCollectedAmount: todaysReport.totalCollectedAmount,
-      totalProfit: todaysReport.totalProfit,
-      gamesCount: todaysReport.games.length,
-      userId: todaysReport.userId
-    });
-    console.log('📊 [ReportStorageManager] Latest game entry:', gameEntry);
 
     await this.saveGameReports(reports, userId);
-    console.log('📊 [ReportStorageManager] Game entry saved successfully!');
     
     // Note: Profit is calculated and stored in the game report
     // but we don't create a profit transaction here since that would
@@ -157,8 +129,6 @@ export class ReportStorageManager {
     winnerFound?: boolean;
     gameStatus?: 'started' | 'completed';
   }, userId?: string): Promise<void> {
-    console.log('📊 [ReportStorageManager] Updating game entry:', gameEntryId, 'for userId:', userId);
-    console.log('📊 [ReportStorageManager] Update data:', JSON.stringify(updateData, null, 2));
     
     const reports = await this.getGameReports(userId);
     
@@ -172,16 +142,13 @@ export class ReportStorageManager {
           ...updateData
         };
         
-        console.log('📊 [ReportStorageManager] Updated game entry:', report.games[gameIndex]);
         
         // Save the updated reports
         await this.saveGameReports(reports, userId);
-        console.log('📊 [ReportStorageManager] Game entry updated successfully!');
         return;
       }
     }
     
-    console.warn('📊 [ReportStorageManager] Game entry not found for update:', gameEntryId);
   }
 
   static async getGameReportByDate(date: string, userId?: string): Promise<GameReport | null> {
@@ -198,10 +165,8 @@ export class ReportStorageManager {
   static async getCashReports(userId?: string): Promise<CashReport[]> {
     try {
       const key = this.getCashReportsKey(userId);
-      console.log('💳 Loading cash reports with key:', key, 'for userId:', userId);
       const data = await AsyncStorage.getItem(key);
       if (!data) {
-        console.log('💳 No cash reports found in storage for user:', userId);
         return [];
       }
       const reports = JSON.parse(data).map((report: any) => ({
@@ -212,10 +177,8 @@ export class ReportStorageManager {
           timestamp: new Date(transaction.timestamp)
         }))
       }));
-      console.log('💳 Successfully loaded', reports.length, 'cash reports for user:', userId);
       return reports;
     } catch (error) {
-      console.error('❌ Error loading cash reports for user:', userId, error);
       return [];
     }
   }
@@ -223,11 +186,8 @@ export class ReportStorageManager {
   static async saveCashReports(reports: CashReport[], userId?: string): Promise<void> {
     try {
       const key = this.getCashReportsKey(userId);
-      console.log('💾 Saving', reports.length, 'cash reports for user:', userId);
       await AsyncStorage.setItem(key, JSON.stringify(reports));
-      console.log('✅ Cash reports saved successfully for user:', userId);
     } catch (error) {
-      console.error('❌ Error saving cash reports for user:', userId, error);
     }
   }
 
@@ -245,10 +205,7 @@ export class ReportStorageManager {
     userId?: string; // Add userId to transaction data
   }): Promise<void> {
     const userId = transactionData.userId;
-    console.log('💾 Adding cash transaction for userId:', userId);
-    console.log('💾 Transaction data:', JSON.stringify(transactionData, null, 2));
     const reports = await this.getCashReports(userId);
-    console.log('💾 Existing reports for this user:', reports.length);
     const todayDate = this.getTodayDateString();
     
     let todaysReport = reports.find(report => report.date === todayDate);
@@ -361,7 +318,6 @@ export class ReportStorageManager {
       const cashKey = this.getCashReportsKey(userId);
       await AsyncStorage.multiRemove([gameKey, cashKey]);
     } catch (error) {
-      console.error('Error clearing reports:', error);
     }
   }
 

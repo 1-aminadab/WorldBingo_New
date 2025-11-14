@@ -94,7 +94,6 @@ export const AppNavigator: React.FC = () => {
         if (paymentSuccess) {
           paymentStatus = 'success';
           message = `Payment successful! ${amount ? `Amount: ${amount}` : ''} ${transactionId ? `Transaction ID: ${transactionId}` : ''}`;
-          console.log('✅ Payment success:', { amount, transactionId });
         } else if (paymentCancelled) {
           paymentStatus = 'cancelled';
           message = 'Payment was cancelled';

@@ -157,7 +157,6 @@ export const ProfileScreen: React.FC = () => {
       const { paymentStatus, paymentMessage, amount, transactionId } = route.params || {};
       
       if (paymentStatus) {
-        console.log('💳 Payment Result Received:', { paymentStatus, paymentMessage, amount, transactionId });
         
         setTimeout(() => {
           if (paymentStatus === 'success') {
@@ -375,7 +374,6 @@ export const ProfileScreen: React.FC = () => {
 
   const handleCoinPurchase = () => {
     const userId = useAuthStore.getState().getUserId();
-    console.log('💳 Navigating to payment page with user ID:', userId);
     navigation.navigate(ScreenNames.PAYMENT_WEBVIEW as never);
   };
 
@@ -427,7 +425,6 @@ export const ProfileScreen: React.FC = () => {
         console.log(`💰 [${debugId}] Coin difference: ${coinIncrease}`);
         
         if (coinIncrease > 0) {
-          console.log(`📈 [${debugId}] Creating positive transaction report for coin increase: +${coinIncrease}`);
           try {
             await transactionApiService.createTransaction({
               userId: userId,
@@ -435,7 +432,6 @@ export const ProfileScreen: React.FC = () => {
               amount: coinIncrease,
               description: `Coins retrieved from sync (+${coinIncrease.toFixed(2)} coins)`
             });
-            console.log(`✅ [${debugId}] Transaction report created for +${coinIncrease} coins`);
           } catch (transactionError) {
             console.error(`❌ [${debugId}] Failed to create transaction report:`, transactionError);
             // Don't show error to user, just log it since sync was successful

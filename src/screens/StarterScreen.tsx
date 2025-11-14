@@ -27,6 +27,7 @@ import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { audioService } from '../services/audioService';
 import { TouchableWithSound } from '../components/ui/TouchableWithSound';
+import { CoinSyncIndicator } from '../components/ui/CoinSyncIndicator';
 import { ScreenNames } from '../constants/ScreenNames';
 
 const { width } = Dimensions.get('window');
@@ -37,6 +38,11 @@ export const StarterScreen: React.FC = () => {
   const { theme } = useTheme();
   const { user, isGuest, logout, setPendingAuthScreen, logoutSilent } = useAuthStore();
   const { isGameReadyToStart, isMusicEnabled, setMusicEnabled, isFirstTimeStartup, setFirstTimeStartup } = useSettingsStore();
+
+  // Debug logging for music state
+  React.useEffect(() => {
+    console.log('🔊 StarterScreen - Music state changed:', isMusicEnabled);
+  }, [isMusicEnabled]);
 
   // Card floating animation
   const cardRotate = useSharedValue(0);
@@ -147,8 +153,23 @@ export const StarterScreen: React.FC = () => {
     Linking.openURL('https://help.myworldbingo.com');
   };
 
-  const handleMusicToggle = () => {
-    audioService.toggleMusic();
+  const handleMusicToggle = async () => {
+    try {
+      console.log('🔊 Before toggle - Music enabled:', isMusicEnabled);
+      const newState = audioService.toggleMusic();
+      console.log('🔊 After toggle - Music enabled:', newState);
+      
+      // Double-check the state after toggle
+      const currentState = useSettingsStore.getState().isMusicEnabled;
+      console.log('🔊 Store state after toggle:', currentState);
+      
+      // Force state update if needed
+      if (currentState !== newState) {
+        setMusicEnabled(newState);
+      }
+    } catch (error) {
+      console.error('🔊 Error toggling music:', error);
+    }
   };
 
   const handleShare = () => {
@@ -186,14 +207,33 @@ https://myworldbingo.com/app`;
                 resizeMode="contain"
               />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconCircle} onPress={handleMusicToggle}>
+            <TouchableOpacity 
+              style={[
+                styles.iconCircle,
+                { 
+                  // backgroundColor: isMusicEnabled ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)',
+                  // borderWidth: 1,
+                  borderColor: isMusicEnabled ? 'rgba(0, 255, 0, 0.3)' : 'rgba(255, 0, 0, 0.3)',
+                  borderRadius: 20
+                }
+              ]} 
+              onPress={handleMusicToggle}
+              activeOpacity={0.7}
+            >
               <Image 
                 source={isMusicEnabled 
                   ? require('../assets/images/unmute.png')
                   : require('../assets/images/mute.png')
                 }
-                style={styles.iconImage}
+                style={[
+                  styles.iconImage,
+                  { 
+                    // tintColor: isMusicEnabled ? '#00AA00' : '#AA0000',
+                    opacity: 1 
+                  }
+                ]}
                 resizeMode="contain"
+                key={`music-${isMusicEnabled ? 'unmuted' : 'muted'}`} // Force re-render on state change
               />
             </TouchableOpacity>
             <TouchableOpacity style={styles.iconCircle} onPress={handleShare}>
@@ -212,6 +252,9 @@ https://myworldbingo.com/app`;
             />
           </View>
         </View>
+
+        {/* Coin Sync Indicator */}
+        <CoinSyncIndicator />
 
         {/* Main Actions */}
         <View style={styles.actionsContainer}>

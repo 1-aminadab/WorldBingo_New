@@ -138,20 +138,28 @@ export const useAuthStore = create<AuthStore>()(
         try {
           const result = await authApiService.verifyOtp({ phoneNumber, otp });
           
-          if (result.success && result.data?.user) {
-            const appUser = get().convertApiUserToAppUser(result.data.user);
-          set({ 
-            user: appUser, 
-            isAuthenticated: true, 
-            isGuest: false,
-            isLoading: false,
-            error: null
-          });
-          // Load coins for this user
-          await get().loadCoins();
-          console.log('🔐 Persistent login: Session will remain until manual logout');
-          toastContext?.showSuccess(`Welcome, ${appUser.name}!`, 'Verification Successful');
-          return { success: true, message: result.message };
+          if (result.success) {
+            // If we have user data, set up authenticated session
+            if (result.data?.user) {
+              const appUser = get().convertApiUserToAppUser(result.data.user);
+              set({ 
+                user: appUser, 
+                isAuthenticated: true, 
+                isGuest: false,
+                isLoading: false,
+                error: null
+              });
+              // Load coins for this user
+              await get().loadCoins();
+              console.log('🔐 Persistent login: Session will remain until manual logout');
+              toastContext?.showSuccess(`Welcome, ${appUser.name}!`, 'Verification Successful');
+            } else {
+              // Verification successful but no user data (e.g., account registration verification)
+              // Don't set up session - just mark verification as successful
+              set({ isLoading: false, error: null });
+              toastContext?.showSuccess(result.message || 'Account verified! Please log in.', 'Registration Complete');
+            }
+            return { success: true, message: result.message };
           }
           
           const errorMsg = result.message || 'OTP verification failed';
@@ -488,16 +496,7 @@ export const useAuthStore = create<AuthStore>()(
           console.log('🔐 User session restored from storage:', user.name);
           console.log('🔐 Persistent login enabled - user stays logged in until manual logout');
           
-          // Load game reports after authentication restoration
-          console.log('📊 Loading game reports for restored user session...');
-          try {
-            const { useGameReportStore } = await import('./gameReportStore');
-            const gameReportStore = useGameReportStore.getState();
-            await gameReportStore.fetchCurrentUserReport();
-            console.log('✅ Game reports loaded successfully');
-          } catch (error) {
-            console.error('❌ Failed to load game reports on auth init:', error);
-          }
+          // Backend sync removed - only local reports now
           
           return; // Keep existing state
         }
@@ -506,16 +505,7 @@ export const useAuthStore = create<AuthStore>()(
         if (isGuest) {
           console.log('👤 Guest session restored');
           
-          // Load game reports for guest user
-          console.log('📊 Loading game reports for guest user...');
-          try {
-            const { useGameReportStore } = await import('./gameReportStore');
-            const gameReportStore = useGameReportStore.getState();
-            await gameReportStore.fetchCurrentUserReport();
-            console.log('✅ Guest game reports loaded successfully');
-          } catch (error) {
-            console.error('❌ Failed to load guest game reports on auth init:', error);
-          }
+          // Backend sync removed - only local reports now
           
           return; // Keep guest state
         }

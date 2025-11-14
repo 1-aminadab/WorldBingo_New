@@ -13,7 +13,6 @@ class AudioService {
   async initialize() {
     if (this.isInitialized) return;
     
-    console.log('🎵 AudioService: Initializing...');
     
     // Wait for store rehydration to complete before starting music
     this.waitForRehydrationAndStart();
@@ -22,7 +21,6 @@ class AudioService {
     let previousMusicState = useSettingsStore.getState().isMusicEnabled;
     useSettingsStore.subscribe((state) => {
       if (state.isMusicEnabled !== previousMusicState) {
-        console.log('🎵 AudioService: Music state changed to:', state.isMusicEnabled);
         if (state.isMusicEnabled) {
           this.startBackgroundMusic();
         } else {
@@ -33,7 +31,6 @@ class AudioService {
     });
     
     this.isInitialized = true;
-    console.log('🎵 AudioService: Initialization complete');
   }
 
   /**
@@ -46,14 +43,11 @@ class AudioService {
       
       const { isMusicEnabled } = useSettingsStore.getState();
       
-      console.log(`🎵 AudioService: Check attempt ${this.rehydrationCheckAttempts}, isMusicEnabled:`, isMusicEnabled);
       
       // Start music if enabled
       if (isMusicEnabled && !this.backgroundMusicStarted) {
-        console.log('🎵 AudioService: Starting background music (rehydration complete)');
         this.startBackgroundMusic();
       } else if (!isMusicEnabled) {
-        console.log('🎵 AudioService: Music is disabled, not starting');
       }
     };
     
@@ -67,7 +61,6 @@ class AudioService {
   startBackgroundMusic() {
     if (this.backgroundMusicStarted) return;
     
-    console.log('🎵 AudioService: Starting background music');
     audioManager.playBackgroundMusic();
     this.backgroundMusicStarted = true;
   }
@@ -78,7 +71,6 @@ class AudioService {
   stopBackgroundMusic() {
     if (!this.backgroundMusicStarted) return;
     
-    console.log('🎵 AudioService: Stopping background music');
     audioManager.stopBackgroundMusic();
     this.backgroundMusicStarted = false;
   }
@@ -100,7 +92,6 @@ class AudioService {
     const { isMusicEnabled, setMusicEnabled } = useSettingsStore.getState();
     const newState = !isMusicEnabled;
     
-    console.log('🎵 AudioService: Toggling music from', isMusicEnabled, 'to', newState);
     setMusicEnabled(newState);
     
     // Note: The state change will be automatically handled by the subscriber
@@ -136,7 +127,6 @@ class AudioService {
    */
   pauseMusic() {
     if (this.backgroundMusicStarted) {
-      console.log('🎵 AudioService: Temporarily pausing music for game');
       audioManager.stopBackgroundMusic();
       this.backgroundMusicStarted = false; // Update flag so music can be resumed
     }
@@ -149,7 +139,6 @@ class AudioService {
   resumeMusic() {
     const { isMusicEnabled } = useSettingsStore.getState();
     if (isMusicEnabled) {
-      console.log('🎵 AudioService: Resuming music after game');
       this.startBackgroundMusic();
     }
   }
