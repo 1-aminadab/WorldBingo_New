@@ -269,9 +269,18 @@ export const SinglePlayerGameScreen: React.FC = () => {
   // Initial number draw - always start immediately in SinglePlayerGameScreen
   useEffect(() => {
     if (calledNumbers.length === 0) {
-      drawNext();
+      // Play game start sound
+      if (selectedVoice) {
+        audioManager.setVoice(selectedVoice);
+        audioManager.playGameStartSound();
+      }
+      
+      // Add delay before first number like in GameScreen
+      setTimeout(() => {
+        drawNext();
+      }, 3000);
     }
-  }, []); // Remove dependency on numberCallingMode
+  }, [selectedVoice]); // Add selectedVoice dependency
 
   // Keep a ref of called numbers for always-fresh reads in timers
   useEffect(() => {
@@ -467,6 +476,9 @@ export const SinglePlayerGameScreen: React.FC = () => {
   };
 
   const openCheck = () => {
+    // Play check cartela sound
+    audioManager.announceCheckWinner();
+    
     setCheckMessage(null);
     setPreviewGridNumbers(null);
     setPreviewMatched(null);
@@ -876,8 +888,15 @@ export const SinglePlayerGameScreen: React.FC = () => {
               if (bingoFound) {
                 setBingoFound(false);
                 setPaused(false);
+                audioManager.announceGameResume();
               } else {
-                setPaused((p) => !p);
+                const willBePaused = !paused;
+                setPaused(willBePaused);
+                if (willBePaused) {
+                  audioManager.announceGamePause();
+                } else {
+                  audioManager.announceGameResume();
+                }
               }
             }}
           />

@@ -27,7 +27,6 @@ import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { audioService } from '../services/audioService';
 import { TouchableWithSound } from '../components/ui/TouchableWithSound';
-import { CoinSyncIndicator } from '../components/ui/CoinSyncIndicator';
 import { ScreenNames } from '../constants/ScreenNames';
 
 const { width } = Dimensions.get('window');
@@ -253,8 +252,6 @@ https://myworldbingo.com/app`;
           </View>
         </View>
 
-        {/* Coin Sync Indicator */}
-        <CoinSyncIndicator />
 
         {/* Main Actions */}
         <View style={styles.actionsContainer}>

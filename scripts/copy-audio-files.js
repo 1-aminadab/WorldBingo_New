@@ -42,12 +42,12 @@ function copyAudioFiles() {
     // Copy numbered files (1.mp3 to 75.mp3)
     for (let i = 1; i <= 75; i++) {
       const sourceFile = path.join(sourcePath, `${i}.mp3`);
-      const targetFile = path.join(ANDROID_DEST, `${targetPrefix}_${i}`); // No .mp3 for Android
+      const targetFile = path.join(ANDROID_DEST, `${targetPrefix}_${i}.mp3`); // Keep .mp3 for react-native-sound
       
       if (fs.existsSync(sourceFile)) {
         try {
           fs.copyFileSync(sourceFile, targetFile);
-          console.log(`  Copied: ${i}.mp3 -> ${targetPrefix}_${i}`);
+          console.log(`  Copied: ${i}.mp3 -> ${targetPrefix}_${i}.mp3`);
         } catch (error) {
           console.error(`  Error copying ${i}.mp3:`, error.message);
         }
@@ -63,7 +63,7 @@ function copyAudioFiles() {
     for (const testFile of testFiles) {
       const sourceTestFile = path.join(sourcePath, testFile);
       if (fs.existsSync(sourceTestFile)) {
-        const targetTestFile = path.join(ANDROID_DEST, `${targetPrefix}_test`); // No .mp3 for Android
+        const targetTestFile = path.join(ANDROID_DEST, `${targetPrefix}_test.mp3`); // Keep .mp3 for react-native-sound
         try {
           fs.copyFileSync(sourceTestFile, targetTestFile);
           console.log(`  Copied: ${testFile} -> ${targetPrefix}_test`);
@@ -83,7 +83,7 @@ function copyAudioFiles() {
       otherFiles.forEach(fileName => {
         const sourceFile = path.join(otherPath, fileName);
         const baseFileName = fileName.replace('.mp3', '').replace(/-/g, '_').toLowerCase();
-        const targetFile = path.join(ANDROID_DEST, `${targetPrefix}_other_${baseFileName}`); // No .mp3 for Android
+        const targetFile = path.join(ANDROID_DEST, `${targetPrefix}_other_${baseFileName}.mp3`); // Keep .mp3 for react-native-sound
         
         try {
           fs.copyFileSync(sourceFile, targetFile);
@@ -95,13 +95,69 @@ function copyAudioFiles() {
           console.error(`  Error copying Other/${fileName}:`, error.message);
         }
       });
+    } else {
+      // For Amharic voices that don't have Other folders, copy from men/women game sound folders as fallback
+      if (targetPrefix.includes('amharic')) {
+        console.log(`  No Other folder found for ${sourceFolder}, using game sound fallback`);
+        
+        // Determine which game sound folder to use based on voice type
+        const gameSourceFolder = targetPrefix.includes('women') ? 'woman game sound' : 'men game sound';
+        const gameSourcePath = path.join(SOURCE_DIR, gameSourceFolder);
+        
+        if (fs.existsSync(gameSourcePath)) {
+          console.log(`  Using fallback: ${gameSourceFolder} -> ${targetPrefix}_*`);
+          
+          // Copy the specific game sound files needed - handle gender-specific naming
+          let gameFiles;
+          if (targetPrefix.includes('women')) {
+            // Women game sound has different file names
+            gameFiles = [
+              'checking-cartela.mp3',
+              'game-continue.mp3', 
+              'game-paused.mp3',
+              'game-start.mp3',
+              'no-winner-game-continue.mp3',
+              'Winer Card.mp3'  // Different name for women (note: original file has typo)
+            ];
+          } else {
+            // Men game sound file names
+            gameFiles = [
+              'checking-cartela.mp3',
+              'game-continue.mp3', 
+              'game-paused.mp3',
+              'game-start.mp3',
+              'no-winner-game-continue.mp3',
+              'winner-Cartela.mp3'  // Men's version
+            ];
+          }
+          
+          gameFiles.forEach(fileName => {
+            const sourceFile = path.join(gameSourcePath, fileName);
+            if (fs.existsSync(sourceFile)) {
+              const baseFileName = fileName.replace('.mp3', '').replace(/[-\s]/g, '_').toLowerCase();
+              const targetFile = path.join(ANDROID_DEST, `${targetPrefix}_other_${baseFileName}.mp3`);
+              
+              try {
+                fs.copyFileSync(sourceFile, targetFile);
+                console.log(`  Copied: ${gameSourceFolder}/${fileName} -> ${targetPrefix}_other_${baseFileName}`);
+              } catch (error) {
+                console.error(`  Error copying ${gameSourceFolder}/${fileName}:`, error.message);
+              }
+            } else {
+              console.log(`  Missing in fallback: ${gameSourceFolder}/${fileName}`);
+            }
+          });
+        } else {
+          console.log(`  Warning: Fallback folder not found: ${gameSourcePath}`);
+        }
+      }
     }
     
     // Try test file in Other subfolder for backwards compatibility
     if (!testCopied) {
       const otherTestFile = path.join(sourcePath, 'Other', 'test.mp3');
       if (fs.existsSync(otherTestFile)) {
-        const targetTestFile = path.join(ANDROID_DEST, `${targetPrefix}_test`); // No .mp3 for Android
+        const targetTestFile = path.join(ANDROID_DEST, `${targetPrefix}_test.mp3`); // Keep .mp3 for react-native-sound
         try {
           fs.copyFileSync(otherTestFile, targetTestFile);
           console.log(`  Copied: Other/test.mp3 -> ${targetPrefix}_test`);
@@ -133,12 +189,12 @@ function copyAudioFiles() {
     
     winnerNumbers.forEach(num => {
       const sourceFile = path.join(menWinnerPath, `${num}.mp3`);
-      const targetFile = path.join(ANDROID_DEST, `men_game_sound_winner_cartela_${num}.mp3`);
+      const targetFile = path.join(ANDROID_DEST, `men_game_sound_winner_cartela_${num}.mp3`); // Keep .mp3 for react-native-sound
       
       if (fs.existsSync(sourceFile)) {
         try {
           fs.copyFileSync(sourceFile, targetFile);
-          console.log(`  Copied: ${num}.mp3 -> men_game_sound_winner_cartela_${num}.mp3`);
+          console.log(`  Copied: ${num}.mp3 -> men_game_sound_winner_cartela_${num}`);
         } catch (error) {
           console.error(`  Error copying ${num}.mp3:`, error.message);
         }
@@ -163,12 +219,12 @@ function copyAudioFiles() {
     
     winnerNumbers.forEach(num => {
       const sourceFile = path.join(womenWinnerPath, `${num}.mp3`);
-      const targetFile = path.join(ANDROID_DEST, `woman_game_sound_winner_cartela_${num}.mp3`);
+      const targetFile = path.join(ANDROID_DEST, `woman_game_sound_winner_cartela_${num}.mp3`); // Keep .mp3 for react-native-sound
       
       if (fs.existsSync(sourceFile)) {
         try {
           fs.copyFileSync(sourceFile, targetFile);
-          console.log(`  Copied: ${num}.mp3 -> woman_game_sound_winner_cartela_${num}.mp3`);
+          console.log(`  Copied: ${num}.mp3 -> woman_game_sound_winner_cartela_${num}`);
         } catch (error) {
           console.error(`  Error copying ${num}.mp3:`, error.message);
         }

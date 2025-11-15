@@ -41,6 +41,7 @@ import { useSettingsStore } from '../store/settingsStore';
 import { CoinSyncService } from '../services/coinSyncService';
 import { formatTime } from '../utils/gameHelpers';
 import { ReportStorageManager } from '../utils/reportStorage';
+import { CoinStorageManager } from '../utils/coinStorage';
 import { apiClient } from '../api/client/base';
 import { API_ENDPOINTS } from '../api/config';
 import { ScreenNames } from '../constants/ScreenNames';
@@ -63,7 +64,16 @@ export const ProfileScreen: React.FC = () => {
   const route = useRoute<ProfileScreenRouteProp>();
   const { t, i18n } = useTranslation();
   const { theme, isDark } = useTheme();
-  const { user, isAuthenticated, isGuest, logout, logoutSilent, convertGuestToUser, isLoading, userCoins, setPendingAuthScreen } = useAuthStore();
+  // Extract auth state with explicit selectors
+  const user = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isGuest = useAuthStore((state) => state.isGuest);
+  const userCoins = useAuthStore((state) => state.userCoins);
+  const logout = useAuthStore((state) => state.logout);
+  const logoutSilent = useAuthStore((state) => state.logoutSilent);
+  const convertGuestToUser = useAuthStore((state) => state.convertGuestToUser);
+  const isLoading = useAuthStore((state) => state.isLoading);
+  const setPendingAuthScreen = useAuthStore((state) => state.setPendingAuthScreen);
   const { appLanguage, setAppLanguage } = useSettingsStore();
 
   // Form states
@@ -306,6 +316,11 @@ export const ProfileScreen: React.FC = () => {
     }
   }, [userCoins, user?.userId]); // Trigger when coins or user changes
 
+  // Monitor userCoins changes
+  useEffect(() => {
+    // Component will re-render with new coin value
+  }, [userCoins]);
+
   const handleLogout = () => {
     Alert.alert(
       'Logout',
@@ -378,62 +393,40 @@ export const ProfileScreen: React.FC = () => {
   };
 
   const handleRefreshCoins = async () => {
-    const debugId = Math.random().toString(36).substr(2, 9);
-    console.log(`🔄 [${debugId}] ===== REFRESH COINS BUTTON PRESSED =====`);
-    console.log(`🔄 [${debugId}] Timestamp: ${new Date().toISOString()}`);
-    console.log(`🔄 [${debugId}] Current refresh state: ${isRefreshingCoins}`);
-    
     if (isRefreshingCoins) {
-      console.log(`⚠️ [${debugId}] Refresh already in progress, ignoring click`);
       return; // Prevent multiple simultaneous refreshes
     }
     
-    // Get current user state for debugging
     const authStore = useAuthStore.getState();
     const currentUserCoins = authStore.userCoins;
     const userId = authStore.getUserId();
-    const isAuthenticated = authStore.isAuthenticated;
-    
-    console.log(`👤 [${debugId}] User state:`, {
-      userId,
-      isAuthenticated,
-      currentUserCoins,
-      isGuest: authStore.isGuest
-    });
     
     setIsRefreshingCoins(true);
-    console.log(`🔄 [${debugId}] Set refresh state to true`);
     
     try {
-      console.log(`🔄 [${debugId}] Starting coin sync service...`);
       const result = await CoinSyncService.syncCoins();
-      console.log(`🔄 [${debugId}] Coin sync completed with result:`, result);
       
       if (result.success) {
-        console.log(`✅ [${debugId}] Sync successful, refreshing user coins in store...`);
-        
         // Refresh user coins in the store
         await useAuthStore.getState().loadCoins();
-        console.log(`💰 [${debugId}] Coins refreshed from local storage`);
         
         // Get updated coins for comparison
         const newUserCoins = useAuthStore.getState().userCoins;
-        console.log(`💰 [${debugId}] Coins updated: ${currentUserCoins} → ${newUserCoins}`);
         
-        // Check if coins increased and create transaction report
-        const coinIncrease = newUserCoins - currentUserCoins;
-        console.log(`💰 [${debugId}] Coin difference: ${coinIncrease}`);
+        // Check coin difference and create transaction report if changed
+        const coinDifference = newUserCoins - currentUserCoins;
         
-        if (coinIncrease > 0) {
+        if (coinDifference !== 0) {
           try {
             await transactionApiService.createTransaction({
               userId: userId,
-              type: 'payout', // Positive transaction (coins added to user's balance)
-              amount: coinIncrease,
-              description: `Coins retrieved from sync (+${coinIncrease.toFixed(2)} coins)`
+              type: coinDifference > 0 ? 'payout' : 'payin',
+              amount: Math.abs(coinDifference),
+              description: coinDifference > 0 
+                ? `Coins synced from backend (+${coinDifference.toFixed(2)} coins)`
+                : `Coins adjusted during sync (${coinDifference.toFixed(2)} coins)`
             });
           } catch (transactionError) {
-            console.error(`❌ [${debugId}] Failed to create transaction report:`, transactionError);
             // Don't show error to user, just log it since sync was successful
           }
         }
@@ -443,14 +436,9 @@ export const ProfileScreen: React.FC = () => {
           '🪙 Coins Synced!',
           result.message
         );
-        
-        console.log(`✅ [${debugId}] Success modal shown`);
       } else {
-        console.error(`❌ [${debugId}] Sync failed with result:`, result);
-        
         // Check if login is required
         if (result.requiresLogin) {
-          console.log(`🔐 [${debugId}] Login required, showing login alert...`);
           Alert.alert(
             '🔐 Login Required',
             result.message || 'Please log in to sync your coins with the backend.',
@@ -459,9 +447,8 @@ export const ProfileScreen: React.FC = () => {
               { 
                 text: 'Login', 
                 onPress: () => {
-                  console.log(`🔐 [${debugId}] User chose to login from sync error`);
                   setPendingAuthScreen('Login');
-                  logoutSilent(); // This will navigate to auth
+                  logoutSilent();
                 }
               },
             ]
@@ -473,24 +460,14 @@ export const ProfileScreen: React.FC = () => {
             result.error || 'Failed to sync coins with backend'
           );
         }
-        
-        console.log(`❌ [${debugId}] Error handling completed`);
       }
     } catch (error: any) {
-      console.error(`❌ [${debugId}] Exception during refresh:`, {
-        type: error.constructor?.name,
-        message: error.message,
-        stack: error.stack,
-        fullError: error
-      });
-      
       // Check if this is an authentication error
       const isAuthError = error.statusCode === 401 || 
                          error.message?.includes('No token provided') ||
                          error.message?.includes('Unauthorized');
       
       if (isAuthError) {
-        console.log(`🔐 [${debugId}] Auth error in exception, showing login alert...`);
         Alert.alert(
           '🔐 Login Required',
           'Your session has expired. Please log in to sync your coins.',
@@ -499,7 +476,6 @@ export const ProfileScreen: React.FC = () => {
             { 
               text: 'Login', 
               onPress: () => {
-                console.log(`🔐 [${debugId}] User chose to login from exception`);
                 setPendingAuthScreen('Login');
                 logoutSilent();
               }
@@ -513,12 +489,8 @@ export const ProfileScreen: React.FC = () => {
           'Unable to connect to server. Please check your internet connection.'
         );
       }
-      
-      console.log(`❌ [${debugId}] Exception handling completed`);
     } finally {
       setIsRefreshingCoins(false);
-      console.log(`🔄 [${debugId}] Set refresh state to false`);
-      console.log(`🔄 [${debugId}] ===== REFRESH COINS COMPLETED =====`);
     }
   };
 
@@ -625,15 +597,11 @@ export const ProfileScreen: React.FC = () => {
         return;
       }
 
-      console.log('Updating user profile:', { userId, fullName, phoneNumber: fullPhoneNumber });
-      
       // Use the correct endpoint: PUT /api/v1/users/:userId
       const response = await apiClient.put(`/api/v1/users/${userId}`, {
         fullName,
         phoneNumber: fullPhoneNumber,
       });
-
-      console.log('Update profile response:', response);
 
       if (response.success) {
         // Update local user state
@@ -700,7 +668,10 @@ export const ProfileScreen: React.FC = () => {
 
   const renderProfileHeader = () => {
     // For guest users, show simplified header with signup/signin buttons and coin display
-    if (isGuest) {
+    // Safety check: if isGuest is true OR if user is not authenticated and no user object
+    const shouldShowGuestUI = isGuest === true || (!isAuthenticated && !user);
+    
+    if (shouldShowGuestUI) {
       return (
         <View style={[{ backgroundColor: 'rgb(28, 42, 89)', borderRadius: 8, padding: 16 }]}>
           <View style={styles.guestHeader}>
@@ -764,7 +735,6 @@ export const ProfileScreen: React.FC = () => {
               <TouchableOpacity 
                 style={[styles.refreshBtn, { backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border }]} 
                 onPress={() => {
-                  console.log('🔄 Refresh button pressed by guest user - showing signup alert');
                   Alert.alert(
                     'Sign Up Required',
                     'To sync coins with the backend, please create an account or sign in.',
@@ -773,7 +743,6 @@ export const ProfileScreen: React.FC = () => {
                       { 
                         text: 'Sign Up', 
                         onPress: async () => {
-                          console.log('🔄 Guest user chose to sign up from refresh button');
                           setPendingAuthScreen('SignUp');
                           await logoutSilent();
                         }
@@ -834,7 +803,9 @@ export const ProfileScreen: React.FC = () => {
               source={require('../assets/images/coin-2159.svg')}
               style={styles.coinIcon}
             />
-            <Text style={[styles.coinText, { color: theme.colors.text }]}>{userCoins.toFixed(0)} coins</Text>
+            <Text style={[styles.coinText, { color: theme.colors.text }]}>
+              {userCoins.toFixed(0)} coins
+            </Text>
           </View>
           <View style={styles.coinButtons}>
             <TouchableOpacity style={[styles.buyCoinBtn, { backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: theme.colors.border }]} onPress={handleCoinPurchase}>
@@ -842,12 +813,7 @@ export const ProfileScreen: React.FC = () => {
             </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.refreshBtn, { backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border }]} 
-              onPress={() => {
-                console.log('🔄 Refresh button pressed by authenticated user');
-                console.log('🔄 Current refresh state:', isRefreshingCoins);
-                console.log('🔄 Current user coins:', userCoins);
-                handleRefreshCoins();
-              }}
+              onPress={handleRefreshCoins}
               disabled={isRefreshingCoins}
             >
               <Animated.View style={refreshAnimatedStyle}>

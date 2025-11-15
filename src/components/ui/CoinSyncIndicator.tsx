@@ -15,7 +15,7 @@ export const CoinSyncIndicator: React.FC = () => {
     <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
       <ActivityIndicator size="small" color={theme.colors.primary} />
       <Text style={[styles.text, { color: theme.colors.text }]}>
-        {message || 'Syncing coins...'}
+        {message || 'Syncing...'}
       </Text>
     </View>
   );

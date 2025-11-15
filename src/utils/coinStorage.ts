@@ -85,7 +85,22 @@ export class CoinStorageManager {
       const newBalance = currentCoins + amount;
       console.log(`💰 [${debugId}] Calculating new balance: ${currentCoins} + ${amount} = ${newBalance}`);
       
+      // Log AsyncStorage state before the write
+      const storageKey = userId ? `coins_${userId}` : 'coins_GUEST';
+      console.log(`💾 [${debugId}] AsyncStorage BEFORE setCoins():`);
+      console.log(`💾 [${debugId}] - Key: ${storageKey}`);
+      console.log(`💾 [${debugId}] - Will write value: ${newBalance}`);
+      
       await this.setCoins(newBalance, userId);
+      
+      // Verify AsyncStorage write was successful
+      console.log(`💾 [${debugId}] AsyncStorage AFTER setCoins():`);
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      const verifyStorageValue = await AsyncStorage.getItem(storageKey);
+      console.log(`💾 [${debugId}] - Raw AsyncStorage value: ${verifyStorageValue}`);
+      console.log(`💾 [${debugId}] - Parsed value: ${parseFloat(verifyStorageValue || '0')}`);
+      console.log(`💾 [${debugId}] - Write success: ${parseFloat(verifyStorageValue || '0') === newBalance ? '✅' : '❌'}`);
+      
       console.log(`💰 [${debugId}] ✅ Added ${amount} coins: ${currentCoins} → ${newBalance} (User: ${userId || 'GUEST'})`);
       return newBalance;
     } catch (error) {

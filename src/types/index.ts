@@ -63,6 +63,8 @@ export interface VoiceOption {
 // Game Sound Types
 export type GameSoundType = 
   | 'game_start'
+  | 'game_pause'
+  | 'game_resume'
   | 'check_winner'
   | 'winner_found'
   | 'no_winner_continue'

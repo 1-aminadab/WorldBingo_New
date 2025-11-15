@@ -23,8 +23,10 @@ import { triggerReportSync } from './src/sync/reportSyncService';
 import { useReportSyncStore } from './src/sync/reportSyncStore';
 import { CoinSyncService } from './src/services/coinSyncService';
 import { apiClient } from './src/api/client/base';
+import { useAuthStore } from './src/store/authStore';
 import { logAppVersion } from './src/utils/appVersion';
 import { useVersionStore } from './src/store/versionStore';
+import { SyncIndicator } from './src/components/ui/SyncIndicator';
 import './src/i18n';
 import Orientation from 'react-native-orientation-locker';
 import KeepAwake from 'react-native-keep-awake';
@@ -51,6 +53,27 @@ const AppContent = () => {
     const initializeSyncServices = async () => {
       console.log('🚀 [App] Initializing sync services on startup...');
       
+      // Log authentication token on app load
+      console.log('🔑 [App] === AUTH TOKEN CHECK ON APP LOAD ===');
+      try {
+        await apiClient.ensureTokenLoaded();
+        const token = apiClient.getAuthToken();
+        if (token) {
+          console.log('🔑 [App] Auth token available:', token.length > 0 ? 'YES' : 'NO');
+          console.log('🔑 [App] Token length:', token.length, 'characters');
+          console.log('🔑 [App] Token preview:', token.substring(0, 50) + '...');
+          console.log('🔑 [App] Full token:', token);
+        } else {
+          console.log('🔑 [App] No auth token found');
+        }
+      } catch (error) {
+        console.error('🔑 [App] Error checking auth token:', error);
+      }
+      console.log('🔑 [App] === END AUTH TOKEN CHECK ===');
+      
+      // Wait for auth state and UI to be ready
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // 1. Initialize report sync
       console.log('🚀 [App] Initializing report sync...');
       const syncStore = useReportSyncStore.getState();
@@ -63,35 +86,72 @@ const AppContent = () => {
         console.log('🎮 No game reports pending sync');
       }
       
-      // 2. Initialize coin sync
-      console.log('🚀 [App] Initializing coin sync...');
+      // 2. Initialize coin sync (only if user is logged in)
+      console.log('🚀 [App] Checking authentication for coin sync...');
+      
+      // Ensure auth token is loaded
+      await apiClient.ensureTokenLoaded();
+      
+      // Wait additional time for auth store to be hydrated
+      let authStore = useAuthStore.getState();
+      let retryCount = 0;
+      
+      // Wait up to 2 more seconds for auth state to be ready
+      while (retryCount < 4 && !authStore.isAuthenticated && !authStore.isGuest) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        authStore = useAuthStore.getState();
+        retryCount++;
+        console.log(`🚀 [App] Waiting for auth state... attempt ${retryCount}/4`);
+      }
+      
+      const isAuthenticated = authStore.isAuthenticated && !authStore.isGuest;
+      const hasToken = !!apiClient.getAuthToken();
+      
+      console.log('🚀 [App] Auth state check:', {
+        isAuthenticated,
+        isGuest: authStore.isGuest,
+        hasToken,
+        userId: authStore.getUserId()
+      });
       
       try {
-        // Run both syncs in parallel
-        const [reportSyncResult, coinSyncResult] = await Promise.allSettled([
-          triggerReportSync(),
-          CoinSyncService.autoSync()
-        ]);
+        // Run report sync always, coin sync only if authenticated
+        const syncPromises = [triggerReportSync()];
+        
+        if (isAuthenticated) {
+          console.log('🚀 [App] Adding coin sync to startup...');
+          syncPromises.push(CoinSyncService.autoSync());
+        } else {
+          console.log('🚀 [App] Skipping coin sync - user not authenticated or in guest mode');
+        }
+        
+        const syncResults = await Promise.allSettled(syncPromises);
         
         // Log report sync results
+        const reportSyncResult = syncResults[0];
         if (reportSyncResult.status === 'fulfilled') {
           console.log('✅ [App] Report sync initialization completed');
         } else {
           console.error('❌ [App] Error during report sync initialization:', reportSyncResult.reason);
         }
         
-        // Log coin sync results
-        if (coinSyncResult.status === 'fulfilled') {
-          if (coinSyncResult.value) {
-            console.log('✅ [App] Coin sync completed:', coinSyncResult.value.message);
-            if (coinSyncResult.value.backendCoins > 0) {
-              console.log(`💰 [App] Added ${coinSyncResult.value.backendCoins} coins from backend`);
+        // Log coin sync results (if attempted)
+        if (isAuthenticated && syncResults.length > 1) {
+          const coinSyncResult = syncResults[1];
+          if (coinSyncResult.status === 'fulfilled') {
+            if (coinSyncResult.value) {
+              console.log('✅ [App] Coin sync completed:', coinSyncResult.value.message);
+              if (coinSyncResult.value.backendCoins > 0) {
+                console.log(`💰 [App] Added ${coinSyncResult.value.backendCoins} coins from backend`);
+              }
+            } else {
+              console.log('📡 [App] Coin sync skipped (offline or no auth)');
             }
           } else {
-            console.log('📡 [App] Coin sync skipped (offline or no auth)');
+            console.error('❌ [App] Error during coin sync initialization:', coinSyncResult.reason);
           }
-        } else {
-          console.error('❌ [App] Error during coin sync initialization:', coinSyncResult.reason);
+        } else if (!isAuthenticated) {
+          console.log('📡 [App] Coin sync skipped - user not logged in');
         }
         
         // Log sync store state after sync attempts
@@ -103,10 +163,10 @@ const AppContent = () => {
       }
     };
 
-    // Delay sync slightly to allow app to fully initialize and store rehydration to complete
+    // Delay sync to allow app to fully initialize, UI to render, and store rehydration to complete
     const timeoutId = setTimeout(() => {
       initializeSyncServices();
-    }, 3000); // Increased to 3 seconds to allow more time for auth token loading
+    }, 3000); // Reduced to 3 seconds with better auth state checking
 
     return () => clearTimeout(timeoutId);
   }, []);
@@ -135,6 +195,7 @@ const AppContent = () => {
       />
       <SafeAreaView style={{ flex: 1 }}> 
         <AppNavigator />
+        <SyncIndicator />
         <VersionTestButton />
         {/* Update Modal for APK installation */}
         <UpdateModal onClose={() => console.log('Update modal closed')} />

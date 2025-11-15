@@ -759,157 +759,21 @@ export const GameScreen: React.FC = () => {
     );
   };
 
-  // Play pause/resume sounds based on language
+  // Play pause/resume sounds using audioManager
   const playPauseSound = () => {
-    if (!selectedVoice) return;
-    
-    const fileName = getPauseFileName(selectedVoice.id);
-    
-    
-    const sound = new Sound(fileName, Sound.MAIN_BUNDLE, (error) => {
-      if (error) {
-        return;
-      }
-      sound.setVolume(1.0);
-      sound.play((success) => {
-        if (success) {
-        } else {
-        }
-        sound.release();
-      });
-    });
+    audioManager.announceGamePause();
   };
 
   const playResumeSound = () => {
-    if (!selectedVoice) return;
-    
-    const fileName = getContinueFileName(selectedVoice.id);
-    
-    
-    const sound = new Sound(fileName, Sound.MAIN_BUNDLE, (error) => {
-      if (error) {
-        return;
-      }
-      sound.setVolume(1.0);
-      sound.play((success) => {
-        if (success) {
-        } else {
-        }
-        sound.release();
-      });
-    });
+    audioManager.announceGameResume();
   };
 
-  // Helper function to get pause file name based on voice ID
-  const getPauseFileName = (voiceId: string) => {
-    switch (voiceId) {
-      case 'english_men':
-      case 'english_woman':
-        return Platform.OS === 'ios' 
-          ? `${voiceId}_other_game_paused.mp3`
-          : `${voiceId}_other_game_paused`;
-      case 'spanish_general':
-        return Platform.OS === 'ios' 
-          ? 'spanish_general_other_game_paused.mp3'
-          : 'spanish_general_other_game_paused';
-      case 'amharic_men_aradaw':
-      case 'amharic_men_duryew':
-      case 'amharic_men_shebaw':
-      case 'amharic_men_shebelaw':
-        return Platform.OS === 'ios' 
-          ? 'men_game_sound_game_paused.mp3'
-          : 'men_game_sound_game_paused';
-      case 'amharic_women_amalaya':
-        return Platform.OS === 'ios' 
-          ? 'woman_game_sound_game_paused.mp3'
-          : 'woman_game_sound_game_paused';
-      default:
-        return Platform.OS === 'ios' 
-          ? 'men_game_sound_game_paused.mp3'
-          : 'men_game_sound_game_paused';
-    }
-  };
 
-  // Helper function to get continue file name based on voice ID
-  const getContinueFileName = (voiceId: string) => {
-    switch (voiceId) {
-      case 'english_men':
-      case 'english_woman':
-        return Platform.OS === 'ios' 
-          ? `${voiceId}_other_game_continue.mp3`
-          : `${voiceId}_other_game_continue`;
-      case 'spanish_general':
-        return Platform.OS === 'ios' 
-          ? 'spanish_general_other_game_continue.mp3'
-          : 'spanish_general_other_game_continue';
-      case 'amharic_men_aradaw':
-      case 'amharic_men_duryew':
-      case 'amharic_men_shebaw':
-      case 'amharic_men_shebelaw':
-        return Platform.OS === 'ios' 
-          ? 'men_game_sound_game_continue.mp3'
-          : 'men_game_sound_game_continue';
-      case 'amharic_women_amalaya':
-        return Platform.OS === 'ios' 
-          ? 'woman_game_sound_game_continue.mp3'
-          : 'woman_game_sound_game_continue';
-      default:
-        return Platform.OS === 'ios' 
-          ? 'men_game_sound_game_continue.mp3'
-          : 'men_game_sound_game_continue';
-    }
-  };
-
-  // Play check cartela sound based on language and gender
+  // Play check cartela sound using audioManager
   const playCheckSound = () => {
-    if (!selectedVoice) return;
-    
-    const fileName = getCheckFileName(selectedVoice.id);
-    
-    
-    const sound = new Sound(fileName, Sound.MAIN_BUNDLE, (error) => {
-      if (error) {
-        return;
-      }
-      sound.setVolume(1.0);
-      sound.play((success) => {
-        if (success) {
-        } else {
-        }
-        sound.release();
-      });
-    });
+    audioManager.announceCheckWinner();
   };
 
-  // Helper function to get check cartela file name based on voice ID
-  const getCheckFileName = (voiceId: string) => {
-    switch (voiceId) {
-      case 'english_men':
-      case 'english_woman':
-        return Platform.OS === 'ios' 
-          ? `${voiceId}_other_checking_cartela.mp3`
-          : `${voiceId}_other_checking_cartela`;
-      case 'spanish_general':
-        return Platform.OS === 'ios' 
-          ? 'spanish_general_other_checking_cartela.mp3'
-          : 'spanish_general_other_checking_cartela';
-      case 'amharic_men_aradaw':
-      case 'amharic_men_duryew':
-      case 'amharic_men_shebaw':
-      case 'amharic_men_shebelaw':
-        return Platform.OS === 'ios' 
-          ? 'men_game_sound_checking_cartela.mp3'
-          : 'men_game_sound_checking_cartela';
-      case 'amharic_women_amalaya':
-        return Platform.OS === 'ios' 
-          ? 'woman_game_sound_checking_cartela.mp3'
-          : 'woman_game_sound_checking_cartela';
-      default:
-        return Platform.OS === 'ios' 
-          ? 'men_game_sound_checking_cartela.mp3'
-          : 'men_game_sound_checking_cartela';
-    }
-  };
 
   const renderLettersColumns = (horizontal: boolean, isPortrait = true) => {
     const letterRanges: Record<BingoLetter, [number, number]> = { B: [1, 15], I: [16, 30], N: [31, 45], G: [46, 60], O: [61, 75] };

@@ -188,35 +188,105 @@ class AudioManager {
 
   // Play game sounds based on current voice gender
   playGameSound(soundType: GameSoundType) {
+    console.log('=== PLAYGAMESOUND DEBUG ===');
+    console.log('Sound type requested:', soundType);
+    console.log('Current voice:', this.currentVoice);
+    
     if (!this.currentVoice) {
       console.warn('No voice selected, cannot play game sound');
       return;
     }
 
-    // Get appropriate folder based on gender
-    const folder = GAME_SOUND_FOLDERS[this.currentVoice.gender];
+    let fileName: string;
     
-    // Map sound types to filenames
-    const soundFiles: Record<GameSoundType, string> = {
-      'game_start': 'game-start.mp3',
-      'check_winner': 'check-winner.mp3', 
-      'winner_found': 'winner-found.mp3',
-      'no_winner_continue': 'no-winner-game-continue.mp3',
-      'game_end': 'game-end.mp3'
-    };
+    // Use the EXACT same pattern as playGameStartSound() for consistency
+    if (this.currentVoice.language === 'amharic') {
+      console.log('Processing Amharic voice...');
+      console.log('Voice ID:', this.currentVoice.id);
+      console.log('Voice gender:', this.currentVoice.gender);
+      // Use specific Amharic voice ID for the file path - match playGameStartSound() pattern
+      let soundPath = '';
+      switch (soundType) {
+        case 'game_start':
+          soundPath = `${this.currentVoice.id}_other_game_start`;
+          break;
+        case 'game_pause':
+          soundPath = `${this.currentVoice.id}_other_game_paused`;
+          break;
+        case 'game_resume':
+          soundPath = `${this.currentVoice.id}_other_game_continue`;
+          break;
+        case 'check_winner':
+          soundPath = `${this.currentVoice.id}_other_checking_cartela`;
+          break;
+        case 'winner_found':
+          // Different file names for men vs women
+          if (this.currentVoice.gender === 'female') {
+            soundPath = `${this.currentVoice.id}_other_winer_card`; // "Winer Card.mp3" becomes "winer_card" (note the typo in original file)
+          } else {
+            soundPath = `${this.currentVoice.id}_other_winner_cartela`; // "winner-Cartela.mp3" becomes "winner_cartela"
+          }
+          break;
+        case 'no_winner_continue':
+          soundPath = `${this.currentVoice.id}_other_no_winner_game_continue`;
+          break;
+        case 'game_end':
+          soundPath = `${this.currentVoice.id}_other_game_continue`;
+          break;
+        default:
+          console.warn('Unknown sound type:', soundType);
+          return;
+      }
+      
+      console.log('Generated soundPath:', soundPath);
+      console.log('Platform.OS:', Platform.OS);
+      
+      fileName = Platform.OS === 'ios' 
+        ? `${soundPath}.mp3`
+        : soundPath;
+        
+      console.log('Final fileName for Amharic:', fileName);
+    } else {
+      // Use original logic for English/Spanish voices
+      const soundFiles: Record<GameSoundType, string> = {
+        'game_start': 'game-start.mp3',
+        'game_pause': 'game-paused.mp3',
+        'game_resume': 'game-continue.mp3',
+        'check_winner': 'checking-cartela.mp3',
+        'winner_found': 'winner-Cartela.mp3',
+        'no_winner_continue': 'no-winner-game-continue.mp3',
+        'game_end': 'game-continue.mp3'
+      };
 
-    const soundFile = soundFiles[soundType];
-    const fileName = Platform.OS === 'ios' 
-      ? `${folder}/${soundFile}` 
-      : `${folder}_${soundFile.replace('.mp3', '')}`;
+      const soundFile = soundFiles[soundType];
+      const folder = GAME_SOUND_FOLDERS[this.currentVoice.gender];
+      fileName = Platform.OS === 'ios' 
+        ? `${folder}/${soundFile}` 
+        : `${folder}_${soundFile.replace('.mp3', '')}`;
+    }
 
-    console.log('Playing game sound:', soundType, 'File:', fileName);
+    console.log('=== ATTEMPTING TO PLAY GAME SOUND ===');
+    console.log('Sound type:', soundType);
+    console.log('File name:', fileName);
+    console.log('Current voice:', this.currentVoice?.name);
+    console.log('Voice language:', this.currentVoice?.language);
 
     const sound = new Sound(fileName, Sound.MAIN_BUNDLE, (error) => {
       if (error) {
-        console.log('Failed to load game sound:', fileName, 'Error:', error);
+        console.error('❌ FAILED TO LOAD GAME SOUND');
+        console.error('File name attempted:', fileName);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        console.error('Error details:', JSON.stringify(error));
+        console.error('Sound type was:', soundType);
+        console.error('Voice was:', this.currentVoice?.name);
+        console.error('Voice ID:', this.currentVoice?.id);
+        console.error('Voice gender:', this.currentVoice?.gender);
+        console.error('Platform.OS:', Platform.OS);
         return;
       }
+      
+      console.log('✅ SUCCESS: Game sound file loaded:', fileName);
       
       sound.setVolume(1.0);
       sound.play((success) => {
@@ -237,6 +307,14 @@ class AudioManager {
 
   announceGameStart() {
     this.playGameSound('game_start');
+  }
+
+  announceGamePause() {
+    this.playGameSound('game_pause');
+  }
+
+  announceGameResume() {
+    this.playGameSound('game_resume');
   }
 
   announceCheckWinner() {
@@ -352,11 +430,8 @@ class AudioManager {
     // Based on actual file structure in assets/audio/World Bingo App Audio/
     switch (this.currentVoice.language) {
       case 'amharic':
-        if (this.currentVoice.gender === 'male') {
-          soundPath = 'men_game_sound_game_start';
-        } else {
-          soundPath = 'woman_game_sound_game_start';
-        }
+        // Use specific Amharic voice ID for the file path
+        soundPath = `${this.currentVoice.id}_other_game_start`;
         break;
       case 'spanish':
         soundPath = 'spanish_general_other_game_start';
@@ -416,6 +491,26 @@ class AudioManager {
     }, 4000);
   }
 
+  // Test method specifically for game sounds
+  testGameSounds() {
+    console.log('=== TESTING GAME SOUNDS ===');
+    console.log('Current voice:', this.currentVoice);
+    
+    if (!this.currentVoice) {
+      console.error('No voice selected! Please select a voice first.');
+      return;
+    }
+    
+    const testSounds: GameSoundType[] = ['game_pause', 'game_resume', 'check_winner', 'winner_found', 'no_winner_continue'];
+    
+    testSounds.forEach((soundType, index) => {
+      setTimeout(() => {
+        console.log(`\n=== TESTING SOUND: ${soundType} ===`);
+        this.playGameSound(soundType);
+      }, index * 3000); // 3 second delay between tests
+    });
+  }
+
   stopAllSounds() {
     // Stop all currently playing sounds
     this.sounds.forEach(sound => {
@@ -441,3 +536,9 @@ class AudioManager {
 }
 
 export const audioManager = new AudioManager();
+
+// Make test functions available globally for debugging
+if (__DEV__) {
+  (global as any).testGameSounds = () => audioManager.testGameSounds();
+  (global as any).audioManager = audioManager;
+}

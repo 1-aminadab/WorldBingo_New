@@ -33,6 +33,7 @@ export const PaymentWebViewScreen: React.FC = () => {
   const [canGoForward, setCanGoForward] = useState(false);
   const [currentUrl, setCurrentUrl] = useState('');
   const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [webViewLoaded, setWebViewLoaded] = useState(false);
 
   // Get user ID from auth store
   const userId = useAuthStore((state) => state.getUserId());
@@ -131,33 +132,38 @@ export const PaymentWebViewScreen: React.FC = () => {
 
   const handleLoadStart = () => {
     console.log('⏳ WebView loading started');
-    setLoading(true);
     
-    // Clear any existing timeout
-    if (loadingTimeout) {
-      clearTimeout(loadingTimeout);
-    }
-    
-    // Set a timeout to handle cases where the page takes too long to load
-    const timeout = setTimeout(() => {
-      console.log('⏰ Loading timeout reached');
-      setLoading(false);
+    // Only show loading for initial load, not subsequent navigations after webview is loaded
+    if (!webViewLoaded) {
+      setLoading(true);
       
-      // Navigate back to profile with timeout error
-      (navigation as any).navigate('ProfileMain', {
-        paymentStatus: 'failed',
-        paymentMessage: 'Payment page took too long to load. Please check your internet connection and try again.',
-        amount: null,
-        transactionId: null
-      });
-    }, 30000); // 30 second timeout
-    
-    setLoadingTimeout(timeout);
+      // Clear any existing timeout
+      if (loadingTimeout) {
+        clearTimeout(loadingTimeout);
+      }
+      
+      // Set a timeout to handle cases where the page takes too long to load
+      const timeout = setTimeout(() => {
+        console.log('⏰ Loading timeout reached');
+        setLoading(false);
+        
+        // Navigate back to profile with timeout error
+        (navigation as any).navigate('ProfileMain', {
+          paymentStatus: 'failed',
+          paymentMessage: 'Payment page took too long to load. Please check your internet connection and try again.',
+          amount: null,
+          transactionId: null
+        });
+      }, 30000); // 30 second timeout
+      
+      setLoadingTimeout(timeout);
+    }
   };
 
   const handleLoadEnd = () => {
     console.log('✅ WebView loading completed');
     setLoading(false);
+    setWebViewLoaded(true);
     
     // Clear the loading timeout since loading completed successfully
     if (loadingTimeout) {
@@ -170,18 +176,21 @@ export const PaymentWebViewScreen: React.FC = () => {
     const { nativeEvent } = syntheticEvent;
     console.error('❌ WebView error:', nativeEvent);
     
-    // Stop loading immediately when error occurs
-    setLoading(false);
-    
-    // Navigate back to profile with error parameters
-    setTimeout(() => {
-      (navigation as any).navigate('ProfileMain', {
-        paymentStatus: 'failed',
-        paymentMessage: 'Failed to load the payment page. Please check your internet connection and try again.',
-        amount: null,
-        transactionId: null
-      });
-    }, 100);
+    // Only handle errors for initial load, ignore errors after webview is loaded
+    if (!webViewLoaded) {
+      // Stop loading immediately when error occurs
+      setLoading(false);
+      
+      // Navigate back to profile with error parameters
+      setTimeout(() => {
+        (navigation as any).navigate('ProfileMain', {
+          paymentStatus: 'failed',
+          paymentMessage: 'Failed to load the payment page. Please check your internet connection and try again.',
+          amount: null,
+          transactionId: null
+        });
+      }, 100);
+    }
   };
 
   const handleGoBack = () => {
@@ -214,9 +223,9 @@ export const PaymentWebViewScreen: React.FC = () => {
         barStyle={isDark ? 'light-content' : 'dark-content'} 
       />
 
-      {/* Loading Animation */}
+      {/* Loading Animation - only show during initial load, not after webview is loaded */}
       <LoadingAnimation
-        visible={loading}
+        visible={loading && !webViewLoaded}
         message="Loading payment page..."
         size="medium"
         overlay={true}
@@ -249,6 +258,7 @@ export const PaymentWebViewScreen: React.FC = () => {
           true; // Required for injection
         `}
       />
+
     </SafeAreaView>
   );
 };

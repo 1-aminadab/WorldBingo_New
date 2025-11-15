@@ -445,10 +445,63 @@ export const useAuthStore = create<AuthStore>()(
       },
       // Coins management methods
       loadCoins: async () => {
-        const userId = get().getUserId();
+        const debugId = Math.random().toString(36).substr(2, 9);
+        console.log(`💰 [${debugId}] === LOADING COINS IN AUTH STORE ===`);
+        
+        // Get current auth store state
+        const currentState = get();
+        const userId = currentState.getUserId();
+        const currentUserCoins = currentState.userCoins;
+        
+        console.log(`📱 [${debugId}] Current Zustand Auth Store state:`);
+        console.log(`📱 [${debugId}] - getUserId(): ${userId}`);
+        console.log(`📱 [${debugId}] - userCoins: ${currentUserCoins}`);
+        console.log(`📱 [${debugId}] - isAuthenticated: ${currentState.isAuthenticated}`);
+        console.log(`📱 [${debugId}] - isGuest: ${currentState.isGuest}`);
+        console.log(`📱 [${debugId}] - user object: ${currentState.user ? `${currentState.user.name} (ID: ${currentState.user.userId})` : 'null'}`);
+        
+        console.log(`💾 [${debugId}] Fetching from CoinStorageManager...`);
+        console.log(`💾 [${debugId}] Calling CoinStorageManager.getCoins(${userId || 'undefined'})`);
+        
+        // Check what's actually in AsyncStorage
+        const storageKey = userId ? `coins_${userId}` : 'coins_GUEST';
+        console.log(`💾 [${debugId}] Storage key will be: ${storageKey}`);
+        
         const coins = await CoinStorageManager.getCoins(userId || undefined);
+        console.log(`💾 [${debugId}] CoinStorageManager.getCoins() returned: ${coins}`);
+        
+        // Verify raw AsyncStorage value
+        try {
+          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+          const rawValue = await AsyncStorage.getItem(storageKey);
+          console.log(`💾 [${debugId}] Raw AsyncStorage.getItem('${storageKey}'): ${rawValue}`);
+          console.log(`💾 [${debugId}] Parsed raw value: ${parseFloat(rawValue || '0')}`);
+        } catch (asyncError) {
+          console.error(`💾 [${debugId}] AsyncStorage verification error:`, asyncError);
+        }
+        
+        console.log(`📱 [${debugId}] Updating Zustand Auth Store:`);
+        console.log(`📱 [${debugId}] - BEFORE set(): userCoins = ${currentUserCoins}`);
+        console.log(`📱 [${debugId}] - Setting userCoins to: ${coins}`);
+        
         set({ userCoins: coins });
-        console.log(`💰 Loaded coins from storage: ${coins} (User: ${userId || 'GUEST'})`);
+        
+        // Get updated state after set
+        const newState = get();
+        const updatedCoins = newState.userCoins;
+        
+        console.log(`📱 [${debugId}] - AFTER set(): userCoins = ${updatedCoins}`);
+        console.log(`📱 [${debugId}] - Zustand set() success: ${updatedCoins === coins ? '✅' : '❌'}`);
+        
+        if (updatedCoins !== coins) {
+          console.error(`📱 [${debugId}] ❌ CRITICAL: Zustand failed to update userCoins!`);
+          console.error(`📱 [${debugId}] Expected: ${coins}, Got: ${updatedCoins}`);
+        } else {
+          console.log(`📱 [${debugId}] ✅ Zustand Auth Store updated successfully`);
+        }
+        
+        console.log(`💰 [${debugId}] === AUTH STORE LOAD COMPLETE ===`);
+        console.log(`💰 [${debugId}] Final result: ${currentUserCoins} → ${updatedCoins} (User: ${userId || 'GUEST'})`);
       },
 
       setCoins: (coins: number) => {

@@ -8,10 +8,7 @@ import {
   Dimensions,
   FlatList,
   StyleSheet,
-  ActivityIndicator,
-  Image,
   Animated,
-  KeyboardAvoidingView,
   Platform,
   Keyboard,
 } from 'react-native';
@@ -21,18 +18,16 @@ import NoCartelaSelected from './modals/no-catela-selected';
 import SelectedNumbersModal from './modals/selected-numbers';
 import {useNavigation, useFocusEffect } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
-import { Check, GroupIcon, LucideGroup, PersonStanding, X, ArrowLeft, Users, User, Eye } from 'lucide-react-native';
+import { X, ArrowLeft, Users, User, Eye } from 'lucide-react-native';
 import { useTheme } from '../../components/ui/ThemeProvider';
 import { useSettingsStore } from '../../store/settingsStore';
 import { audioManager } from '../../utils/audioManager';
 import { getCardTypeInfo, getDefaultLimitForCardType } from '../../utils/cardTypeManager';
 import { useAuthStore } from '../../store/authStore';
-import { useGameReportStore } from '../../store/gameReportStore';
 import { transactionApiService } from '../../api/services/transaction';
 import { Alert } from 'react-native';
 import { InsufficientCoinsModal } from '../../components/ui/InsufficientCoinsModal';
 import { LoadingOverlay } from '../../components/ui/LoadingOverlay';
-import { ReportStorageManager } from '../../utils/reportStorage';
 import { ScreenNames } from '../../constants/ScreenNames';
 
 const { width } = Dimensions.get('window');
@@ -517,7 +512,7 @@ const PlayerCartelaSelectionScreen = () => {
 
   // Calculate pagination info
   const itemsPerPage = 25; // 5 columns x 5 rows visible at once (for scroll indicator)
-  const itemsPerPageBottom = 100; // Items per page for bottom pagination
+  const itemsPerPageBottom = 150; // Items per page for bottom pagination
   const totalPages = Math.ceil(filteredArray.length / itemsPerPage);
   const totalPagesBottom = Math.ceil(filteredArray.length / itemsPerPageBottom);
   

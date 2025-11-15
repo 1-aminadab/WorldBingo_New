@@ -2,12 +2,29 @@ import { apiClient } from '../client/base';
 import { API_ENDPOINTS } from '../config';
 import { ApiResponse } from '../types';
 
+// Firestore timestamp type
+interface FirestoreTimestamp {
+  _seconds: number;
+  _nanoseconds: number;
+}
+
+// Helper function to convert Firestore timestamp to ISO string
+function firestoreTimestampToString(timestamp: FirestoreTimestamp | string): string {
+  if (typeof timestamp === 'string') {
+    return timestamp;
+  }
+  if (timestamp && typeof timestamp === 'object' && '_seconds' in timestamp) {
+    return new Date(timestamp._seconds * 1000 + timestamp._nanoseconds / 1000000).toISOString();
+  }
+  return new Date().toISOString();
+}
+
 // Types for coin API responses
 export interface CoinBalanceResponse {
   success: boolean;
   coin: number;
-  updatedAt: string;
-  lastSettlementAt: string;
+  updatedAt: FirestoreTimestamp | string;
+  lastSettlementAt: FirestoreTimestamp | string;
   lastSettlementAmount: number;
 }
 
@@ -47,9 +64,14 @@ export class CoinApiService {
       console.log(`✅ [${debugId}] Response data:`, {
         success: response.success,
         coin: response.data?.coin,
-        updatedAt: response.data?.updatedAt,
-        lastSettlementAt: response.data?.lastSettlementAt,
+        updatedAt: response.data?.updatedAt ? firestoreTimestampToString(response.data.updatedAt) : null,
+        lastSettlementAt: response.data?.lastSettlementAt ? firestoreTimestampToString(response.data.lastSettlementAt) : null,
         lastSettlementAmount: response.data?.lastSettlementAmount
+      });
+      
+      console.log(`✅ [${debugId}] Raw timestamps:`, {
+        updatedAt_raw: response.data?.updatedAt,
+        lastSettlementAt_raw: response.data?.lastSettlementAt
       });
       
       return response;
