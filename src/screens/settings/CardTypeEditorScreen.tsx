@@ -93,9 +93,17 @@ const IsolatedCSVInput = memo<{
   placeholder: string;
   onValueChange: (value: string) => void;
   theme: any;
-}>(({ placeholder, onValueChange, theme }) => {
-  const [localValue, setLocalValue] = useState('');
+  value?: string;
+}>(({ placeholder, onValueChange, theme, value }) => {
+  const [localValue, setLocalValue] = useState(value || '');
   const inputRef = useRef<TextInput>(null);
+
+  // Reset local value when parent value changes (like when CSV is cleared)
+  useEffect(() => {
+    if (value !== undefined) {
+      setLocalValue(value);
+    }
+  }, [value]);
 
   // BINGO column validation ranges
   const columnRanges = [
@@ -107,8 +115,59 @@ const IsolatedCSVInput = memo<{
   ];
 
   const validateAndFormatInput = (text: string): string => {
-    // Just clean up and return - main validation is in onChangeText now
-    return text.replace(/[^0-9,]/g, '');
+    // Only allow numbers and commas
+    let filtered = text.replace(/[^0-9,]/g, '');
+    
+    // Split by commas and validate each position according to BINGO rules
+    const parts = filtered.split(',');
+    const seenNumbers = new Set();
+    const validatedParts = parts.map((part, index) => {
+      if (part === '') return ''; // Allow empty parts
+      if (index >= 24) return ''; // Only allow 24 numbers max
+      
+      // Limit to 2 digits per number
+      let limited = part.slice(0, 2);
+      const num = parseInt(limited);
+      if (isNaN(num) || num < 1) return '';
+      
+      // Enforce BINGO column ranges based on position
+      let columnIndex = Math.floor(index / 5); // 0-4 for columns B,I,N,G,O
+      if (index >= 10 && index < 14) columnIndex = 2; // N column (positions 10-13, only 4 numbers)
+      if (index >= 14) columnIndex = Math.floor((index - 14) / 5) + 3; // G,O columns
+      
+      const columnRanges = [
+        { min: 1, max: 15 },   // B column
+        { min: 16, max: 30 },  // I column  
+        { min: 31, max: 45 },  // N column
+        { min: 46, max: 60 },  // G column
+        { min: 61, max: 75 }   // O column
+      ];
+      
+      const range = columnRanges[columnIndex];
+      if (num < range.min || num > range.max) {
+        // Auto-correct to valid range
+        if (num < range.min) limited = range.min.toString();
+        if (num > range.max) limited = range.max.toString();
+      }
+      
+      // Check for duplicates
+      if (limited !== '' && seenNumbers.has(limited)) {
+        return ''; // Remove duplicate
+      }
+      
+      if (limited !== '') {
+        seenNumbers.add(limited);
+      }
+      
+      return limited;
+    });
+    
+    // Remove empty parts from middle, but preserve structure
+    const cleanedParts = validatedParts.filter((part, index) => {
+      return part !== '' || index === validatedParts.length - 1;
+    });
+    
+    return cleanedParts.join(',');
   };
 
   return (
@@ -116,14 +175,18 @@ const IsolatedCSVInput = memo<{
       ref={inputRef}
       value={localValue}
       onChangeText={(text) => {
-        // Only allow numbers and commas
+        // Only allow numbers and commas - keep it simple during typing
         let filtered = text.replace(/[^0-9,]/g, '');
         
-        // Split by commas and limit each number to 2 digits
+        // Split by commas
         const parts = filtered.split(',');
-        const seenNumbers = new Set();
-        const limitedParts = parts.map((part, index) => {
-          if (part === '') return ''; // Allow empty parts
+        
+        // Limit to 24 parts maximum (23 commas + 1 final number)
+        const limitedParts = parts.slice(0, 24);
+        
+        // Process each part
+        const processedParts = limitedParts.map((part) => {
+          if (part === '') return ''; // Allow empty parts during typing
           
           // Limit to 2 digits per number
           let limited = part.slice(0, 2);
@@ -134,35 +197,23 @@ const IsolatedCSVInput = memo<{
             limited = '75';
           }
           
-          // Check for duplicates - if number already exists, remove it
-          if (limited !== '' && seenNumbers.has(limited)) {
-            return ''; // Remove duplicate
-          }
-          
-          if (limited !== '') {
-            seenNumbers.add(limited);
-          }
-          
           return limited;
         });
         
-        // Remove empty parts except trailing commas
-        const cleanedParts = [];
-        for (let i = 0; i < limitedParts.length; i++) {
-          if (limitedParts[i] !== '' || i === limitedParts.length - 1) {
-            cleanedParts.push(limitedParts[i]);
-          }
+        // Join with commas, but don't add trailing comma if we have exactly 24 numbers
+        let result;
+        if (processedParts.length === 24 && processedParts[23] !== '') {
+          // No trailing comma after 24th number
+          result = processedParts.join(',');
+        } else {
+          result = processedParts.join(',');
         }
         
-        // Limit to 24 numbers max
-        const result = cleanedParts.slice(0, 24).join(',');
         setLocalValue(result);
       }}
       onBlur={() => {
-        // Validate and sync to parent only on blur
-        const validatedText = validateAndFormatInput(localValue);
-        setLocalValue(validatedText);
-        onValueChange(validatedText);
+        // Just sync to parent on blur - don't validate yet
+        onValueChange(localValue);
       }}
       placeholder={placeholder}
       placeholderTextColor={theme.colors.textSecondary}
@@ -187,8 +238,11 @@ const IsolatedCSVInput = memo<{
     />
   );
 }, (prevProps, nextProps) => {
-  // Only re-render if placeholder changes - theme and onValueChange should be stable
-  return prevProps.placeholder === nextProps.placeholder;
+  // Only re-render if placeholder or value changes
+  return (
+    prevProps.placeholder === nextProps.placeholder &&
+    prevProps.value === nextProps.value
+  );
 });
 
 export const CardTypeEditorScreen: React.FC = () => {
@@ -488,23 +542,57 @@ export const CardTypeEditorScreen: React.FC = () => {
     );
   };
   
-  // Convert 24-number array to 5x5 grid with center free space
+  // Transpose function to convert rows to columns
+  const transpose = (matrix: (number | null)[][]) => {
+    return matrix[0].map((_, colIndex) =>
+      matrix.map(row => row[colIndex])
+    );
+  };
+
+  // Convert 24-number array to 5x5 grid with center free space and transpose for BINGO layout
   const getGridFromNumbers = (numbers: (number | null)[]) => {
-    const grid: (number | null)[][] = Array(5).fill(null).map(() => Array(5).fill(null));
+    // First arrange numbers in column order (B,I,N,G,O columns)
+    const columnGrid: (number | null)[][] = Array(5).fill(null).map(() => Array(5).fill(null));
+    
+    // Fill columns: B(0-4), I(5-9), N(10-13), G(14-18), O(19-23)
     let numberIndex = 0;
     
+    // B column (positions 0-4) - all 5 numbers
     for (let row = 0; row < 5; row++) {
-      for (let col = 0; col < 5; col++) {
-        if (row === 2 && col === 2) {
-          // Center cell is free
-          grid[row][col] = null;
-        } else {
-          grid[row][col] = numbers[numberIndex] || null;
-          numberIndex++;
-        }
-      }
+      columnGrid[0][row] = numbers[numberIndex] || null;
+      numberIndex++;
     }
-    return grid;
+    
+    // I column (positions 5-9) - all 5 numbers 
+    for (let row = 0; row < 5; row++) {
+      columnGrid[1][row] = numbers[numberIndex] || null;
+      numberIndex++;
+    }
+    
+    // N column (positions 10-13, only 4 numbers) - skip center row
+    for (let row = 0; row < 5; row++) {
+      if (row === 2) {
+        columnGrid[2][row] = null; // FREE space
+        continue;
+      }
+      columnGrid[2][row] = numbers[numberIndex] || null;
+      numberIndex++;
+    }
+    
+    // G column (positions 14-18) - all 5 numbers
+    for (let row = 0; row < 5; row++) {
+      columnGrid[3][row] = numbers[numberIndex] || null;
+      numberIndex++;
+    }
+    
+    // O column (positions 19-23) - all 5 numbers
+    for (let row = 0; row < 5; row++) {
+      columnGrid[4][row] = numbers[numberIndex] || null;
+      numberIndex++;
+    }
+    
+    // Transpose to get proper row/column display
+    return transpose(columnGrid);
   };
   
   // Convert 5x5 grid back to 24-number array
@@ -799,6 +887,7 @@ export const CardTypeEditorScreen: React.FC = () => {
                 placeholder="11,24,31,... (24 numbers)"
                 onValueChange={handleCSVValueChange}
                 theme={theme}
+                value={csv}
               />
               <View style={{ marginTop: 12 }}>
                 <Button title="Add Card From CSV" onPress={addFromCsv} />
