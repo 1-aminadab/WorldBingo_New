@@ -149,31 +149,65 @@ export class CoinSyncService {
       const shouldSettleBackend = backendCoins > 0 && verifyBalance === balanceAfterAdd;
       
       let settledAmount = 0;
+      let settleSuccess = true;
+      
       if (shouldSettleBackend) {
         try {
           const settleResponse = await CoinApiService.settleCoin();
         
           if (settleResponse.success) {
             settledAmount = settleResponse.data?.settled || 0;
+            settleSuccess = true;
+          } else {
+            settleSuccess = false;
+            throw new Error(`Settle failed: ${settleResponse.message}`);
           }
         } catch (settleError: any) {
-          // Don't throw here - settle failure is not critical for user experience
+          settleSuccess = false;
+          
+          // ROLLBACK: Remove the coins we just added since settle failed
+          if (backendCoins > 0) {
+            try {
+              // Restore the original balance by removing the added coins
+              await CoinStorageManager.setCoins(localBefore, userId);
+              
+              // Also rollback auth store
+              await authStore.loadCoins();
+            } catch (rollbackError) {
+              // Critical: rollback failed, log the error
+              console.error('CRITICAL: Failed to rollback coins after settle failure:', rollbackError);
+            }
+          }
+          
+          // Throw error to indicate sync failure
+          throw new Error(`Coin sync failed: Unable to settle backend coins. ${settleError.message}`);
         }
       }
+      
+      // Only consider sync successful if coins were added AND settle succeeded (or no coins to settle)
+      const syncSuccess = (backendCoins === 0) || (backendCoins > 0 && settleSuccess);
+      
+      // Get final balance after potential rollback
+      const finalBalance = await CoinStorageManager.getCoins(userId);
 
-      const result: CoinSyncResult = {
-        success: true,
-        message: `Successfully synced coins with backend. Local balance: ${localBefore} → ${localAfter}`,
-        localBefore,
-        backendCoins,
-        localAfter,
-        settled: settledAmount,
-      };
-      
-      // Set success status
-      coinSyncStore.setSyncStatus('success', 'Sync');
-      
-      return result;
+      if (syncSuccess) {
+        const result: CoinSyncResult = {
+          success: true,
+          message: `Successfully synced coins with backend. Local balance: ${localBefore} → ${finalBalance}`,
+          localBefore,
+          backendCoins,
+          localAfter: finalBalance,
+          settled: settledAmount,
+        };
+        
+        // Set success status
+        coinSyncStore.setSyncStatus('success', 'Sync');
+        
+        return result;
+      } else {
+        // This shouldn't happen since we throw on settle failure, but just in case
+        throw new Error('Sync failed due to settle error');
+      }
 
     } catch (error: any) {
       // Check if this is an authentication error

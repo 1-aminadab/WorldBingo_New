@@ -107,71 +107,8 @@ const IsolatedCSVInput = memo<{
   ];
 
   const validateAndFormatInput = (text: string): string => {
-    // Only allow numbers and commas
-    let filtered = text.replace(/[^0-9,]/g, '');
-    
-    // If user just typed a comma at the end, preserve it
-    if (filtered.endsWith(',') && !text.endsWith(',,')) {
-      return filtered; // Return immediately to preserve comma
-    }
-    
-    // Split by commas to get individual numbers
-    const parts = filtered.split(',');
-    const validParts: string[] = [];
-    
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i].trim();
-      
-      // If this is an empty part (like between commas or trailing comma), handle it
-      if (part === '') {
-        validParts.push('');
-        continue;
-      }
-      
-      // Limit each individual number to 2 digits max
-      let limitedPart = part.slice(0, 2);
-      
-      // Also enforce max value of 75 for any number
-      const number = parseInt(limitedPart);
-      if (!isNaN(number) && number > 75) {
-        limitedPart = '75'; // Cap at 75
-      }
-      
-      // Count how many actual numbers we have so far (excluding empty parts)
-      const currentNumberPosition = validParts.filter(p => p !== '').length;
-      
-      // If this number would exceed 24 total numbers, don't add it
-      if (currentNumberPosition >= 24) {
-        break;
-      }
-      
-      // Only validate ranges for completed numbers (followed by comma or not last part)
-      const isLastPart = i === parts.length - 1;
-      const isCompletedNumber = !isLastPart;
-      
-      if (isCompletedNumber && !isNaN(number)) {
-        // Determine which BINGO column this position should be in
-        let columnIndex: number;
-        
-        // Map position to column (each column has 5 numbers, but N column only has 4 due to FREE space)
-        if (currentNumberPosition < 5) columnIndex = 0;        // B: positions 0-4
-        else if (currentNumberPosition < 10) columnIndex = 1;  // I: positions 5-9
-        else if (currentNumberPosition < 14) columnIndex = 2;  // N: positions 10-13 (only 4 numbers)
-        else if (currentNumberPosition < 19) columnIndex = 3;  // G: positions 14-18
-        else columnIndex = 4;                                  // O: positions 19-23
-        
-        const { min, max } = columnRanges[columnIndex];
-        
-        // If number is not in correct range for this column, reject it
-        if (number < min || number > max) {
-          continue; // Skip this invalid number
-        }
-      }
-      
-      validParts.push(limitedPart);
-    }
-    
-    return validParts.join(',');
+    // Just clean up and return - main validation is in onChangeText now
+    return text.replace(/[^0-9,]/g, '');
   };
 
   return (
@@ -179,12 +116,53 @@ const IsolatedCSVInput = memo<{
       ref={inputRef}
       value={localValue}
       onChangeText={(text) => {
-        const validatedText = validateAndFormatInput(text);
-        setLocalValue(validatedText);
+        // Only allow numbers and commas
+        let filtered = text.replace(/[^0-9,]/g, '');
+        
+        // Split by commas and limit each number to 2 digits
+        const parts = filtered.split(',');
+        const seenNumbers = new Set();
+        const limitedParts = parts.map((part, index) => {
+          if (part === '') return ''; // Allow empty parts
+          
+          // Limit to 2 digits per number
+          let limited = part.slice(0, 2);
+          
+          // Don't allow numbers > 75 while typing
+          const num = parseInt(limited);
+          if (!isNaN(num) && num > 75) {
+            limited = '75';
+          }
+          
+          // Check for duplicates - if number already exists, remove it
+          if (limited !== '' && seenNumbers.has(limited)) {
+            return ''; // Remove duplicate
+          }
+          
+          if (limited !== '') {
+            seenNumbers.add(limited);
+          }
+          
+          return limited;
+        });
+        
+        // Remove empty parts except trailing commas
+        const cleanedParts = [];
+        for (let i = 0; i < limitedParts.length; i++) {
+          if (limitedParts[i] !== '' || i === limitedParts.length - 1) {
+            cleanedParts.push(limitedParts[i]);
+          }
+        }
+        
+        // Limit to 24 numbers max
+        const result = cleanedParts.slice(0, 24).join(',');
+        setLocalValue(result);
       }}
       onBlur={() => {
-        // Only sync to parent on blur
-        onValueChange(localValue);
+        // Validate and sync to parent only on blur
+        const validatedText = validateAndFormatInput(localValue);
+        setLocalValue(validatedText);
+        onValueChange(validatedText);
       }}
       placeholder={placeholder}
       placeholderTextColor={theme.colors.textSecondary}
@@ -209,10 +187,8 @@ const IsolatedCSVInput = memo<{
     />
   );
 }, (prevProps, nextProps) => {
-  return (
-    prevProps.placeholder === nextProps.placeholder &&
-    prevProps.theme === nextProps.theme
-  );
+  // Only re-render if placeholder changes - theme and onValueChange should be stable
+  return prevProps.placeholder === nextProps.placeholder;
 });
 
 export const CardTypeEditorScreen: React.FC = () => {
@@ -552,12 +528,14 @@ export const CardTypeEditorScreen: React.FC = () => {
   // Reset screen for "create" mode or filter by provided name in manage mode
   useEffect(() => {
     if (route.params?.mode === 'create') {
+      // Load existing custom cards if they exist
+      const existingCustom = customCardTypes.find(c => c.name === 'custom');
       setName('custom');
       setOriginalName('custom');
-      setMode(MODE_MANUAL);
+      setMode(MODE_CSV); // Default to CSV mode
       setCsv('');
-      setCards([]);
-      setOriginalCards([]);
+      setCards(existingCustom ? existingCustom.cards : []);
+      setOriginalCards(existingCustom ? [...existingCustom.cards] : []);
       setCurrentManual(Array(24).fill(null));
       setEditIndex(null);
       return;
@@ -582,28 +560,18 @@ export const CardTypeEditorScreen: React.FC = () => {
         setCurrentManual(Array(24).fill(null));
         setEditIndex(null);
       } else {
-        const found = customCardTypes.find(c => c.name === route.params.name);
-        if (found) {
-          setName('custom');
-          setOriginalName('custom');
-          setCards(found.cards);
-          setOriginalCards([...found.cards]);
-          setMode(MODE_MANUAL);
-          setCurrentManual(Array(24).fill(null));
-          setEditIndex(null);
-        } else {
-          // If custom doesn't exist yet, initialize it
-          setName('custom');
-          setOriginalName('custom');
-          setCards([]);
-          setOriginalCards([]);
-          setMode(MODE_MANUAL);
-          setCurrentManual(Array(24).fill(null));
-          setEditIndex(null);
-        }
+        // For custom cards, always load existing custom cards or initialize empty
+        const found = customCardTypes.find(c => c.name === 'custom');
+        setName('custom');
+        setOriginalName('custom');
+        setCards(found ? found.cards : []);
+        setOriginalCards(found ? [...found.cards] : []);
+        setMode(MODE_CSV); // Default to CSV mode
+        setCurrentManual(Array(24).fill(null));
+        setEditIndex(null);
       }
     }
-  }, [route.params]);
+  }, [route.params, customCardTypes]);
 
   const isValidCard = (row: number[]) => new Set(row).size === 24 && row.length === 24;
 
@@ -627,19 +595,15 @@ export const CardTypeEditorScreen: React.FC = () => {
       { min: 61, max: 75, name: 'O' }   // O column: 61-75
     ];
     
-    // Check each position in the 24-number array
+    // Check each position in the 24-number array according to BINGO column layout
     for (let i = 0; i < 24; i++) {
-      // Convert linear index to grid position
-      let row, col;
-      if (i < 12) {
-        row = Math.floor(i / 5);
-        col = i % 5;
-      } else {
-        // Adjust for center cell (index 12 in 5x5 grid is skipped)
-        const adjustedIndex = i + 1;
-        row = Math.floor(adjustedIndex / 5);
-        col = adjustedIndex % 5;
-      }
+      // Map 24-number linear array to BINGO column position
+      let col;
+      if (i < 5) col = 0;        // B column: positions 0-4
+      else if (i < 10) col = 1;  // I column: positions 5-9
+      else if (i < 14) col = 2;  // N column: positions 10-13 (only 4 numbers)
+      else if (i < 19) col = 3;  // G column: positions 14-18
+      else col = 4;              // O column: positions 19-23
       
       const { min, max, name } = columnRanges[col];
       const value = parsed[i];
@@ -653,8 +617,18 @@ export const CardTypeEditorScreen: React.FC = () => {
       Alert.alert('Duplicate', 'Card with same arrangement already exists.');
       return;
     }
-    setCards([...cards, parsed]);
+    const newCards = [...cards, parsed];
+    setCards(newCards);
     setCsv('');
+    
+    // Auto-save after adding card
+    const isExisting = customCardTypes.some(c => c.name === 'custom');
+    if (isExisting) {
+      updateCustomCardType({ name: 'custom', cards: newCards });
+    } else {
+      addCustomCardType({ name: 'custom', cards: newCards });
+    }
+    selectCardTypeByName('custom');
   };
 
   const saveManualCard = () => {
@@ -698,15 +672,26 @@ export const CardTypeEditorScreen: React.FC = () => {
     const duplicateArrangement = cards.some(row => row.join(',') === values.join(','));
     if (duplicateArrangement && editIndex === null) { Alert.alert('Duplicate', 'Card with same arrangement already exists.'); return; }
     // Save in place if editing
+    let newCards;
     if (editIndex !== null) {
-      const next = [...cards];
-      next[editIndex] = values;
-      setCards(next);
+      newCards = [...cards];
+      newCards[editIndex] = values;
+      setCards(newCards);
       setEditIndex(null);
     } else {
-      setCards([...cards, values]);
+      newCards = [...cards, values];
+      setCards(newCards);
     }
     setCurrentManual(Array(24).fill(null));
+    
+    // Auto-save after adding/editing card
+    const isExisting = customCardTypes.some(c => c.name === 'custom');
+    if (isExisting) {
+      updateCustomCardType({ name: 'custom', cards: newCards });
+    } else {
+      addCustomCardType({ name: 'custom', cards: newCards });
+    }
+    selectCardTypeByName('custom');
   };
 
   const removeCard = (index: number) => {
@@ -716,6 +701,17 @@ export const CardTypeEditorScreen: React.FC = () => {
         const next = [...cards];
         next.splice(index, 1);
         setCards(next);
+        
+        // Auto-save after removing card
+        const isExisting = customCardTypes.some(c => c.name === 'custom');
+        if (isExisting) {
+          updateCustomCardType({ name: 'custom', cards: next });
+        } else if (next.length > 0) {
+          addCustomCardType({ name: 'custom', cards: next });
+        }
+        if (next.length > 0) {
+          selectCardTypeByName('custom');
+        }
       }}
     ]);
   };
@@ -727,43 +723,19 @@ export const CardTypeEditorScreen: React.FC = () => {
     setCards(next);
     setHighlightedCard(to);
     setTimeout(() => setHighlightedCard(null), 1500);
+    
+    // Auto-save after moving card
+    const isExisting = customCardTypes.some(c => c.name === 'custom');
+    if (isExisting) {
+      updateCustomCardType({ name: 'custom', cards: next });
+    } else {
+      addCustomCardType({ name: 'custom', cards: next });
+    }
+    selectCardTypeByName('custom');
   };
 
   const canSubmit = cards.length > 0;
 
-  const hasUnsavedChanges = () => {
-    const cardsChanged = JSON.stringify(cards) !== JSON.stringify(originalCards);
-    return cardsChanged;
-  };
-
-  const handleBackPress = () => {
-    if (hasUnsavedChanges()) {
-      setUnsavedChangesModal(true);
-      return true;
-    }
-    return false;
-  };
-
-  const exitWithoutSaving = () => {
-    setUnsavedChangesModal(false);
-    navigation.goBack();
-  };
-
-  const saveAndExit = () => {
-    if (!canSubmit) { 
-      Alert.alert('Missing', 'Add at least one card.'); 
-      return; 
-    }
-    const isExisting = customCardTypes.some(c => c.name === 'custom');
-    if (isExisting) {
-      updateCustomCardType({ name: 'custom', cards });
-    } else {
-      addCustomCardType({ name: 'custom', cards });
-    }
-    selectCardTypeByName('custom');
-    setUnsavedChangesModal(false);
-    navigation.goBack();
-  };
 
   // Hide tab bar when this screen is focused
   useFocusEffect(
@@ -775,11 +747,7 @@ export const CardTypeEditorScreen: React.FC = () => {
         });
       }
 
-      const onBackPress = () => handleBackPress();
-      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-      
       return () => {
-        subscription.remove();
         // Show tab bar again when leaving
         if (parent) {
           parent.setOptions({
@@ -795,7 +763,7 @@ export const CardTypeEditorScreen: React.FC = () => {
           });
         }
       };
-    }, [navigation, theme, hasUnsavedChanges])
+    }, [navigation, theme])
   );
 
   const submit = () => {
@@ -1081,12 +1049,6 @@ export const CardTypeEditorScreen: React.FC = () => {
           </View>
         )}
 
-        {/* Save Button for Custom Cards */}
-        {!isWorldBingo && !isAfricaBingo && (
-          <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-            <Button title="Save Cartela" onPress={submit} disabled={!canSubmit} />
-          </View>
-        )}
       </View>
     );
   };
@@ -1178,32 +1140,6 @@ export const CardTypeEditorScreen: React.FC = () => {
         </View>
       </Modal>
 
-      <Modal visible={unsavedChangesModal} transparent animationType="fade">
-        <View style={styles.modalBackdrop}>
-          <View style={[{ backgroundColor: theme.colors.surface, borderRadius: 8, padding: 16, width: 280 }]}>
-            <View style={styles.modalCard}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Unsaved Changes</Text>
-              <Text style={{ color: theme.colors.textSecondary, marginBottom: 16 }}>
-                You have unsaved changes. What would you like to do?
-              </Text>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
-                <Button 
-                  title="Exit without saving" 
-                  variant="outline" 
-                  onPress={exitWithoutSaving}
-                  style={{ flex: 1 }}
-                />
-                <Button 
-                  title="Save" 
-                  onPress={saveAndExit}
-                  disabled={!canSubmit}
-                  style={{ flex: 1 }}
-                />
-              </View>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 };

@@ -6,6 +6,7 @@ import { authApiService } from '../api';
 import { errorHandler } from '../api/utils/errorHandler';
 import type { ApiUser } from '../api/types';
 import { CoinStorageManager } from '../utils/coinStorage';
+import { CoinSyncService } from '../services/coinSyncService';
 
 // Import toast context
 let toastContext: { showSuccess: (message: string, title?: string) => void; showError: (message: string, title?: string) => void; } | null = null;
@@ -115,6 +116,15 @@ export const useAuthStore = create<AuthStore>()(
             });
             // Load coins for this user
             await get().loadCoins();
+            
+            // Auto-sync coins after successful login
+            try {
+              await CoinSyncService.autoSync();
+              console.log('🪙 Coin sync completed after login');
+            } catch (syncError) {
+              console.log('🪙 Coin sync failed after login:', syncError);
+            }
+            
             console.log('🔐 Persistent login: Session will remain until manual logout');
             toastContext?.showSuccess(`Welcome back, ${appUser.name}!`, 'Login Successful');
             return { success: true, message: result.message };

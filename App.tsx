@@ -5,7 +5,7 @@
  * @format
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SafeAreaView, StatusBar, Platform } from 'react-native';
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -34,6 +34,9 @@ import { Immersive } from 'react-native-immersive';
 
 const AppContent = () => {
   const { theme } = useTheme();
+  
+  // Track if automatic sync has already run this app session
+  const [hasRunAutoSync, setHasRunAutoSync] = useState(false);
   
   if (!__DEV__) {
     console.log = () => {};
@@ -118,9 +121,12 @@ const AppContent = () => {
         // Run report sync always, coin sync only if authenticated
         const syncPromises = [triggerReportSync()];
         
-        if (isAuthenticated) {
-          console.log('🚀 [App] Adding coin sync to startup...');
+        if (isAuthenticated && !hasRunAutoSync) {
+          console.log('🚀 [App] Adding coin sync to startup (first time this session)...');
           syncPromises.push(CoinSyncService.autoSync());
+          setHasRunAutoSync(true);
+        } else if (hasRunAutoSync) {
+          console.log('🚀 [App] Skipping coin sync - already ran this app session');
         } else {
           console.log('🚀 [App] Skipping coin sync - user not authenticated or in guest mode');
         }
