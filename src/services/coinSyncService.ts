@@ -3,6 +3,7 @@ import { CoinStorageManager } from '../utils/coinStorage';
 import { useAuthStore } from '../store/authStore';
 import { apiClient } from '../api/client/base';
 import { useCoinSyncStore } from '../store/coinSyncStore';
+import { transactionApiService } from '../api/services/transaction';
 
 export interface CoinSyncResult {
   success: boolean;
@@ -191,6 +192,27 @@ export class CoinSyncService {
       const finalBalance = await CoinStorageManager.getCoins(userId);
 
       if (syncSuccess) {
+        // Create transaction report if coins changed (same logic as ProfileScreen manual refresh)
+        const coinDifference = finalBalance - localBefore;
+        
+        if (coinDifference !== 0) {
+          try {
+            await transactionApiService.createTransaction({
+              userId: userId,
+              type: coinDifference > 0 ? 'payout' : 'payin',
+              amount: Math.abs(coinDifference),
+              description: coinDifference > 0 
+                ? `Coins synced from backend (+${coinDifference.toFixed(0)} coins)`
+                : `Coins synced to backend (${coinDifference.toFixed(0)} coins)`,
+              gameId: `COIN_SYNC_${Date.now()}`
+            });
+            console.log(`📊 Transaction report created: ${coinDifference > 0 ? '+' : ''}${coinDifference.toFixed(0)} coins`);
+          } catch (reportError) {
+            console.error('Failed to create transaction report:', reportError);
+            // Don't fail the sync operation if report creation fails
+          }
+        }
+        
         const result: CoinSyncResult = {
           success: true,
           message: `Successfully synced coins with backend. Local balance: ${localBefore} → ${finalBalance}`,
