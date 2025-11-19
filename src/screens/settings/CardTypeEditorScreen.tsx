@@ -94,9 +94,13 @@ const IsolatedCSVInput = memo<{
   onValueChange: (value: string) => void;
   theme: any;
   value?: string;
-}>(({ placeholder, onValueChange, theme, value }) => {
+  inputRef?: any;
+}>(({ placeholder, onValueChange, theme, value, inputRef }) => {
   const [localValue, setLocalValue] = useState(value || '');
-  const inputRef = useRef<TextInput>(null);
+  const localInputRef = useRef<TextInput>(null);
+  
+  // Use passed ref if available, otherwise use local ref
+  const activeRef = inputRef || localInputRef;
 
   // Reset local value when parent value changes (like when CSV is cleared)
   useEffect(() => {
@@ -105,78 +109,36 @@ const IsolatedCSVInput = memo<{
     }
   }, [value]);
 
-  // BINGO column validation ranges
-  const columnRanges = [
-    { min: 1, max: 15, name: 'B' },   // Positions 0-4: B column (1-15)
-    { min: 16, max: 30, name: 'I' },  // Positions 5-9: I column (16-30)  
-    { min: 31, max: 45, name: 'N' },  // Positions 10-14: N column (31-45)
-    { min: 46, max: 60, name: 'G' },  // Positions 15-19: G column (46-60)
-    { min: 61, max: 75, name: 'O' }   // Positions 20-23: O column (61-75)
-  ];
-
-  const validateAndFormatInput = (text: string): string => {
-    // Only allow numbers and commas
-    let filtered = text.replace(/[^0-9,]/g, '');
-    
-    // Split by commas and validate each position according to BINGO rules
-    const parts = filtered.split(',');
-    const seenNumbers = new Set();
-    const validatedParts = parts.map((part, index) => {
-      if (part === '') return ''; // Allow empty parts
-      if (index >= 24) return ''; // Only allow 24 numbers max
-      
-      // Limit to 2 digits per number
-      let limited = part.slice(0, 2);
-      const num = parseInt(limited);
-      if (isNaN(num) || num < 1) return '';
-      
-      // Enforce BINGO column ranges based on position
-      let columnIndex = Math.floor(index / 5); // 0-4 for columns B,I,N,G,O
-      if (index >= 10 && index < 14) columnIndex = 2; // N column (positions 10-13, only 4 numbers)
-      if (index >= 14) columnIndex = Math.floor((index - 14) / 5) + 3; // G,O columns
-      
-      const columnRanges = [
-        { min: 1, max: 15 },   // B column
-        { min: 16, max: 30 },  // I column  
-        { min: 31, max: 45 },  // N column
-        { min: 46, max: 60 },  // G column
-        { min: 61, max: 75 }   // O column
-      ];
-      
-      const range = columnRanges[columnIndex];
-      if (num < range.min || num > range.max) {
-        // Auto-correct to valid range
-        if (num < range.min) limited = range.min.toString();
-        if (num > range.max) limited = range.max.toString();
-      }
-      
-      // Check for duplicates
-      if (limited !== '' && seenNumbers.has(limited)) {
-        return ''; // Remove duplicate
-      }
-      
-      if (limited !== '') {
-        seenNumbers.add(limited);
-      }
-      
-      return limited;
-    });
-    
-    // Remove empty parts from middle, but preserve structure
-    const cleanedParts = validatedParts.filter((part, index) => {
-      return part !== '' || index === validatedParts.length - 1;
-    });
-    
-    return cleanedParts.join(',');
-  };
 
   return (
     <TextInput
-      ref={inputRef}
+      ref={activeRef}
       value={localValue}
       onChangeText={(text) => {
+        console.log('CSV Input onChangeText:', text);
+        console.log('Previous localValue:', localValue);
+        
+        // If user is deleting (text is shorter), allow it more freely
+        if (text.length < localValue.length) {
+          console.log('User is deleting, allowing deletion');
+          // Only filter out non-numeric/comma characters but preserve structure
+          let filtered = text.replace(/[^0-9,]/g, '');
+          // Also clean up consecutive commas during deletion
+          filtered = filtered.replace(/,+/g, ',');
+          setLocalValue(filtered);
+          
+          // Sync to parent immediately during deletion
+          onValueChange(filtered);
+          return;
+        }
+        
         // Only allow numbers and commas - keep it simple during typing
         let filtered = text.replace(/[^0-9,]/g, '');
+        
+        // Replace consecutive commas with single comma
+        filtered = filtered.replace(/,+/g, ',');
+        
+        console.log('Filtered text:', filtered);
         
         // Split by commas
         const parts = filtered.split(',');
@@ -184,35 +146,91 @@ const IsolatedCSVInput = memo<{
         // Limit to 24 parts maximum (23 commas + 1 final number)
         const limitedParts = parts.slice(0, 24);
         
-        // Process each part
-        const processedParts = limitedParts.map((part) => {
+        // Process each part with BINGO column validation and duplicate detection
+        const seenNumbers = new Set();
+        const processedParts = limitedParts.map((part, index) => {
+          console.log(`Processing part ${index}: "${part}"`);
+          
           if (part === '') return ''; // Allow empty parts during typing
+          if (index >= 24) return ''; // Only allow 24 numbers max
           
           // Limit to 2 digits per number
           let limited = part.slice(0, 2);
-          
-          // Don't allow numbers > 75 while typing
           const num = parseInt(limited);
-          if (!isNaN(num) && num > 75) {
-            limited = '75';
+          
+          // If it's not a valid number, return empty
+          if (isNaN(num) || limited.length === 0) return '';
+          if (num < 1) return '';
+          
+          // Check if this is the last part being typed (no comma after it)
+          const isLastPart = index === limitedParts.length - 1;
+          const isBeingTyped = isLastPart && !filtered.endsWith(',');
+          
+          console.log(`Part ${index}: "${limited}", isLastPart: ${isLastPart}, isBeingTyped: ${isBeingTyped}`);
+          
+          // If user is still typing this number (no comma after), allow it without validation
+          if (isBeingTyped) {
+            console.log(`Number "${limited}" is being typed, allowing without validation`);
+            return limited; // Allow any valid digits while typing
           }
           
+          // Number is complete (has comma after or is in middle), apply full validation
+          // Enforce BINGO column ranges based on position (N column has only 4 numbers)
+          let col;
+          if (index < 5) col = 0;        // B column: positions 0-4 (5 numbers)
+          else if (index < 10) col = 1;  // I column: positions 5-9 (5 numbers)
+          else if (index < 14) col = 2;  // N column: positions 10-13 (4 numbers - center is FREE)
+          else if (index < 19) col = 3;  // G column: positions 14-18 (5 numbers)
+          else col = 4;                  // O column: positions 19-23 (5 numbers)
+          
+          const columnRanges = [
+            { min: 1, max: 15 },   // B column
+            { min: 16, max: 30 },  // I column  
+            { min: 31, max: 45 },  // N column
+            { min: 46, max: 60 },  // G column
+            { min: 61, max: 75 }   // O column
+          ];
+          
+          const range = columnRanges[col];
+          console.log(`Position ${index}: number ${num}, column ${col} (${['B','I','N','G','O'][col]}), range ${range.min}-${range.max}`);
+          
+          if (num < range.min || num > range.max) {
+            console.log(`Number ${num} out of range ${range.min}-${range.max}, auto-correcting`);
+            // Auto-correct to valid range
+            if (num < range.min) limited = range.min.toString();
+            if (num > range.max) limited = range.max.toString();
+            console.log(`Auto-corrected to: ${limited}`);
+          }
+          
+          // Check for duplicates - remove if already seen
+          if (limited !== '' && seenNumbers.has(limited)) {
+            console.log(`Duplicate number ${limited} found, removing`);
+            return ''; // Remove duplicate
+          }
+          
+          if (limited !== '') {
+            seenNumbers.add(limited);
+          }
+          
+          console.log(`Final processed: "${limited}"`);
           return limited;
         });
         
-        // Join with commas, but don't add trailing comma if we have exactly 24 numbers
-        let result;
-        if (processedParts.length === 24 && processedParts[23] !== '') {
-          // No trailing comma after 24th number
-          result = processedParts.join(',');
-        } else {
-          result = processedParts.join(',');
-        }
+        // Keep all parts to allow proper editing - don't remove empty parts during typing
+        const cleanedParts = processedParts;
         
+        // Join with commas
+        let result = cleanedParts.join(',');
+        
+        console.log('Final result to set:', result);
         setLocalValue(result);
+        
+        // Also sync to parent immediately for copy-paste scenarios
+        onValueChange(result);
       }}
       onBlur={() => {
-        // Just sync to parent on blur - don't validate yet
+        console.log('CSV Input onBlur, syncing value:', localValue);
+        // Sync to parent on blur (backup)
         onValueChange(localValue);
       }}
       placeholder={placeholder}
@@ -279,6 +297,7 @@ export const CardTypeEditorScreen: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [tempSliderValue, setTempSliderValue] = useState(worldBingoCardsLimit);
   const sliderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const csvInputRef = useRef<any>(null);
   
 
   // Callback for isolated input components
@@ -292,6 +311,7 @@ export const CardTypeEditorScreen: React.FC = () => {
 
   // Callback for isolated CSV input
   const handleCSVValueChange = useCallback((value: string) => {
+    console.log('handleCSVValueChange called with:', JSON.stringify(value));
     setCsv(value);
   }, []);
 
@@ -461,7 +481,22 @@ export const CardTypeEditorScreen: React.FC = () => {
 
   // Render function for each card in FlatList
   const renderCard = ({ item: row, index: idx }: { item: number[], index: number }) => {
-    const grid = getGridFromNumbers(row);
+    // Convert 24-number array directly to 5x5 grid (row by row)
+    const grid: (number | null)[][] = [];
+    let numberIndex = 0;
+    
+    for (let gridRow = 0; gridRow < 5; gridRow++) {
+      const currentRow: (number | null)[] = [];
+      for (let gridCol = 0; gridCol < 5; gridCol++) {
+        if (gridRow === 2 && gridCol === 2) {
+          currentRow.push(null); // FREE space
+        } else {
+          currentRow.push(row[numberIndex]);
+          numberIndex++;
+        }
+      }
+      grid.push(currentRow);
+    }
     
     // Calculate the actual card number based on pagination and search
     const actualCardNumber = searchNumber 
@@ -542,59 +577,6 @@ export const CardTypeEditorScreen: React.FC = () => {
     );
   };
   
-  // Transpose function to convert rows to columns
-  const transpose = (matrix: (number | null)[][]) => {
-    return matrix[0].map((_, colIndex) =>
-      matrix.map(row => row[colIndex])
-    );
-  };
-
-  // Convert 24-number array to 5x5 grid with center free space and transpose for BINGO layout
-  const getGridFromNumbers = (numbers: (number | null)[]) => {
-    // First arrange numbers in column order (B,I,N,G,O columns)
-    const columnGrid: (number | null)[][] = Array(5).fill(null).map(() => Array(5).fill(null));
-    
-    // Fill columns: B(0-4), I(5-9), N(10-13), G(14-18), O(19-23)
-    let numberIndex = 0;
-    
-    // B column (positions 0-4) - all 5 numbers
-    for (let row = 0; row < 5; row++) {
-      columnGrid[0][row] = numbers[numberIndex] || null;
-      numberIndex++;
-    }
-    
-    // I column (positions 5-9) - all 5 numbers 
-    for (let row = 0; row < 5; row++) {
-      columnGrid[1][row] = numbers[numberIndex] || null;
-      numberIndex++;
-    }
-    
-    // N column (positions 10-13, only 4 numbers) - skip center row
-    for (let row = 0; row < 5; row++) {
-      if (row === 2) {
-        columnGrid[2][row] = null; // FREE space
-        continue;
-      }
-      columnGrid[2][row] = numbers[numberIndex] || null;
-      numberIndex++;
-    }
-    
-    // G column (positions 14-18) - all 5 numbers
-    for (let row = 0; row < 5; row++) {
-      columnGrid[3][row] = numbers[numberIndex] || null;
-      numberIndex++;
-    }
-    
-    // O column (positions 19-23) - all 5 numbers
-    for (let row = 0; row < 5; row++) {
-      columnGrid[4][row] = numbers[numberIndex] || null;
-      numberIndex++;
-    }
-    
-    // Transpose to get proper row/column display
-    return transpose(columnGrid);
-  };
-  
   // Convert 5x5 grid back to 24-number array
   const getNumbersFromGrid = (grid: (number | null)[][]) => {
     const numbers: (number | null)[] = [];
@@ -663,10 +645,116 @@ export const CardTypeEditorScreen: React.FC = () => {
 
   const isValidCard = (row: number[]) => new Set(row).size === 24 && row.length === 24;
 
+  // Transform CSV input (24 numbers in column order) to display format (24 numbers in row order)
+  const transformCsvToDisplayFormat = (csvNumbers: number[]) => {
+    // Create a 5x5 grid and fill with CSV numbers in column order
+    const columnGrid: (number | null)[][] = Array(5).fill(null).map(() => Array(5).fill(null));
+    
+    let numberIndex = 0;
+    
+    // Fill columns: B(0-4), I(5-9), N(10-13), G(14-18), O(19-23)
+    // B column (positions 0-4) - all 5 numbers
+    for (let row = 0; row < 5; row++) {
+      columnGrid[0][row] = csvNumbers[numberIndex] || null;
+      numberIndex++;
+    }
+    
+    // I column (positions 5-9) - all 5 numbers 
+    for (let row = 0; row < 5; row++) {
+      columnGrid[1][row] = csvNumbers[numberIndex] || null;
+      numberIndex++;
+    }
+    
+    // N column (positions 10-13, only 4 numbers) - skip center row
+    for (let row = 0; row < 5; row++) {
+      if (row === 2) {
+        columnGrid[2][row] = null; // FREE space
+        continue;
+      }
+      columnGrid[2][row] = csvNumbers[numberIndex] || null;
+      numberIndex++;
+    }
+    
+    // G column (positions 14-18) - all 5 numbers
+    for (let row = 0; row < 5; row++) {
+      columnGrid[3][row] = csvNumbers[numberIndex] || null;
+      numberIndex++;
+    }
+    
+    // O column (positions 19-23) - all 5 numbers
+    for (let row = 0; row < 5; row++) {
+      columnGrid[4][row] = csvNumbers[numberIndex] || null;
+      numberIndex++;
+    }
+    
+    // Transpose to get row-oriented layout
+    const rowGrid = columnGrid[0].map((_, colIndex) =>
+      columnGrid.map(row => row[colIndex])
+    );
+    
+    // Convert back to 24-number array (skip center cell)
+    const transformedNumbers: number[] = [];
+    for (let row = 0; row < 5; row++) {
+      for (let col = 0; col < 5; col++) {
+        if (row === 2 && col === 2) {
+          // Skip center cell (FREE space)
+          continue;
+        }
+        transformedNumbers.push(rowGrid[row][col] as number);
+      }
+    }
+    
+    return transformedNumbers;
+  };
+
   const addFromCsv = () => {
-    const parsed = csv.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+    console.log('=== ADD FROM CSV CALLED ===');
+    
+    // Force the CSV input to blur and sync its value
+    if (csvInputRef.current) {
+      csvInputRef.current.blur();
+    }
+    
+    // Small delay to allow any pending syncs
+    setTimeout(() => {
+      console.log('Raw CSV value after blur:', JSON.stringify(csv));
+      console.log('CSV length:', csv.length);
+      
+      if (!csv || csv.trim() === '') {
+        console.log('CSV is empty, aborting');
+        Alert.alert('Invalid', 'Please enter CSV numbers first.');
+        return;
+      }
+      
+      // Continue with the rest of the processing...
+      processCSV();
+    }, 50);
+  };
+  
+  const processCSV = () => {
+    // Clean the CSV input more thoroughly
+    const cleanCsv = csv.trim().replace(/,+$/, ''); // Remove trailing commas
+    console.log('Clean CSV:', JSON.stringify(cleanCsv));
+    
+    const splitParts = cleanCsv.split(',');
+    console.log('Split parts:', splitParts);
+    console.log('Split parts length:', splitParts.length);
+    
+    const trimmedParts = splitParts.map(s => s.trim());
+    console.log('Trimmed parts:', trimmedParts);
+    
+    const nonEmptyParts = trimmedParts.filter(s => s !== '');
+    console.log('Non-empty parts:', nonEmptyParts);
+    
+    const numbersOnly = nonEmptyParts.map(s => parseInt(s, 10));
+    console.log('Parsed numbers:', numbersOnly);
+    
+    const parsed = numbersOnly.filter(n => !isNaN(n) && n > 0);
+    console.log('Valid numbers:', parsed);
+    console.log('Valid numbers length:', parsed.length);
+      
     if (parsed.length !== 24) {
-      Alert.alert('Invalid', 'A card must contain exactly 24 numbers.');
+      Alert.alert('Invalid', `A card must contain exactly 24 numbers. Found ${parsed.length} valid numbers.`);
       return;
     }
     if (new Set(parsed).size !== 24) {
@@ -700,12 +788,16 @@ export const CardTypeEditorScreen: React.FC = () => {
         return;
       }
     }
-    const duplicateArrangement = cards.some(row => row.join(',') === parsed.join(','));
+    
+    // Transform CSV input to match display format BEFORE saving
+    const transformedNumbers = transformCsvToDisplayFormat(parsed);
+    
+    const duplicateArrangement = cards.some(row => row.join(',') === transformedNumbers.join(','));
     if (duplicateArrangement) {
       Alert.alert('Duplicate', 'Card with same arrangement already exists.');
       return;
     }
-    const newCards = [...cards, parsed];
+    const newCards = [...cards, transformedNumbers];
     setCards(newCards);
     setCsv('');
     
@@ -888,6 +980,7 @@ export const CardTypeEditorScreen: React.FC = () => {
                 onValueChange={handleCSVValueChange}
                 theme={theme}
                 value={csv}
+                inputRef={csvInputRef}
               />
               <View style={{ marginTop: 12 }}>
                 <Button title="Add Card From CSV" onPress={addFromCsv} />

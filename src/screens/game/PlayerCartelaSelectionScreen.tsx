@@ -1034,33 +1034,49 @@ const PlayerCartelaSelectionScreen = () => {
             gap: 12, 
             justifyContent: 'center'
           }}>
-            <TextInput
-              style={{
-                height: 42,
-                paddingHorizontal: 14,
-                borderRadius: 10,
-                backgroundColor: 'rgb(0, 20, 60)',
-                fontSize: 16,
-                color: theme.colors.text,
-                borderWidth: 1,
-                borderColor: theme.colors.border,
-                width: 140,
-                shadowColor: '#000',
-                shadowOffset: {
-                  width: 0,
-                  height: 1,
-                },
-                shadowOpacity: 0.2,
-                shadowRadius: 1.41,
-                elevation: 2,
-              }}
-              placeholder="Enter amount"
-              placeholderTextColor={theme.colors.textSecondary}
-              value={medebAmount}
-              onChangeText={setMedebAmount}
-              keyboardType="numeric"
-              returnKeyType="done"
-            />
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              position: 'relative',
+            }}>
+              <TextInput
+                style={{
+                  height: 42,
+                  paddingHorizontal: 14,
+                  paddingRight: 45, // Add padding for "Birr" text
+                  borderRadius: 10,
+                  backgroundColor: 'rgb(0, 20, 60)',
+                  fontSize: 16,
+                  color: theme.colors.text,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  width: 140,
+                  shadowColor: '#000',
+                  shadowOffset: {
+                    width: 0,
+                    height: 1,
+                  },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 1.41,
+                  elevation: 2,
+                }}
+                placeholder="Amount"
+                placeholderTextColor={theme.colors.textSecondary}
+                value={medebAmount}
+                onChangeText={setMedebAmount}
+                keyboardType="numeric"
+                returnKeyType="done"
+              />
+              <Text style={{
+                position: 'absolute',
+                right: 12,
+                fontSize: 14,
+                color: theme.colors.textSecondary,
+                fontWeight: '500',
+              }}>
+                Birr
+              </Text>
+            </View>
             
             <TouchableOpacity
               style={{
