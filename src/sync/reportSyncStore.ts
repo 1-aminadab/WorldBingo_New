@@ -10,6 +10,7 @@ export interface Report {
   totalPayin: number;
   totalPayout: number;
   balance: number;
+  date: Date;
 }
 
 // Store state interface

@@ -213,7 +213,8 @@ export const SinglePlayerGameScreen: React.FC = () => {
         numberOfCards: totalCardsSold,
         totalPayin: totalCollectedAmount,
         totalPayout: payout,
-        balance: totalCollectedAmount - payout
+        balance: totalCollectedAmount - payout,
+        date: new Date()
       });
 
       // Backend sync removed - only local reports now
